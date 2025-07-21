@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="Notification_service" />
+        <module name="Customer_service" />
+      </profile>
+      <profile name="Annotation profile for Suplier_service" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/unknown/lombok-unknown.jar" />
+        </processorPath>
+        <module name="Order_Mangement_service" />
+        <module name="Inventory_service" />
+        <module name="Suplier_service" />
+        <module name="Auth_User_service" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="Analytics-and-Reporting_service" target="21" />
+    </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="Analytics-and-Reporting_service" options="-parameters" />
+      <module name="Auth_User_service" options="-parameters" />
+      <module name="Customer_service" options="-parameters" />
+      <module name="Inventory_service" options="-parameters" />
+      <module name="Notification_service" options="-parameters" />
+      <module name="Order_Mangement_service" options="-parameters" />
+      <module name="Suplier_service" options="-parameters" />
+    </option>
+  </component>
+</project>
