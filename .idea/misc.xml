@@ -11,6 +11,7 @@
         <option value="$PROJECT_DIR$/backend/Customer_service/Customer_service/pom.xml" />
         <option value="$PROJECT_DIR$/backend/Analytics-and-Reporting_service/Analytics-and-Reporting_service/pom.xml" />
         <option value="$PROJECT_DIR$/backend/Notification_service/Notification_service/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/API_Gateway_service/API_Gateway_service/pom.xml" />
       </list>
     </option>
     <option name="workspaceImportForciblyTurnedOn" value="true" />
