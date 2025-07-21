@@ -8,6 +8,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="Notification_service" />
         <module name="Customer_service" />
+        <module name="API_Gateway_service" />
       </profile>
       <profile name="Annotation profile for Suplier_service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -28,6 +29,7 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="API_Gateway_service" options="-parameters" />
       <module name="Analytics-and-Reporting_service" options="-parameters" />
       <module name="Auth_User_service" options="-parameters" />
       <module name="Customer_service" options="-parameters" />
