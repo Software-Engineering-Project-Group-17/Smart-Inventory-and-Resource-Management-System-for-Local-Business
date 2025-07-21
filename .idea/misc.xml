@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/backend/Order_Mangement_service/Order_Mangement_service/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/Auth_User_service/Auth_User_service/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/Inventory_service/Inventory_service/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/Suplier_service/Suplier_service/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/Customer_service/Customer_service/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/Analytics-and-Reporting_service/Analytics-and-Reporting_service/pom.xml" />
+        <option value="$PROJECT_DIR$/backend/Notification_service/Notification_service/pom.xml" />
+      </list>
+    </option>
+    <option name="workspaceImportForciblyTurnedOn" value="true" />
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_21" default="true" project-jdk-name="21" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/out" />
+  </component>
+</project>
