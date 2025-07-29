@@ -16,6 +16,7 @@ public class InventoryMapper {
         item.setQuantity(request.getQuantity());
         item.setPrice(request.getPrice());
         item.setSupplier(request.getSupplier());
+        item.setThreshold(request.getThreshold());
 
         return item;
     }
@@ -29,7 +30,8 @@ public class InventoryMapper {
                 item.getQuantity(),
                 item.getPrice(),
                 item.getSupplier(),
-                item.getCategory() != null ? item.getCategory().getName() : null
+                item.getCategory() != null ? item.getCategory().getName() : null,
+                item.getThreshold()
         );
     }
 }

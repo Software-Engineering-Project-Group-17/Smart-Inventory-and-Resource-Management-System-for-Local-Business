@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class CategoryMapper {
 
-    // ✅ Convert CategoryRequest (DTO) → Category (Entity)
+    // Convert CategoryRequest (DTO) → Category (Entity)
     public Category toCategory(CategoryRequest request) {
         if (request == null) return null;
         Category category = new Category();
@@ -16,7 +16,7 @@ public class CategoryMapper {
         return category;
     }
 
-    // ✅ Convert Category (Entity) → CategoryResponse (DTO)
+    //Convert Category (Entity) → CategoryResponse (DTO)
     public CategoryResponse fromCategory(Category category) {
         if (category == null) return null;
         return new CategoryResponse(category.getId(), category.getName());

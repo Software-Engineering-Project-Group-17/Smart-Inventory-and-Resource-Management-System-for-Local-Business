@@ -20,6 +20,8 @@ public class InventoryItem {
     private int quantity;
     private double price;
     private String supplier;
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 10")
+    private int threshold;
 
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)

@@ -28,4 +28,7 @@ public class InventoryRequest {
 
     @NotBlank(message = "Category name is required")
     private String category;
+
+    @Min(value = 0, message = "Threshold must be 0 or greater")
+    private int threshold;
 }

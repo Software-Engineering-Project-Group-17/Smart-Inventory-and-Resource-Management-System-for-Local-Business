@@ -6,8 +6,11 @@ import com.thivinu.inventoryapi.Entity.InventoryItem;
 import com.thivinu.inventoryapi.Service.InventoryService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/inventory")
@@ -44,4 +47,26 @@ public class InventoryController {
         InventoryResponse response = inventoryService.getInventoryById(id);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/stock")
+    public ResponseEntity<List<InventoryResponse>> getStockLevels() {
+        return ResponseEntity.ok(inventoryService.getAllStockLevels());
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<Page<InventoryResponse>> searchInventory(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return ResponseEntity.ok(inventoryService.searchInventory(category, keyword, page, size));
+    }
+
+    //API to get low stock items
+    @GetMapping("/low-stock")
+    public ResponseEntity<List<InventoryResponse>> getLowStockAlerts() {
+        return ResponseEntity.ok(inventoryService.getLowStockItems());
+    }
+
 }
