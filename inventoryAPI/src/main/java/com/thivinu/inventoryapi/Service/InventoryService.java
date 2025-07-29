@@ -1,0 +1,104 @@
+package com.thivinu.inventoryapi.Service;
+
+import com.thivinu.inventoryapi.Dto.InventoryRequest;
+import com.thivinu.inventoryapi.Dto.InventoryResponse;
+import com.thivinu.inventoryapi.Entity.Category;
+import com.thivinu.inventoryapi.Entity.InventoryItem;
+import com.thivinu.inventoryapi.Exception.InventoryNotFoundException;
+import com.thivinu.inventoryapi.Mapper.CategoryMapper;
+import com.thivinu.inventoryapi.Mapper.InventoryMapper;
+import com.thivinu.inventoryapi.Repository.CategoryRepository;
+import com.thivinu.inventoryapi.Repository.InventoryRepository;
+import io.micrometer.common.util.StringUtils;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+public class InventoryService {
+
+    private final InventoryRepository inventoryRepository;
+    private final CategoryRepository categoryRepository;
+    private final InventoryMapper inventoryMapper;
+    private final CategoryMapper categoryMapper;
+
+    public InventoryItem addInventoryItem(InventoryRequest request){
+        // In this request.getCategory() reads the category of the inventory item
+        Category category = categoryRepository.findByName(request.getCategory());
+        if (category == null) {
+            category = new Category(request.getCategory());
+            categoryRepository.save(category);
+        }
+        // Now we have the required category for the inventory, now we want to get the category_id from the category
+        InventoryItem item = inventoryMapper.toInventoryItem(request);
+        item.setCategory(category);
+        return  inventoryRepository.save(item);
+    }
+
+    public InventoryItem updateInventoryItem(Long id, InventoryRequest request) {
+        InventoryItem existingItem = inventoryRepository.findById(id)
+                .orElseThrow(() -> new InventoryNotFoundException(
+                        String.format("Cannot find Inventory: No inventory found for id: %s", id)
+                ));
+        if(request.getId()!=null){
+            if(!(id.equals(request.getId()))){
+                throw new RuntimeException("doesn't match with the provided Id");
+            }
+        }
+        Category category = categoryRepository.findByName(request.getCategory());
+        if(category!=null){
+            if(existingItem.getCategory().getId().equals(category.getId())) {
+                System.out.println("category doesn't change");
+            }
+            else{
+                System.out.println("category changed the existing inventory");
+            }
+        }
+        else{
+            category = new Category(request.getCategory());
+            categoryRepository.save(category);
+        }
+        // now category is ok
+        mergeInventory(existingItem,request,category);
+        return this.inventoryRepository.save(existingItem);
+    }
+
+    private void mergeInventory(InventoryItem inventory, InventoryRequest request,Category category) {
+
+        if (StringUtils.isNotBlank(request.getName())) {
+            inventory.setName(request.getName());
+        }
+        if (StringUtils.isNotBlank(request.getSupplier())) {
+            inventory.setSupplier(request.getSupplier());
+        }
+        if (request.getQuantity() >= 0) {
+            inventory.setQuantity(request.getQuantity());
+        }
+        if (request.getPrice() > 0) {
+            inventory.setPrice(request.getPrice());
+        }
+        if (category != null) {
+            inventory.setCategory(category);
+        }
+
+    }
+
+    public boolean deleteInventoryItem(Long inventoryId) {
+        if (inventoryRepository.existsById(inventoryId)) {
+            inventoryRepository.deleteById(inventoryId);
+            return true;
+        }
+        return false;
+    }
+    public InventoryResponse getInventoryById(Long id) {
+        InventoryItem item = inventoryRepository.findById(id)
+                .orElseThrow(() -> new InventoryNotFoundException(
+                        String.format("Inventory not found for ID: %s", id)
+                ));
+
+        return inventoryMapper.fromInventoryItem(item);
+    }
+}
