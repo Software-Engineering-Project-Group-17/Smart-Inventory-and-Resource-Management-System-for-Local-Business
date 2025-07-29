@@ -10,5 +10,6 @@
     <file url="file://$PROJECT_DIR$/backend/Order_Mangement_service/Order_Mangement_service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/backend/Suplier_service/Suplier_service/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/inventoryAPI/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/notificationAPI/src/main/java" charset="UTF-8" />
   </component>
 </project>

@@ -6,7 +6,8 @@ public record InventoryResponse(
         int quantity,
         double price,
         String supplier,
-        String category
+        String category,
+        int threshold
 ) {
     // No additional body needed for a record unless you want custom methods
 }
