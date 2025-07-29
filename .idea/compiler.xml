@@ -9,6 +9,15 @@
         <outputRelativeToContentRoot value="true" />
         <module name="inventoryAPI" />
       </profile>
+      <profile name="Annotation profile for notificationAPI" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/unknown/lombok-unknown.jar" />
+        </processorPath>
+        <module name="notificationAPI" />
+      </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="Analytics-and-Reporting_service" target="21" />
@@ -32,6 +41,7 @@
       <module name="Order_Mangement_service" options="-parameters" />
       <module name="Suplier_service" options="-parameters" />
       <module name="inventoryAPI" options="-parameters" />
+      <module name="notificationAPI" options="-parameters" />
     </option>
   </component>
 </project>
