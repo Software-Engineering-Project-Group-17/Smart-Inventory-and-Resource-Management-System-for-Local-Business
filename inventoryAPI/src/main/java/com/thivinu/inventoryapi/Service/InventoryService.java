@@ -12,8 +12,13 @@ import com.thivinu.inventoryapi.Repository.InventoryRepository;
 import io.micrometer.common.util.StringUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -37,7 +42,6 @@ public class InventoryService {
         item.setCategory(category);
         return  inventoryRepository.save(item);
     }
-
     public InventoryItem updateInventoryItem(Long id, InventoryRequest request) {
         InventoryItem existingItem = inventoryRepository.findById(id)
                 .orElseThrow(() -> new InventoryNotFoundException(
@@ -80,12 +84,14 @@ public class InventoryService {
         if (request.getPrice() > 0) {
             inventory.setPrice(request.getPrice());
         }
+        if (request.getThreshold() > 0) {
+            inventory.setThreshold(request.getThreshold());
+        }
         if (category != null) {
             inventory.setCategory(category);
         }
 
     }
-
     public boolean deleteInventoryItem(Long inventoryId) {
         if (inventoryRepository.existsById(inventoryId)) {
             inventoryRepository.deleteById(inventoryId);
@@ -101,4 +107,27 @@ public class InventoryService {
 
         return inventoryMapper.fromInventoryItem(item);
     }
+
+    public List<InventoryResponse> getAllStockLevels() {
+        return inventoryRepository.findAll().stream()
+                .map(inventoryMapper::fromInventoryItem)
+                .toList();
+    }
+
+    public Page<InventoryResponse> searchInventory(String category, String keyword, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
+
+        Page<InventoryItem> result = inventoryRepository.searchAndFilter(category, keyword, pageable);
+
+        return result.map(inventoryMapper::fromInventoryItem);
+    }
+
+    //Get all low-stock items
+    public List<InventoryResponse> getLowStockItems() {
+        return inventoryRepository.findLowStockItems()
+                .stream()
+                .map(inventoryMapper::fromInventoryItem)
+                .toList();
+    }
+
 }
