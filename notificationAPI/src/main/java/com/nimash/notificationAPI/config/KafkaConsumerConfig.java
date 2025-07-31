@@ -19,15 +19,17 @@ import java.util.Map;
 public class KafkaConsumerConfig {
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, LowStockEvent> kafkaListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<String, LowStockEvent> factory =
+    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, String> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
-
-        factory.setConsumerFactory(new DefaultKafkaConsumerFactory<>(consumerConfigs(), new StringDeserializer(),
-                new JsonDeserializer<>(LowStockEvent.class)));
-
+        factory.setConsumerFactory(new DefaultKafkaConsumerFactory<>(
+                consumerConfigs(),
+                new StringDeserializer(),
+                new StringDeserializer()
+        ));
         return factory;
     }
+
 
     @Bean
     public Map<String, Object> consumerConfigs() {
