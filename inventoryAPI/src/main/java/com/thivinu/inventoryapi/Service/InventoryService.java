@@ -1,5 +1,7 @@
 package com.thivinu.inventoryapi.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thivinu.inventoryapi.Dto.InventoryRequest;
 import com.thivinu.inventoryapi.Dto.InventoryResponse;
 import com.thivinu.inventoryapi.Entity.Category;
@@ -17,8 +19,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.kafka.core.KafkaTemplate;
 
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -29,6 +35,12 @@ public class InventoryService {
     private final CategoryRepository categoryRepository;
     private final InventoryMapper inventoryMapper;
     private final CategoryMapper categoryMapper;
+
+    @Autowired
+    private KafkaTemplate<String,String> kafkaTemplate;
+
+
+    private static final String TOPIC = "low-stock-topic";
 
     public InventoryItem addInventoryItem(InventoryRequest request){
         // In this request.getCategory() reads the category of the inventory item
@@ -42,7 +54,7 @@ public class InventoryService {
         item.setCategory(category);
         return  inventoryRepository.save(item);
     }
-    public InventoryItem updateInventoryItem(Long id, InventoryRequest request) {
+    public InventoryItem updateInventoryItem(Long id, InventoryRequest request) throws JsonProcessingException {
         InventoryItem existingItem = inventoryRepository.findById(id)
                 .orElseThrow(() -> new InventoryNotFoundException(
                         String.format("Cannot find Inventory: No inventory found for id: %s", id)
@@ -67,7 +79,27 @@ public class InventoryService {
         }
         // now category is ok
         mergeInventory(existingItem,request,category);
-        return this.inventoryRepository.save(existingItem);
+        // ✅ Check if low stock
+        if (existingItem.getQuantity() < existingItem.getThreshold()) {
+            ObjectMapper objectMapper = new ObjectMapper();
+
+            // Create a Map to send only necessary fields
+            Map<String, Object> eventMap = new HashMap<>();
+            eventMap.put("itemId", existingItem.getId());
+            eventMap.put("itemName", existingItem.getName());
+            eventMap.put("quantity", existingItem.getQuantity());
+            eventMap.put("threshold", existingItem.getThreshold());
+
+            String eventJson = objectMapper.writeValueAsString(eventMap);
+
+            kafkaTemplate.send("low-stock-topic", eventJson);
+
+
+        }
+
+        existingItem=inventoryRepository.save(existingItem);
+
+        return existingItem;
     }
 
     private void mergeInventory(InventoryItem inventory, InventoryRequest request,Category category) {
