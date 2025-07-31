@@ -1,5 +1,6 @@
 package com.nimash.notificationAPI.consumer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimash.notificationAPI.model.LowStockEvent;
 import com.nimash.notificationAPI.service.EmailService;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -14,16 +15,23 @@ public class LowStockConsumer {
         this.emailService = emailService;
     }
 
-    @KafkaListener(topics = "low-stock-topic", groupId = "notification-group", containerFactory = "kafkaListenerContainerFactory")
-    public void consume(LowStockEvent event) {
-        System.out.println("📩 Received Low Stock Alert: " + event);
+    @KafkaListener(topics = "low-stock-topic", groupId = "notification-group")
+    public void consume(String message) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            LowStockEvent event =objectMapper.readValue(message, LowStockEvent.class);
 
-        // Example: Send email to admin
-        emailService.sendLowStockEmail(
-                "nimsh.22@cse.mrt.ac.lk",
-                event.getItemName(),
-                event.getQuantity(),
-                event.getThreshold()
-        );
+            System.out.println("📩 Received Low Stock Alert: " + event);
+
+            emailService.sendLowStockEmail(
+                    "nimsh.22@cse.mrt.ac.lk",
+                    event.getItemName(),
+                    event.getQuantity(),
+                    event.getThreshold()
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
 }

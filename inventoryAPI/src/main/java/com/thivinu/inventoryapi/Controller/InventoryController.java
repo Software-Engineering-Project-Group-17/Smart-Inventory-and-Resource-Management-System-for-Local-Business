@@ -1,5 +1,6 @@
 package com.thivinu.inventoryapi.Controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.thivinu.inventoryapi.Dto.InventoryRequest;
 import com.thivinu.inventoryapi.Dto.InventoryResponse;
 import com.thivinu.inventoryapi.Entity.InventoryItem;
@@ -25,7 +26,7 @@ public class InventoryController {
         return ResponseEntity.ok(savedItem);
     }
     @PutMapping("/updateInventory/{id}")
-    public ResponseEntity<?> updateInventoryItem(@PathVariable Long id, @RequestBody @Valid InventoryRequest request) {
+    public ResponseEntity<?> updateInventoryItem(@PathVariable Long id, @RequestBody @Valid InventoryRequest request) throws JsonProcessingException {
         InventoryItem updated = inventoryService.updateInventoryItem(id, request);
         if (updated != null){
             return ResponseEntity.ok(updated);
