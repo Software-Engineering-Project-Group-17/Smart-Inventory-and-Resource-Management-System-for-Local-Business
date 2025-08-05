@@ -1,0 +1,48 @@
+# Node.js dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+out/
+resourceManagementAPI/dist/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+resourceManagementAPI/npm-debug.log
+resourceManagementAPI/yarn-error.log
+
+# Environment variables
+.env
+.env.local
+resourceManagementAPI/.env
+resourceManagementAPI/.env.local
+
+# Editor & OS junk
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*.swp
+*.swo
+
+# TypeScript
+*.tsbuildinfo
+
+# Java / Maven / Spring (optional, only if used in your repo)
+target/
+*.class
+.mvn/
+*.mvn/
+pom.xml.*
+release.properties
+
+# Miscellaneous
+*.bak
+*.tmp
