@@ -21,17 +21,15 @@ public class InventoryMapper {
         return item;
     }
     public InventoryResponse fromInventoryItem(InventoryItem item) {
-        if (item == null) {
-            return null;
-        }
-        return new InventoryResponse(
-                item.getId(),
-                item.getName(),
-                item.getQuantity(),
-                item.getPrice(),
-                item.getSupplier(),
-                item.getCategory() != null ? item.getCategory().getName() : null,
-                item.getThreshold()
-        );
+        return InventoryResponse.builder()
+                .id(item.getId())
+                .name(item.getName())
+                .quantity(item.getQuantity())
+                .price(item.getPrice())
+                .supplier(item.getSupplier())
+                .threshold(item.getThreshold())
+                .category(item.getCategory().getName()) // ✅ Only send category name
+                .build();
     }
+
 }

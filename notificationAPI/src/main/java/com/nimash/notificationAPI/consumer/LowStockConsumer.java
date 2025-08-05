@@ -17,6 +17,7 @@ public class LowStockConsumer {
 
     @KafkaListener(topics = "low-stock-topic", groupId = "notification-group")
     public void consume(String message) {
+        System.out.println("🔥 Consumer Triggered! Raw Message: " + message);
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             LowStockEvent event =objectMapper.readValue(message, LowStockEvent.class);
