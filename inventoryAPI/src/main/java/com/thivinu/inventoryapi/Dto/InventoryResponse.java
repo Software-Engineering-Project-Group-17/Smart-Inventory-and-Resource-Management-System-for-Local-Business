@@ -1,5 +1,10 @@
 package com.thivinu.inventoryapi.Dto;
 
+import lombok.Builder;
+import lombok.Data;
+
+@Builder
+@Data
 public record InventoryResponse(
         Long id,
         String name,

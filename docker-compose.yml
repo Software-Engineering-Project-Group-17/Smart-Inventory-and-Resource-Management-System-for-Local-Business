@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -25,7 +26,6 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
-
   mysql:
     image: mysql:8.0
     container_name: mysql-db
@@ -37,34 +37,42 @@ services:
       - "3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
 
   inventory-api:
-      build: ./inventoryAPI  # Path to your Dockerfile
-      container_name: inventory-api
-      depends_on:
-        - mysql
-      ports:
-        - "8080:8080"
-      environment:
-        SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/${MYSQL_DATABASE}
-        SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
-        SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
-        SPRING_JPA_HIBERNATE_DDL_AUTO: update
-        SPRING_JPA_SHOW_SQL: "true"
+    build: ./inventoryAPI
+    container_name: inventory-api
+    depends_on:
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/${MYSQL_DATABASE}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
 
   notification-api:
-    build: ./notificationAPI  # Path to your Dockerfile
+    build: ./notificationAPI
     container_name: notification-api
     ports:
       - "8081:8081"
     depends_on:
-      - kafka
+      kafka:
+        condition: service_started
     environment:
       SPRING_APPLICATION_NAME: notificationAPI
       SERVER_PORT: 8081
-      SPRING_KAFKA_CONSUMER_BOOTSTRAP_SERVERS: kafka:9092
-      SPRING_KAFKA_PRODUCER_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_KAFKA_CONSUMER_GROUP_ID: notification-group
       SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET: earliest
       SPRING_MAIL_HOST: smtp.gmail.com
@@ -73,6 +81,40 @@ services:
       SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: true
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: true
+    command: >
+      java -jar app.jar
+      --spring.kafka.bootstrap-servers=kafka:9092
+
+  resource-mongo:
+    image: mongo:6
+    container_name: resource-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - resource-mongo-data:/data/db
+    healthcheck:
+      test: [ "CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand(\"ping\")' || exit 1" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+  
+
+
+  # 👇 Node.js Resource API
+  resource-api:
+    build: ./resourceManagementAPI
+    container_name: resource-api
+    depends_on:
+      resource-mongo:
+        condition: service_healthy
+    ports:
+      - "8082:8082"
+    volumes:
+      - /app/node_modules
+    environment:
+      MONGO_URI: mongodb://resource-mongo:27017/resource_mgmt
+      PORT: 8082
 
 volumes:
   mysql-data:
+  resource-mongo-data:
