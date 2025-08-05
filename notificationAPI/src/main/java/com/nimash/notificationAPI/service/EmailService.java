@@ -12,6 +12,9 @@ public class EmailService {
     private JavaMailSender mailSender;
 
     public void sendLowStockEmail(String to, String itemName, int quantity, int threshold) {
+        System.out.println("📧 Sending email to: " + to);
+        System.out.println("Item: " + itemName + " | Qty: " + quantity + " | Threshold: " + threshold);
+
         String subject = "🚨 Low Stock Alert!";
         String text = String.format("Item: %s\nQuantity: %d\nThreshold: %d\nPlease restock soon!",
                 itemName, quantity, threshold);

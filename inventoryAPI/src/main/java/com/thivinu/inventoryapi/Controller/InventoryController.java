@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.thivinu.inventoryapi.Dto.InventoryRequest;
 import com.thivinu.inventoryapi.Dto.InventoryResponse;
 import com.thivinu.inventoryapi.Entity.InventoryItem;
+import com.thivinu.inventoryapi.Mapper.InventoryMapper;
 import com.thivinu.inventoryapi.Service.InventoryService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,11 +21,16 @@ public class InventoryController {
 
     @Autowired
     private InventoryService inventoryService;
+    @Autowired
+    private InventoryMapper inventoryMapper;
+
     @PostMapping("/add")
-    public ResponseEntity<InventoryItem> addInventoryItem(@RequestBody @Valid InventoryRequest request) {
+    public ResponseEntity<InventoryResponse> addInventoryItem(@RequestBody @Valid InventoryRequest request) {
         InventoryItem savedItem = inventoryService.addInventoryItem(request);
-        return ResponseEntity.ok(savedItem);
+        InventoryResponse response = inventoryMapper.fromInventoryItem(savedItem);
+        return ResponseEntity.ok(response);
     }
+
     @PutMapping("/updateInventory/{id}")
     public ResponseEntity<?> updateInventoryItem(@PathVariable Long id, @RequestBody @Valid InventoryRequest request) throws JsonProcessingException {
         InventoryItem updated = inventoryService.updateInventoryItem(id, request);
