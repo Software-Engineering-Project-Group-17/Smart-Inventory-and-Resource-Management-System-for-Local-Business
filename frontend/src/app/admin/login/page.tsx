@@ -77,18 +77,18 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="flex flex-col sm:flex-row h-screen w-full relative">
-      <div className="hidden h-full w-1/2 bg-primaryColor items-center justify-center sm:flex relative">
-        <Image src="/logo.png" fill alt="" className="object-cover" />
+    <div className="flex flex-col lg:flex-row h-screen w-full relative">
+      <div className="hidden lg:flex h-full w-1/2 bg-primaryColor items-center justify-center relative">
+        {/* <Image src="/logo.png" fill alt="" className="object-cover" /> */}
       </div>
-      <div className="flex flex-col items-center w-full h-full sm:w-1/2 py-14 px-5">
-        <div className="size-full flex flex-col items-center p-6 relative">
+      <div className="flex flex-col items-center w-full h-full lg:w-1/2 py-4 px-4 sm:py-8 sm:px-6 md:py-12 md:px-8 lg:py-14 lg:px-5">
+        <div className="size-full flex flex-col items-center p-2 sm:p-4 md:p-6 relative max-w-md w-full lg:max-w-none">
           {/* TOP PART */}
-          <div className="h-1/5 justify-center gap-5 items-center flex flex-col w-full">
-            <h1 className="font-bold text-3xl handwriting text-textLight">
+          <div className="h-auto lg:h-1/5 justify-center gap-3 sm:gap-5 items-center flex flex-col w-full mb-6 lg:mb-17">
+            <h1 className="font-bold text-2xl sm:text-3xl lg:text-3xl handwriting text-textLight text-center">
               Our Inventory
             </h1>
-            <h2 className="heebo font-medium text-lg text-textLight">
+            <h2 className="heebo font-medium text-base sm:text-lg lg:text-lg text-textLight text-center px-4">
               Streamline your business operations
             </h2>
           </div>
@@ -96,7 +96,7 @@ export default function AdminLoginPage() {
           {/* FORM */}
           <form
             onSubmit={handleSubmit}
-            className="flex flex-col items-center h-3/5 w-2/3 justify-center gap-6 relative"
+            className="flex flex-col items-center w-full lg:h-3/5 lg:w-2/3 justify-center gap-4 sm:gap-6 relative"
           >
             <Input
               name="email"
@@ -115,7 +115,7 @@ export default function AdminLoginPage() {
             />
 
             <button
-              className="mt-6 px-10 py-2 bg-textLight text-white rounded-4xl text-center text-lg heebo font-semibold hover:bg-textDark transition-colors"
+              className="mt-4 sm:mt-6 px-8 sm:px-10 py-2 sm:py-2 bg-textLight text-white rounded-4xl text-center text-base sm:text-lg heebo font-semibold hover:bg-textDark transition-colors w-full sm:w-auto"
               type="submit"
               disabled={isLoading}
             >
@@ -123,9 +123,9 @@ export default function AdminLoginPage() {
             </button>
 
             {/* Divider */}
-            <div className="flex items-center w-full my-4">
+            <div className="flex items-center w-full my-3 sm:my-4">
               <div className="flex-1 h-px bg-gray-300"></div>
-              <span className="px-4 text-sm heebo font-light text-textLight">
+              <span className="px-3 sm:px-4 text-xs sm:text-sm heebo font-light text-textLight">
                 or
               </span>
               <div className="flex-1 h-px bg-gray-300"></div>
@@ -134,7 +134,7 @@ export default function AdminLoginPage() {
             {/* Google Sign In Button */}
             <button
               type="button"
-              className="w-full flex items-center justify-center gap-3 px-6 py-3 border border-gray-300 rounded-4xl bg-white hover:bg-gray-50 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-300 rounded-4xl bg-white hover:bg-gray-50 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
               onClick={handleGoogleSignIn}
               disabled={isGoogleLoading || isLoading}
             >
@@ -164,15 +164,15 @@ export default function AdminLoginPage() {
                   />
                 </svg>
               )}
-              <span className="heebo font-medium text-gray-700 group-hover:text-gray-900">
+              <span className="heebo font-medium text-gray-700 group-hover:text-gray-900 text-sm sm:text-base">
                 {isGoogleLoading ? "Connecting..." : "Continue with Google"}
               </span>
             </button>
           </form>
 
           {/* FOOTER */}
-          <div className="h-1/5 w-full items-center justify-center flex flex-col gap-3">
-            <p className="heebo font-light text-textLight">
+          <div className="h-auto lg:h-1/5 w-full items-center justify-center flex flex-col gap-2 sm:gap-3 mt-4 sm:mt-6">
+            <p className="heebo font-light text-textLight text-sm sm:text-base text-center px-4">
               New to{" "}
               <span className="handwriting text-textLight font-medium">
                 Our Inventory
