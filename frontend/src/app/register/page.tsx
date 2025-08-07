@@ -188,7 +188,7 @@ export default function AdminRegisterPage() {
           </form>
 
           {/* FOOTER */}
-          <div className="h-auto lg:h-1/5 w-full items-center justify-center flex flex-col gap-2 sm:gap-3 mt-4 sm:mt-6 lg:mt-16">
+          <div className="h-auto lg:h-1/5 w-full items-center justify-center flex flex-col gap-2 sm:gap-3 mt-4 sm:mt-6 lg:mt-20">
             <p className="heebo font-light text-textLight text-sm sm:text-base text-center px-4">
               Have an account in{" "}
               <span className="handwriting text-textLight font-medium">
