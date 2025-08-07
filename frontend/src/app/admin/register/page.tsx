@@ -82,7 +82,7 @@ export default function AdminRegisterPage() {
       <div className="hidden lg:flex h-full w-1/2 bg-primaryColor items-center justify-center relative">
         {/* <Image src="/logo.png" fill alt="" className="object-cover" /> */}
       </div>
-      <div className="flex flex-col items-center w-full h-full lg:w-1/2 py-4 px-4 sm:py-8 sm:px-6 md:py-12 md:px-8 lg:py-14 lg:px-5">
+      <div className="flex flex-col items-center w-full h-full lg:w-1/2 py-12 px-4 sm:py-8 sm:px-6 md:py-12 md:px-8 lg:py-14 lg:px-5">
         <div className="size-full flex flex-col items-center p-2 sm:p-4 md:p-6 relative max-w-md w-full lg:max-w-none">
           {/* TOP PART */}
           <div className="h-auto lg:h-1/5 justify-center gap-3 sm:gap-5 items-center flex flex-col w-full mb-6 lg:mb-17">
