@@ -7,8 +7,11 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="inventoryAPI" />
+        <module name="supplier-service" />
         <module name="user-roleManagementAPI" />
+        <module name="order-service" />
+        <module name="customer-service" />
+        <module name="inventoryAPI" />
       </profile>
       <profile name="Annotation profile for notificationAPI" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -41,8 +44,11 @@
       <module name="Notification_service" options="-parameters" />
       <module name="Order_Mangement_service" options="-parameters" />
       <module name="Suplier_service" options="-parameters" />
+      <module name="customer-service" options="-parameters" />
       <module name="inventoryAPI" options="-parameters" />
       <module name="notificationAPI" options="-parameters" />
+      <module name="order-service" options="-parameters" />
+      <module name="supplier-service" options="-parameters" />
       <module name="user-roleManagementAPI" options="-parameters" />
     </option>
   </component>
