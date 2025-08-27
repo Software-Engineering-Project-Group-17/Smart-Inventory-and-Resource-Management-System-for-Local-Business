@@ -15,31 +15,30 @@ import java.util.List;
 @RequestMapping("/customers")
 @RequiredArgsConstructor
 public class CustomerController {
-
     private final CustomerService service;
 
-    @PostMapping
+    @PostMapping // customer profile creation
     public ResponseEntity<CustomerResponse> create(@Valid @RequestBody CustomerRequest r){
         return ResponseEntity.ok(service.create(r));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{id}") // update customer profile
     public ResponseEntity<CustomerResponse> update(@PathVariable Long id, @Valid @RequestBody CustomerRequest r){
         return ResponseEntity.ok(service.update(id, r));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id}") // get the specific customer
     public ResponseEntity<CustomerResponse> get(@PathVariable Long id){
         return ResponseEntity.ok(service.get(id));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id}") // delete the customer
     public ResponseEntity<Void> del(@PathVariable Long id){
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping
+    @GetMapping // search customers
     public ResponseEntity<List<CustomerResponse>> list(@RequestParam(required = false) String q){
         if(q!=null && !q.isBlank()) return ResponseEntity.ok(service.search(q));
         return ResponseEntity.ok(service.list());
