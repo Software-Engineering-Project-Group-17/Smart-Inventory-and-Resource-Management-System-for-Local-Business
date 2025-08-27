@@ -15,6 +15,9 @@
         <option value="$PROJECT_DIR$/inventoryAPI/pom.xml" />
         <option value="$PROJECT_DIR$/notificationAPI/pom.xml" />
         <option value="$PROJECT_DIR$/user-roleManagementAPI/pom.xml" />
+        <option value="$PROJECT_DIR$/customer-service/pom.xml" />
+        <option value="$PROJECT_DIR$/order-service/pom.xml" />
+        <option value="$PROJECT_DIR$/supplier-service/pom.xml" />
       </list>
     </option>
     <option name="workspaceImportForciblyTurnedOn" value="true" />
