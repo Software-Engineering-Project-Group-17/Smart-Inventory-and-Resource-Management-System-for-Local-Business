@@ -13,7 +13,8 @@ import {
   User,
   Clock,
   Target,
-  Loader
+  Loader,
+  Search
 } from 'lucide-react';
 
 interface Resource {
@@ -46,6 +47,8 @@ interface StaffMember {
 const ResourceTrackingPage = () => {
   const [activeTab, setActiveTab] = useState<'available' | 'assigned'>('available');
   const [showAssignForm, setShowAssignForm] = useState<number | null>(null);
+  const [showAddResourceForm, setShowAddResourceForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [resources, setResources] = useState<Resource[]>([
     {
@@ -110,10 +113,29 @@ const ResourceTrackingPage = () => {
     endTime: ''
   });
 
+  const [addResourceForm, setAddResourceForm] = useState({
+    name: '',
+    details: ''
+  });
+
   const [isLoadingStaff, setIsLoadingStaff] = useState(false);
 
   const availableResources = resources.filter(resource => resource.isAvailable);
   const assignedResourceIds = assignments.map(a => a.resourceId);
+
+  // Filter resources based on search query
+  const filteredResources = resources.filter(resource =>
+    resource.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    resource.details.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Filter assignments based on search query
+  const filteredAssignments = assignments.filter(assignment =>
+    assignment.resourceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    assignment.purpose.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    assignment.staffName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    assignment.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const fetchStaffDetails = async (email: string) => {
     if (!email || !email.includes('@')) return;
@@ -147,6 +169,28 @@ const ResourceTrackingPage = () => {
   const handleEmailChange = (email: string) => {
     setAssignForm(prev => ({ ...prev, email }));
     fetchStaffDetails(email);
+  };
+
+  const handleAddResource = () => {
+    if (addResourceForm.name && addResourceForm.details) {
+      const newResource: Resource = {
+        id: Math.max(...resources.map(r => r.id), 0) + 1,
+        name: addResourceForm.name,
+        details: addResourceForm.details,
+        isAvailable: true
+      };
+      
+      setResources(prev => [...prev, newResource]);
+      
+      // Reset form
+      setAddResourceForm({
+        name: '',
+        details: ''
+      });
+      setShowAddResourceForm(false);
+      
+      alert('Resource added successfully!');
+    }
   };
 
   const handleAssign = (resourceId: number) => {
@@ -228,7 +272,7 @@ const ResourceTrackingPage = () => {
           </div>
         </div>
 
-              {/* Summary Cards */}
+        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
@@ -311,6 +355,90 @@ const ResourceTrackingPage = () => {
           {/* All Resources Tab */}
           {activeTab === 'available' && (
             <div className="p-6">
+              {/* Search Bar and Add Resource Button */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search size={20} className="text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search resources by name or details..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
+                  />
+                </div>
+                <button
+                  onClick={() => setShowAddResourceForm(!showAddResourceForm)}
+                  className="px-6 py-3 text-white rounded-lg hover:opacity-90 transition-all duration-200 flex items-center gap-2 font-medium"
+                  style={{ backgroundColor: "#3674B5" }}
+                >
+                  <Plus size={20} />
+                  Add Resource
+                </button>
+              </div>
+
+              {/* Add Resource Form */}
+              {showAddResourceForm && (
+                <div className="mb-6 bg-gray-50 rounded-lg border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div 
+                      className="p-2 rounded-lg text-white"
+                      style={{ backgroundColor: "#10B981" }}
+                    >
+                      <Plus size={20} />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800">Add New Resource</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Resource Name</label>
+                      <input
+                        type="text"
+                        value={addResourceForm.name}
+                        onChange={(e) => setAddResourceForm(prev => ({...prev, name: e.target.value}))}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
+                        placeholder="Enter resource name (e.g., Delivery Truck - ABC-123)"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Resource Details</label>
+                      <input
+                        type="text"
+                        value={addResourceForm.details}
+                        onChange={(e) => setAddResourceForm(prev => ({...prev, details: e.target.value}))}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
+                        placeholder="Enter resource details and specifications"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={() => {
+                        setShowAddResourceForm(false);
+                        setAddResourceForm({ name: '', details: '' });
+                      }}
+                      className="px-6 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddResource}
+                      className="px-6 py-2 text-white rounded-lg hover:opacity-90 transition-colors flex items-center gap-2"
+                      style={{ backgroundColor: "#10B981" }}
+                      disabled={!addResourceForm.name || !addResourceForm.details}
+                    >
+                      <Plus size={16} />
+                      Add Resource
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -322,7 +450,7 @@ const ResourceTrackingPage = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {resources.map((resource) => (
+                    {filteredResources.map((resource) => (
                       <React.Fragment key={resource.id}>
                         <tr className="hover:bg-gray-50 transition-colors duration-150">
                           <td className="px-6 py-4">
@@ -342,15 +470,13 @@ const ResourceTrackingPage = () => {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center justify-center gap-2">
-                             
-                                <button
-                                  onClick={() => setShowAssignForm(showAssignForm === resource.id ? null : resource.id)}
-                                  className="p-2 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
-                               
-                                  title="Assign Resource"
-                                >
-                                  <UserPlus size={16} />
-                                </button>
+                              <button
+                                onClick={() => setShowAssignForm(showAssignForm === resource.id ? null : resource.id)}
+                                className="p-2 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                                title="Assign Resource"
+                              >
+                                <UserPlus size={16} />
+                              </button>
                               
                               <button
                                 onClick={() => handleDeleteResource(resource.id)}
@@ -510,6 +636,14 @@ const ResourceTrackingPage = () => {
                   </tbody>
                 </table>
 
+                {filteredResources.length === 0 && resources.length > 0 && (
+                  <div className="text-center py-12">
+                    <Search size={48} className="mx-auto text-gray-300 mb-4" />
+                    <p className="text-gray-500 text-lg">No resources found</p>
+                    <p className="text-gray-400">Try adjusting your search query</p>
+                  </div>
+                )}
+
                 {resources.length === 0 && (
                   <div className="text-center py-12">
                     <Truck size={48} className="mx-auto text-gray-300 mb-4" />
@@ -524,6 +658,90 @@ const ResourceTrackingPage = () => {
           {/* Assigned Resources Tab */}
           {activeTab === 'assigned' && (
             <div className="p-6">
+              {/* Search Bar and Add Resource Button */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search size={20} className="text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search assigned resources by name, purpose, or staff..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
+                  />
+                </div>
+                <button
+                  onClick={() => setShowAddResourceForm(!showAddResourceForm)}
+                  className="px-6 py-3 text-white rounded-lg hover:opacity-90 transition-all duration-200 flex items-center gap-2 font-medium"
+                  style={{ backgroundColor: "#3674B5" }}
+                >
+                  <Plus size={20} />
+                  Add Resource
+                </button>
+              </div>
+
+              {/* Add Resource Form */}
+              {showAddResourceForm && (
+                <div className="mb-6 bg-gray-50 rounded-lg border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div 
+                      className="p-2 rounded-lg text-white"
+                      style={{ backgroundColor: "#10B981" }}
+                    >
+                      <Plus size={20} />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800">Add New Resource</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Resource Name</label>
+                      <input
+                        type="text"
+                        value={addResourceForm.name}
+                        onChange={(e) => setAddResourceForm(prev => ({...prev, name: e.target.value}))}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
+                        placeholder="Enter resource name (e.g., Delivery Truck - ABC-123)"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Resource Details</label>
+                      <input
+                        type="text"
+                        value={addResourceForm.details}
+                        onChange={(e) => setAddResourceForm(prev => ({...prev, details: e.target.value}))}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
+                        placeholder="Enter resource details and specifications"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={() => {
+                        setShowAddResourceForm(false);
+                        setAddResourceForm({ name: '', details: '' });
+                      }}
+                      className="px-6 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddResource}
+                      className="px-6 py-2 text-white rounded-lg hover:opacity-90 transition-colors flex items-center gap-2"
+                      style={{ backgroundColor: "#10B981" }}
+                      disabled={!addResourceForm.name || !addResourceForm.details}
+                    >
+                      <Plus size={16} />
+                      Add Resource
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -536,7 +754,7 @@ const ResourceTrackingPage = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {assignments.map((assignment) => (
+                    {filteredAssignments.map((assignment) => (
                       <tr key={assignment.id} className="hover:bg-gray-50 transition-colors duration-150">
                         <td className="px-6 py-4">
                           <div className="font-medium text-gray-900">{assignment.resourceName}</div>
@@ -600,7 +818,6 @@ const ResourceTrackingPage = () => {
           )}
         </div>
 
-  
       </div>
     </div>
   );

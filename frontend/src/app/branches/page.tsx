@@ -17,6 +17,8 @@ import {
   AlertTriangle,
   UserPlus,
 } from "lucide-react";
+import ActionButton from "@/components/Owners/ActionButton";
+import Modal from "@/components/Owners/Modal";
 
 interface Branch {
   id: number;
@@ -173,71 +175,8 @@ const BranchesPage = () => {
     }, 1000);
   };
 
-  const ActionButton = ({
-    icon: Icon,
-    label,
-    onClick,
-    variant = "default",
-    disabled = false,
-  }: {
-    icon: any;
-    label: string;
-    onClick: () => void;
-    variant?: "default" | "danger" | "primary";
-    disabled?: boolean;
-  }) => {
-    const baseClasses =
-      "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100";
+  
 
-    const variants = {
-      default: "bg-gray-100 text-gray-700 hover:bg-gray-200",
-      danger: "bg-red-50 text-red-600 hover:bg-red-100",
-      primary: "text-white hover:opacity-90",
-    };
-
-    return (
-      <button
-        onClick={onClick}
-        disabled={disabled}
-        className={`${baseClasses} ${variants[variant]}`}
-        style={variant === "primary" ? { backgroundColor: "#3674B5" } : {}}
-      >
-        <Icon size={14} />
-        {label}
-      </button>
-    );
-  };
-
-  const Modal = ({
-    isOpen,
-    onClose,
-    title,
-    children,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-    title: string;
-    children: React.ReactNode;
-  }) => {
-    if (!isOpen) return null;
-
-    return (
-      <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-          <div className="flex items-center justify-between p-6 border-b border-gray-100">
-            <h3 className="text-xl font-semibold text-gray-800">{title}</h3>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X size={20} className="text-gray-500" />
-            </button>
-          </div>
-          <div className="p-6">{children}</div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
