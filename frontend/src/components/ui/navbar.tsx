@@ -28,7 +28,7 @@ interface NavItem {
 const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAlertModal, setShowAlertModal] = useState(false);
-  const [role, setRole] = useState<"owner" | "manager" | "staff">("manager");
+  const [role, setRole] = useState<"owner" | "manager" | "staff">("owner");
   const [userType, setUserType] = useState<string[]>([
     "sales",
     "inventory",
