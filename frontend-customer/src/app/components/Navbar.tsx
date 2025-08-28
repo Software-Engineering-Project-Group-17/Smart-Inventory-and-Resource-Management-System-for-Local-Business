@@ -50,7 +50,7 @@ const Navbar = () => {
 
             {/* Text with hover animation */}
             <div className="flex items-center gap-2 text-xl tracking-wide uppercase group-hover:text-zeta active:scale-90 transition-transform duration-200">
-              INVENTORY SHOP
+              BUILD MATE
             </div>
           </Link>
         </div>

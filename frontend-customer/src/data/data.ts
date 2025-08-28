@@ -8,7 +8,7 @@ export const sampleProducts = [
     },
     media: {
       mainMedia: {
-        image: { url: "/images/cordless-drill.jpg" },
+        image: { url: "/tools/tool1.jpg" },
       },
       items: [
         { image: { url: "/images/cordless-drill-front.jpg" } },
@@ -32,7 +32,7 @@ export const sampleProducts = [
     },
     media: {
       mainMedia: {
-        image: { url: "/images/safety-gloves.jpg" },
+        image: { url: "/tools/tool2.jpg" },
       },
       items: [
         { image: { url: "/images/safety-gloves-front.jpg" } },
@@ -56,7 +56,7 @@ export const sampleProducts = [
     },
     media: {
       mainMedia: {
-        image: { url: "/images/steel-hammer.jpg" },
+        image: { url: "/tools/tool3.jpg" },
       },
       items: [
         { image: { url: "/images/steel-hammer-front.jpg" } },
@@ -68,6 +68,30 @@ export const sampleProducts = [
         title: "shortDesc",
         description:
           "Heavy-duty steel hammer with anti-slip grip, perfect for carpentry and construction.",
+      },
+    ],
+  },
+  {
+    _id: "4",
+    slug: "measuring-tape",
+    name: "Measuring Tape",
+    priceData: {
+      price: 9.99,
+    },
+    media: {
+      mainMedia: {
+        image: { url: "/tools/tool4.jpg" },
+      },
+      items: [
+        { image: { url: "/images/measuring-tape-front.jpg" } },
+        { image: { url: "/images/measuring-tape-side.jpg" } },
+      ],
+    },
+    additionalInfoSections: [
+      {
+        title: "shortDesc",
+        description:
+          "Durable 5m measuring tape with auto-lock and belt clip, perfect for accurate measurements.",
       },
     ],
   },
@@ -85,9 +109,9 @@ export const sampleProduct = {
   },
   media: {
     items: [
-      { image: { url: "/images/products/cordless-drill-front.jpg" } },
-      { image: { url: "/images/products/cordless-drill-side.jpg" } },
-      { image: { url: "/images/products/cordless-drill-kit.jpg" } },
+      { image: { url: "/tools/tool1.jpg" } },
+      { image: { url: "/tools/tool2.jpg" } },
+      { image: { url: "/tools/tool3.jpg" } },
     ],
   },
   customTextFields: [

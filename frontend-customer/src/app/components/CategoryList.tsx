@@ -10,7 +10,7 @@ const CategoryList = async () => {
       name: "Power Tools",
       media: {
         mainMedia: {
-          image: { url: "/images/categories/power-tools.jpg" },
+          image: { url: "/tools/tool1.jpg" },
         },
       },
     },
@@ -20,7 +20,7 @@ const CategoryList = async () => {
       name: "Safety Gear",
       media: {
         mainMedia: {
-          image: { url: "/images/categories/safety-gear.jpg" },
+          image: { url: "/tools/tool2.jpg" },
         },
       },
     },
@@ -30,7 +30,7 @@ const CategoryList = async () => {
       name: "Hand Tools",
       media: {
         mainMedia: {
-          image: { url: "/images/categories/hand-tools.jpg" },
+          image: { url: "/tools/tool3.jpg" },
         },
       },
     },
@@ -40,7 +40,7 @@ const CategoryList = async () => {
       name: "Measuring Tools",
       media: {
         mainMedia: {
-          image: { url: "/images/categories/measuring-tools.jpg" },
+          image: { url: "/tools/tool1.jpg" },
         },
       },
     },
@@ -50,7 +50,37 @@ const CategoryList = async () => {
       name: "Hardware Accessories",
       media: {
         mainMedia: {
-          image: { url: "/images/categories/hardware-accessories.jpg" },
+          image: { url: "/tools/tool2.jpg" },
+        },
+      },
+    },
+    {
+      _id: "c6",
+      slug: "hardware-accessories",
+      name: "Hardware Accessories",
+      media: {
+        mainMedia: {
+          image: { url: "/tools/tool3.jpg" },
+        },
+      },
+    },
+    {
+      _id: "c7",
+      slug: "hardware-accessories",
+      name: "Hardware Accessories",
+      media: {
+        mainMedia: {
+          image: { url: "/tools/tool1.jpg" },
+        },
+      },
+    },
+    {
+      _id: "c8",
+      slug: "hardware-accessories",
+      name: "Hardware Accessories",
+      media: {
+        mainMedia: {
+          image: { url: "/tools/tool2.jpg" },
         },
       },
     },
