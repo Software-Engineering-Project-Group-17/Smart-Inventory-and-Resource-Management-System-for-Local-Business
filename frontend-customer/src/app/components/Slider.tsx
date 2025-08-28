@@ -7,27 +7,27 @@ import { transform } from "next/dist/build/swc";
 const slides = [
   {
     id: 1,
-    title: "MANCHANAYAKE",
+    title: "RYOBI",
     description: "NEW PARTNERSHIP WITH",
-    img: "/Golf4.png",
+    img: "/slider/item2.jpg",
+    url: "/list?cat=golf",
+    bg: "bg-gradient-to-r from-slate-200 to-green-900",
+  },
+  {
+    id: 2,
+    title: "CRAFTSMAN",
+    description: "NEW PARTNERSHIP WITH",
+    img: "/slider/item1.jpg",
     url: "/list?cat=golf",
     bg: "bg-gradient-to-r from-orange-300 to-orange-800",
   },
   {
-    id: 2,
-    title: "GOLF",
-    description: "NEW PARTNERSHIP WITH",
-    img: "/Golf2.png",
-    url: "/list?cat=golf",
-    bg: "bg-gradient-to-r from-lime-400 to-gray-50",
-  },
-  {
     id: 3,
-    title: "GOLF",
+    title: "DEWALT",
     description: "NEW PARTNERSHIP WITH",
-    img: "/Golf3.png",
+    img: "/slider/item3.jpg",
     url: "/list?cat=golf",
-    bg: "bg-gradient-to-r from-amber-50 to-sky-800",
+    bg: "bg-gradient-to-r from-slate-200 to-zinc-600",
   },
 ];
 
