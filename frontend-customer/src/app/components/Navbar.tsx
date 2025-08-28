@@ -78,7 +78,7 @@ const Navbar = () => {
             </Link>
           </div>
           <Link
-            href="https://www.facebook.com/share/15fhkFjWj3/?mibextid=wwXIfr"
+            href="/"
             className="flex items-center gap-2 text-lg font-semibold text-gray-700 active:scale-90 transition-transform duration-200 hover:text-zeta"
           >
             <Phone size={20} /> CONTACT
