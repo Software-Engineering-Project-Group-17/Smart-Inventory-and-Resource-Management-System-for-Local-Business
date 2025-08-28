@@ -36,8 +36,8 @@ const Input: React.FC<InputProps> = ({
           focus:outline-none
           ${
             isFocused
-              ? "border-secondaryColor"
-              : "border-primaryColor hover:borderSecondaryColor"
+              ? "border-black"
+              : "border-black hover:borderSecondaryColor"
           }
         `}
       />
@@ -49,15 +49,15 @@ const Input: React.FC<InputProps> = ({
           font-medium capitalize cursor-text heebo
           ${
             isFloating
-              ? "top-0 text-xs text-primaryColor transform -translate-y-1"
-              : "top-3 text-[16px] text-secondaryColor"
+              ? "top-0 text-xs text-black transform -translate-y-1"
+              : "top-3 text-[16px] text-black"
           }
           ${
             isFocused
-              ? "text-blue-500"
+              ? "text-[#3674B5]"
               : isFloating
-              ? "text-gray-600"
-              : "text-gray-500"
+              ? "text-black"
+              : "text-black"
           }
         `}
       >
