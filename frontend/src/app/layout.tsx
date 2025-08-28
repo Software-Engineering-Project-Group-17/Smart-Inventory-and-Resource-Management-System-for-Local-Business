@@ -8,6 +8,7 @@ import {
 } from "next/font/google";
 import { Playwrite_AU_QLD } from "next/font/google";
 import "./globals.css";
+import Navbar from "@/components/ui/navbar";
 
 // Using Playwrite_AU_QLD for handwriting style
 // This font is used for a more casual, handwritten look
