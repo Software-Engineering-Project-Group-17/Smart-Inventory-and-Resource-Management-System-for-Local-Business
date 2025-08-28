@@ -23,6 +23,8 @@ resourceManagementAPI/npm-debug.log
 resourceManagementAPI/yarn-error.log
 resourceManagementAPI/dist/
 
+frontend-customer/node_modules/
+
 # Logs
 logs/
 *.log
