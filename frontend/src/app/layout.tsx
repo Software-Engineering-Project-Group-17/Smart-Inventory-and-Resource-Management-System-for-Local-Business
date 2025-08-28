@@ -46,7 +46,6 @@ export default function RootLayout({
       <body
         className={` ${playwriteAuQld.variable} ${robotoMono.variable} ${heebo.variable} antialiased`}
       >
-        <Navbar />
         {children}
       </body>
     </html>

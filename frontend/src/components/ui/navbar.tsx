@@ -261,7 +261,7 @@ const Navbar: React.FC = () => {
     <>
       {/* Desktop Navbar */}
       <nav
-        className="bg-white shadow-lg"
+        className="bg-white shadow-lg sticky top-0"
         style={{ borderBottom: `2px solid #3674B5` }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

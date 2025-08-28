@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Input from "@/components/admin/Input";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -78,17 +79,24 @@ export default function AdminLoginPage() {
 
   return (
     <div className="flex flex-col lg:flex-row h-screen w-full relative">
-      <div className="hidden lg:flex h-full w-1/2 bg-primaryColor items-center justify-center relative">
-        {/* <Image src="/logo.png" fill alt="" className="object-cover" /> */}
+      <div className="hidden lg:flex h-full w-1/2 bg-gradient-to-b from-slate-200 to-[#3674B5] items-center justify-center relative">
+        <Image src="/logo.png" fill alt="" className="object-contain" />
       </div>
       <div className="flex flex-col items-center w-full h-full lg:w-1/2 py-12 px-4 sm:py-8 sm:px-6 md:py-12 md:px-8 lg:py-14 lg:px-5">
         <div className="size-full flex flex-col items-center p-2 sm:p-4 md:p-6 relative max-w-md w-full lg:max-w-none">
           {/* TOP PART */}
           <div className="h-auto lg:h-1/5 justify-center gap-3 sm:gap-5 items-center flex flex-col w-full mb-6 lg:mb-17">
-            <h1 className="font-bold text-2xl sm:text-3xl lg:text-3xl handwriting text-textLight text-center">
-              Our Inventory
+            <Image
+              src="/logo.png"
+              width={100}
+              height={100}
+              alt=""
+              className="object-contain"
+            />
+            <h1 className="font-bold text-2xl sm:text-3xl lg:text-3xl handwriting text-center">
+              BUILDMATE
             </h1>
-            <h2 className="heebo font-medium text-base sm:text-lg lg:text-lg text-textLight text-center px-4">
+            <h2 className="heebo font-medium text-base sm:text-lg lg:text-lg text-center px-4">
               Streamline your business operations
             </h2>
           </div>
@@ -114,18 +122,19 @@ export default function AdminLoginPage() {
               required
             />
 
-            <button
-              className="mt-4 sm:mt-6 px-8 sm:px-10 py-2 sm:py-2 bg-textLight text-white rounded-4xl text-center text-base sm:text-lg heebo font-semibold hover:bg-textDark transition-colors w-full sm:w-auto"
+            <Link
+              href="/branches"
+              className="mt-4 sm:mt-6 px-8 sm:px-10 py-2 sm:py-2 bg-[#3674B5] hover:bg-blue-900 text-white rounded-4xl text-center text-base sm:text-lg heebo font-semibold transition-colors w-full sm:w-auto"
               type="submit"
-              disabled={isLoading}
+              // disabled={isLoading}
             >
               {isLoading ? "Signing In..." : "Login"}
-            </button>
+            </Link>
 
             {/* Divider */}
             <div className="flex items-center w-full my-3 sm:my-4">
               <div className="flex-1 h-px bg-gray-300"></div>
-              <span className="px-3 sm:px-4 text-xs sm:text-sm heebo font-light text-textLight">
+              <span className="px-3 sm:px-4 text-xs sm:text-sm heebo font-light">
                 or
               </span>
               <div className="flex-1 h-px bg-gray-300"></div>
@@ -171,13 +180,10 @@ export default function AdminLoginPage() {
           </form>
 
           {/* FOOTER */}
-          <div className="h-auto lg:h-1/5 w-full items-center justify-center flex flex-col gap-2 sm:gap-3 mt-4 sm:mt-6">
-            <p className="heebo font-light text-textLight text-sm sm:text-base text-center px-4">
+          {/* <div className="h-auto lg:h-1/5 w-full items-center justify-center flex flex-col gap-2 sm:gap-3 mt-4 sm:mt-6">
+            <p className="heebo font-light  text-sm sm:text-base text-center px-4">
               New to{" "}
-              <span className="handwriting text-textLight font-medium">
-                Our Inventory
-              </span>
-              ?{" "}
+              <span className="handwriting font-medium">Our Inventory</span>?{" "}
               <a
                 href="/register"
                 className="text-textDark underline heebo font-medium hover:text-amber-600 transition-colors"
@@ -185,7 +191,7 @@ export default function AdminLoginPage() {
                 Sign Up
               </a>
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
