@@ -8,6 +8,7 @@ import {
 } from "next/font/google";
 import { Playwrite_AU_QLD } from "next/font/google";
 import "./globals.css";
+import Navbar from "@/components/ui/navbar";
 
 // Using Playwrite_AU_QLD for handwriting style
 // This font is used for a more casual, handwritten look
@@ -45,6 +46,7 @@ export default function RootLayout({
       <body
         className={` ${playwriteAuQld.variable} ${robotoMono.variable} ${heebo.variable} antialiased`}
       >
+        <Navbar />
         {children}
       </body>
     </html>
