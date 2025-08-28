@@ -12,15 +12,8 @@
         <option value="$PROJECT_DIR$/backend/Analytics-and-Reporting_service/Analytics-and-Reporting_service/pom.xml" />
         <option value="$PROJECT_DIR$/backend/Notification_service/Notification_service/pom.xml" />
         <option value="$PROJECT_DIR$/backend/API_Gateway_service/API_Gateway_service/pom.xml" />
-        <option value="$PROJECT_DIR$/inventoryAPI/pom.xml" />
-        <option value="$PROJECT_DIR$/notificationAPI/pom.xml" />
-        <option value="$PROJECT_DIR$/user-roleManagementAPI/pom.xml" />
-        <option value="$PROJECT_DIR$/customer-service/pom.xml" />
-        <option value="$PROJECT_DIR$/order-service/pom.xml" />
-        <option value="$PROJECT_DIR$/supplier-service/pom.xml" />
       </list>
     </option>
-    <option name="workspaceImportForciblyTurnedOn" value="true" />
   </component>
   <component name="NullableNotNullManager">
     <option name="myDefaultNullable" value="org.jetbrains.annotations.Nullable" />
