@@ -50,7 +50,6 @@ const Navbar: React.FC = () => {
             href: "/reports",
             icon: <FileBarChart size={20} />,
           },
-      
         ];
 
       case "manager":
@@ -271,9 +270,9 @@ const Navbar: React.FC = () => {
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center">
                 <Image
-                  src="/api/placeholder/120/40"
-                  alt="Company Logo"
-                  className="h-8 w-auto"
+                  src="/logo.png"
+                  alt="Build Mate"
+                  className="h-15 w-auto"
                   width={120}
                   height={120}
                 />

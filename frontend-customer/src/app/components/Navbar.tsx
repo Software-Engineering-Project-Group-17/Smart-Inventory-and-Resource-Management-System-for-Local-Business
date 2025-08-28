@@ -12,7 +12,7 @@ const Navbar = () => {
         {/* Logo */}
         <div className="flex-1 flex justify-start active:scale-90 transition-transform duration-200">
           <Link href="/">
-            <Image src="/logo.webp" alt="logo" width={95} height={74} />
+            <Image src="/logo.png" alt="logo" width={95} height={74} />
           </Link>
         </div>
 
@@ -40,7 +40,7 @@ const Navbar = () => {
             {/* Image with hover scale */}
             <div className="relative active:scale-90 transition-transform duration-200">
               <Image
-                src="/logo.webp"
+                src="/logo.png"
                 alt="logo"
                 width={94}
                 height={74}
