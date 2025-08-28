@@ -132,15 +132,15 @@ export default function AdminLoginPage() {
             </Link>
 
             {/* Divider */}
-            <div className="flex items-center w-full my-3 sm:my-4">
+            {/* <div className="flex items-center w-full my-3 sm:my-4">
               <div className="flex-1 h-px bg-gray-300"></div>
               <span className="px-3 sm:px-4 text-xs sm:text-sm heebo font-light">
                 or
               </span>
               <div className="flex-1 h-px bg-gray-300"></div>
-            </div>
+            </div> */}
 
-            {/* Google Sign In Button */}
+            {/* Google Sign In Button
             <button
               type="button"
               className="w-full flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-300 rounded-4xl bg-white hover:bg-gray-50 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
@@ -176,7 +176,7 @@ export default function AdminLoginPage() {
               <span className="heebo font-medium text-gray-700 group-hover:text-gray-900 text-sm sm:text-base">
                 {isGoogleLoading ? "Connecting..." : "Continue with Google"}
               </span>
-            </button>
+            </button> */}
           </form>
 
           {/* FOOTER */}

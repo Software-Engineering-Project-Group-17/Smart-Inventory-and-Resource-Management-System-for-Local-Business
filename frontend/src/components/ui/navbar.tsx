@@ -326,7 +326,8 @@ const Navbar: React.FC = () => {
               </div>
 
               {/* Logout Button */}
-              <button
+              <Link
+                href="/login"
                 className="flex items-center px-4 py-2 text-sm font-medium text-white rounded-md transition-colors duration-200"
                 style={{ backgroundColor: "#3674B5" }}
                 onMouseEnter={(e) => {
@@ -338,7 +339,7 @@ const Navbar: React.FC = () => {
               >
                 <LogOut size={16} />
                 <span className="ml-2">Logout</span>
-              </button>
+              </Link>
             </div>
 
             {/* Mobile menu button */}
