@@ -4,6 +4,8 @@ import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { getDefaultRedirectPath } from "@/lib/auth";
 import Input from "@/components/admin/Input";
 import Image from "next/image";
 import Link from "next/link";
@@ -14,19 +16,12 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
 
     try {
-      // TODO: Implement Google OAuth integration
-      // This would typically involve:
-      // 1. Initialize Google OAuth client
-      // 2. Open Google sign-in popup
-      // 3. Get user credentials
-      // 4. Send to backend for verification
-      // 5. Handle response
-
       toast({
         title: "Coming Soon",
         description: "Google sign-in will be available soon!",
@@ -69,7 +64,7 @@ export default function AdminLoginPage() {
       const token = await userCredential.user.getIdToken();
 
       // Send token to backend
-      const response = await fetch("http://localhost:8080/api/auth/login", {
+      const response = await fetch("http://localhost:8084/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -84,20 +79,34 @@ export default function AdminLoginPage() {
       }
 
       const data = await response.json();
+
+      // Store authentication data
       localStorage.setItem("token", token);
+      localStorage.setItem("userProfile", JSON.stringify(data.user));
+      localStorage.setItem("uid", data.uid);
 
       toast({
         title: "Success",
-        description: "Login successful!",
+        description: `Welcome back, ${data.user?.firstName || email}!`,
         variant: "default",
       });
 
-      // Optionally redirect to dashboard
+      // Redirect based on user role
+      if (data.user && data.user.role) {
+        const redirectPath = getDefaultRedirectPath(data.user.role);
+        router.push(redirectPath);
+      } else {
+        // Fallback if no role is found
+        router.push("/profile");
+      }
     } catch (error) {
       console.error("Login error:", error);
       toast({
         title: "Error",
-        description: "Failed to login. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to login. Please try again.",
         variant: "destructive",
       });
     } finally {
