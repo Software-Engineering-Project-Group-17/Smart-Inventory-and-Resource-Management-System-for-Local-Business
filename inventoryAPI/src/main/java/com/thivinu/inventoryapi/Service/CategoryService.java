@@ -1,30 +1,35 @@
 package com.thivinu.inventoryapi.Service;
 
+import com.thivinu.inventoryapi.Dto.CategoryRequest;
 import com.thivinu.inventoryapi.Entity.Category;
+import com.thivinu.inventoryapi.Mapper.CategoryMapper;
 import com.thivinu.inventoryapi.Repository.CategoryRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class CategoryService {
 
-    @Autowired
-    private CategoryRepository categoryRepository;
+    private final CategoryRepository categoryRepository;
+    private final CategoryMapper categoryMapper;
 
-    // ✅ Add new category
-    public Category addCategory(Category category) {
+    public Category addCategory(CategoryRequest request) {
+        Category category = categoryMapper.toEntity(request);
         return categoryRepository.save(category);
     }
 
-    // ✅ Get all categories
     public List<Category> getAllCategories() {
         return categoryRepository.findAll();
     }
 
-    // ✅ Get category by name
     public Category getCategoryByName(String name) {
         return categoryRepository.findByName(name);
+    }
+
+    public Category getCategoryById(Long id) {
+        return categoryRepository.findById(id).orElse(null);
     }
 }

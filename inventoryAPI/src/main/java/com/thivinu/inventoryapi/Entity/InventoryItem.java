@@ -20,13 +20,19 @@ public class InventoryItem {
 
     private String name;
     private int quantity;
-    private double price;
-    private String supplier;
+    private String sku;
+    private double cost_price_per_unit;
+
+    private double selling_price_per_unit;
     @Column(nullable = false, columnDefinition = "INT DEFAULT 10")
     private int threshold;
-
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)
     @JsonBackReference
     private Category category;
+
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 10")
+    private int branch_id;
+
+
 }
