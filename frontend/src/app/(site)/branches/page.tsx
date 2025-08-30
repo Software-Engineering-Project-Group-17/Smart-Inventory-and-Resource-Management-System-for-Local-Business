@@ -1,7 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { withAuth } from "@/hooks/useAuth";
-import Navbar from "@/components/ui/navbar";
+
 import {
   Plus,
   UserMinus,
@@ -25,6 +24,7 @@ import DeleteBranchModal from "@/components/Owners/DeleteBranchModal";
 import AddManagerModal from "@/components/Owners/AddManagerModal";
 import AddBranchModal from "@/components/Owners/AddBranchModal";
 import SummaryCards from "@/components/Owners/SummaryCards";
+import { withAuth } from "@/hooks/useAuth";
 
 interface Branch {
   id: string;
@@ -183,7 +183,6 @@ const BranchesPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
       <div className="p-4 md:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
