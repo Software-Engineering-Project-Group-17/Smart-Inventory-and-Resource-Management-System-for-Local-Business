@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { withAuth } from "@/hooks/useAuth";
 import Input from "@/components/admin/Input";
 
@@ -29,7 +29,6 @@ function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const { toast } = useToast();
 
   // Fetch roles and branches on component mount
   useEffect(() => {
@@ -72,11 +71,7 @@ function AdminDashboard() {
       !selectedRole ||
       !selectedBranch
     ) {
-      toast({
-        title: "Error",
-        description: "All fields are required.",
-        variant: "destructive",
-      });
+      toast("All fields are required.");
       return;
     }
 
@@ -108,11 +103,7 @@ function AdminDashboard() {
 
       const data = await response.json();
 
-      toast({
-        title: "Success",
-        description: `User ${firstName} ${lastName} created successfully!`,
-        variant: "default",
-      });
+      toast(`User ${firstName} ${lastName} created successfully!`);
 
       // Reset form
       setEmail("");
@@ -123,14 +114,11 @@ function AdminDashboard() {
       setSelectedBranch("");
     } catch (error) {
       console.error("User creation error:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to create user. Please try again.",
-        variant: "destructive",
-      });
+      toast(
+        error instanceof Error
+          ? error.message
+          : "Failed to create user. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
