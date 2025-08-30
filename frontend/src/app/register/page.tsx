@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import Input from "@/components/admin/Input";
 import Image from "next/image";
 
-export default function AdminLoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+export default function RegisterPage() {
+  const [form, setForm] = useState({
+    username: "",
+    password: "",
+    email: "",
+  });
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
@@ -44,10 +47,15 @@ export default function AdminLoginPage() {
     }
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!email || !password) {
+    setError("");
+    setSuccess("");
+    if (!form.email || !form.password) {
       toast({
         title: "Error",
         description: "All fields are required.",
@@ -58,20 +66,18 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/admin/login", {
+      const res = await fetch("http://localhost:8080/api/auth/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
       });
-    } catch (error) {
-      console.error("Login error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to login. Please try again.",
-        variant: "destructive",
-      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Registration failed");
+      }
+      setSuccess("Registration successful! You can now log in.");
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -106,27 +112,34 @@ export default function AdminLoginPage() {
             onSubmit={handleSubmit}
             className="flex flex-col items-center w-full lg:h-3/5 lg:w-2/3 justify-center gap-4 sm:gap-6 relative"
           >
-            <Input
-              name="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+            <input
+              type="text"
+              name="username"
+              placeholder="Username"
+              value={form.username}
+              onChange={handleChange}
               required
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
 
-            <Input
-              name="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+            <input
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={form.email}
+              onChange={handleChange}
               required
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <Input
-              name="confirm Password"
+
+            <input
               type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              name="password"
+              placeholder="Password"
+              value={form.password}
+              onChange={handleChange}
               required
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
 
             <button
@@ -184,7 +197,8 @@ export default function AdminLoginPage() {
               </span>
             </button>
           </form>
-
+          {error && <p style={{ color: "red" }}>{error}</p>}
+          {success && <p style={{ color: "green" }}>{success}</p>}
           {/* FOOTER */}
           {/* <div className="h-auto lg:h-1/5 w-full items-center justify-center flex flex-col gap-2 sm:gap-3 mt-4 sm:mt-6">
             <p className="heebo font-light  text-sm sm:text-base text-center px-4">

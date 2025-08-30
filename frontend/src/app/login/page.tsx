@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import Input from "@/components/admin/Input";
 import Image from "next/image";
@@ -58,13 +60,39 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/admin/login", {
+      // Firebase login
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const token = await userCredential.user.getIdToken();
+
+      // Send token to backend
+      const response = await fetch("http://localhost:8080/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email }),
       });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Login failed");
+      }
+
+      const data = await response.json();
+      localStorage.setItem("token", token);
+
+      toast({
+        title: "Success",
+        description: "Login successful!",
+        variant: "default",
+      });
+
+      // Optionally redirect to dashboard
     } catch (error) {
       console.error("Login error:", error);
       toast({
@@ -122,14 +150,13 @@ export default function AdminLoginPage() {
               required
             />
 
-            <Link
-              href="/branches"
+            <button
               className="mt-4 sm:mt-6 px-8 sm:px-10 py-2 sm:py-2 bg-[#3674B5] hover:bg-blue-900 text-white rounded-4xl text-center text-base sm:text-lg heebo font-semibold transition-colors w-full sm:w-auto"
               type="submit"
               // disabled={isLoading}
             >
               {isLoading ? "Signing In..." : "Login"}
-            </Link>
+            </button>
 
             {/* Divider */}
             {/* <div className="flex items-center w-full my-3 sm:my-4">

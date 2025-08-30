@@ -13,6 +13,18 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Branch {
+    public void setName(String name) {
+        this.name = name;
+    }
+    public void setLocation(String location) {
+        this.location = location;
+    }
+    public void setContactNumber(String contactNumber) {
+        this.contactNumber = contactNumber;
+    }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,4 +42,29 @@ public class Branch {
     @EqualsAndHashCode.Exclude
     @JsonIgnore
     private Set<User> users = new HashSet<>();
+    
+    // Explicit getters for JSON serialization
+    public Long getId() {
+        return id;
+    }
+    
+    public String getName() {
+        return name;
+    }
+    
+    public String getLocation() {
+        return location;
+    }
+    
+    public String getContactNumber() {
+        return contactNumber;
+    }
+    
+    public String getDescription() {
+        return description;
+    }
+    
+    public Set<User> getUsers() {
+        return users;
+    }
 }

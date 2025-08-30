@@ -6,19 +6,12 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
@@ -33,50 +26,16 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
-                        .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         // Swagger/OpenAPI endpoints
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api-docs/**").permitAll()
                         .requestMatchers("/swagger-resources/**", "/webjars/**").permitAll()
-                        // Role-based endpoints
-                        .requestMatchers("/api/owner/**").hasRole("OWNER")
-                        .requestMatchers("/api/customer/**").hasRole("CUSTOMER")
-                        .requestMatchers("/api/supplier/**").hasRole("SUPPLIER")
-                        .requestMatchers("/api/branch_manager/**").hasRole("MANAGER")
-                        .requestMatchers("/api/inventory_manager/**").hasRole("INVENTORY_MANAGER")
-                        .requestMatchers("/api/supplier_manager/**").hasRole("SUPPLIER_MANAGER")
-                        .requestMatchers("/api/resource_manager/**").hasRole("RESOURCE_MANAGER")
-                        .anyRequest().authenticated()
-                )
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                        // Temporarily allow all other endpoints for testing
+                        .anyRequest().permitAll()
                 );
 
         return http.build();
-    }
-
-    @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
-            Collection<String> roles = (Collection<String>) realmAccess.get("roles");
-            return roles.stream()
-                    .filter(role -> role.startsWith("ROLE_") ||
-                            role.equals("OWNER") ||
-                            role.equals("STAFF") ||
-                            role.equals("MANAGER") ||
-                            role.equals("RESOURCE_MANAGER") ||
-                            role.equals("INVENTORY_MANAGER") ||
-                            role.equals("SALES_MANAGER") ||
-                            role.equals("SUPPLIER") ||
-                            role.equals("CUSTOMER"))
-                    .map(role -> role.startsWith("ROLE_") ?
-                            new SimpleGrantedAuthority(role) :
-                            new SimpleGrantedAuthority("ROLE_" + role))
-                    .collect(Collectors.toList());
-        });
-        return converter;
     }
 
     @Bean

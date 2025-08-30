@@ -1,204 +1,78 @@
 package com.nimash.user.roleManagementAPI.Service;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.UserRecord;
+import com.google.firebase.auth.FirebaseToken;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.nimash.user.roleManagementAPI.Entity.User;
+import com.nimash.user.roleManagementAPI.Entity.Role;
+import com.nimash.user.roleManagementAPI.Entity.Branch;
+import com.nimash.user.roleManagementAPI.Repository.UserRepository;
+import com.nimash.user.roleManagementAPI.Repository.RoleRepository;
+import com.nimash.user.roleManagementAPI.Repository.BranchRepository;
+import org.springframework.stereotype.Service;
+import java.util.List;
 
 import com.nimash.user.roleManagementAPI.Dto.*;
-import com.nimash.user.roleManagementAPI.Entity.User;
-import com.nimash.user.roleManagementAPI.Repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.keycloak.admin.client.Keycloak;
-import org.keycloak.admin.client.resource.RealmResource;
-import org.keycloak.admin.client.resource.UserResource;
-import org.keycloak.admin.client.resource.UsersResource;
-import org.keycloak.representations.idm.CredentialRepresentation;
-import org.keycloak.representations.idm.RoleRepresentation;
-import org.keycloak.representations.idm.UserRepresentation;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
 
-import jakarta.ws.rs.core.Response;
-import java.time.LocalDateTime;
-import java.util.*;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AuthService {
 
-    private final Keycloak keycloak;
     private final UserRepository userRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RoleRepository roleRepository;
+    private final BranchRepository branchRepository;
+    
+    public AuthService(UserRepository userRepository, RoleRepository roleRepository, BranchRepository branchRepository) {
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.branchRepository = branchRepository;
+    }
 
-    @Value("${keycloak.realm}")
-    private String realm;
-
-    @Value("${keycloak.client-id}")
-    private String clientId;
-
-    @Value("${keycloak.client-secret}")
-    private String clientSecret;
-
-    @Value("${keycloak.server-url}")
-    private String serverUrl;
+    // Firebase integration will be added here
 
     public AuthResponse registerUser(UserRegistrationRequest request) {
         try {
-            // Create user in Keycloak
-            String keycloakUserId = createKeycloakUser(request);
+            UserRecord.CreateRequest createRequest = new UserRecord.CreateRequest()
+                    .setEmail(request.getEmail())
+                    .setEmailVerified(true)
+                    .setPassword(request.getPassword())
+                    .setDisplayName(request.getFirstName() + " " + request.getLastName())
+                    .setDisabled(false);
 
-            // Create user in local database
-            User user = createLocalUser(keycloakUserId, request);
-            userRepository.save(user);
+            UserRecord userRecord = FirebaseAuth.getInstance().createUser(createRequest);
 
-            // Assign role to user in Keycloak
-            assignRoleToUser(keycloakUserId, request.getRole());
+            // You should also save the user to your local database and assign roles here
 
-            // Authenticate user and return tokens
-            return authenticateUser(request.getUsername(), request.getPassword());
-
-        } catch (Exception e) {
-            log.error("Error registering user: ", e);
+            return new AuthResponse(null, null, "Firebase", 0L, userRecord.getUid());
+        } catch (FirebaseAuthException e) {
             throw new RuntimeException("Failed to register user: " + e.getMessage());
         }
     }
 
-    public AuthResponse authenticateUser(String username, String password) {
+    public AuthResponse authenticateUser(String idToken) {
         try {
-            MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-            formData.add("grant_type", "password");
-            formData.add("client_id", clientId);
-            formData.add("client_secret", clientSecret);
-            formData.add("username", username);
-            formData.add("password", password);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-            HttpEntity<MultiValueMap<String, String>> request =
-                    new HttpEntity<>(formData, headers);
-
-            String tokenUrl = serverUrl + "/realms/" + realm + "/protocol/openid-connect/token";
-
-            Map<String, Object> response = restTemplate.postForObject(
-                    tokenUrl, request, Map.class);
-
-            if (response != null && response.containsKey("access_token")) {
-                // Update last login time
-                User user = userRepository.findByUsername(username)
-                        .orElseThrow(() -> new RuntimeException("User not found"));
-                user.setLastLoginAt(LocalDateTime.now());
-                userRepository.save(user);
-
-                return new AuthResponse(
-                        (String) response.get("access_token"),
-                        (String) response.get("refresh_token"),
-                        "Bearer",
-                        ((Number) response.get("expires_in")).longValue(),
-                        mapToUserProfileResponse(user)
-                );
-            } else {
-                throw new RuntimeException("Authentication failed");
-            }
-
-        } catch (Exception e) {
-            log.error("Authentication error: ", e);
-            throw new RuntimeException("Authentication failed: " + e.getMessage());
+            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+            String uid = decodedToken.getUid();
+            // You can fetch user details and roles from your database using uid
+            return new AuthResponse(idToken, null, "Bearer", 0L, uid);
+        } catch (FirebaseAuthException e) {
+            throw new RuntimeException("Invalid Firebase token: " + e.getMessage());
         }
     }
 
     public AuthResponse refreshToken(String refreshToken) {
-        try {
-            MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-            formData.add("grant_type", "refresh_token");
-            formData.add("client_id", clientId);
-            formData.add("client_secret", clientSecret);
-            formData.add("refresh_token", refreshToken);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-            HttpEntity<MultiValueMap<String, String>> request =
-                    new HttpEntity<>(formData, headers);
-
-            String tokenUrl = serverUrl + "/realms/" + realm + "/protocol/openid-connect/token";
-
-            Map<String, Object> response = restTemplate.postForObject(
-                    tokenUrl, request, Map.class);
-
-            if (response != null && response.containsKey("access_token")) {
-                return new AuthResponse(
-                        (String) response.get("access_token"),
-                        (String) response.get("refresh_token"),
-                        "Bearer",
-                        ((Number) response.get("expires_in")).longValue(),
-                        null
-                );
-            } else {
-                throw new RuntimeException("Token refresh failed");
-            }
-
-        } catch (Exception e) {
-            log.error("Token refresh error: ", e);
-            throw new RuntimeException("Token refresh failed: " + e.getMessage());
-        }
+        // Firebase does not support refresh tokens in Admin SDK. Handle on frontend.
+        throw new UnsupportedOperationException("Firebase token refresh should be handled on the client side.");
     }
 
-    private String createKeycloakUser(UserRegistrationRequest request) {
-        RealmResource realmResource = keycloak.realm(realm);
-        UsersResource usersResource = realmResource.users();
+    // Firebase user creation and role assignment will be implemented here
 
-        UserRepresentation user = new UserRepresentation();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setEnabled(true);
-        user.setEmailVerified(true);
-
-        // Set password
-        CredentialRepresentation credential = new CredentialRepresentation();
-        credential.setType(CredentialRepresentation.PASSWORD);
-        credential.setValue(request.getPassword());
-        credential.setTemporary(false);
-        user.setCredentials(List.of(credential));
-
-        Response response = usersResource.create(user);
-
-        if (response.getStatus() == 201) {
-            String location = response.getHeaderString("Location");
-            return location.substring(location.lastIndexOf("/") + 1);
-        } else {
-            throw new RuntimeException("Failed to create user in Keycloak: " +
-                    response.getStatusInfo().getReasonPhrase());
-        }
-    }
-
-    private User createLocalUser(String keycloakUserId, UserRegistrationRequest request) {
-        User user = new User();
-        user.setId(keycloakUserId);
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setPhoneNumber(request.getPhoneNumber());
-        user.setRole(User.UserRole.valueOf(request.getRole()));
-        user.setIsActive(true);
-        return user;
-    }
-
-    private void assignRoleToUser(String userId, String roleName) {
-        RealmResource realmResource = keycloak.realm(realm);
-        UserResource userResource = realmResource.users().get(userId);
-        RoleRepresentation role = realmResource.roles().get(roleName).toRepresentation();
-        userResource.roles().realmLevel().add(List.of(role));
-    }
-
-    private UserProfileResponse mapToUserProfileResponse(User user) {
+    public UserProfileResponse getUserProfile(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
         UserProfileResponse response = new UserProfileResponse();
         response.setId(user.getId());
         response.setUsername(user.getUsername());
@@ -214,16 +88,11 @@ public class AuthService {
         return response;
     }
 
-    public UserProfileResponse getUserProfile(String userId) {
+    public UserProfileResponse updateUserProfile(String userId, UserProfileResponse updateRequest) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return mapToUserProfileResponse(user);
-    }
-
-    public void updateUserProfile(String userId, UserProfileResponse updateRequest) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
+        
+        // Update user fields
         if (updateRequest.getFirstName() != null) {
             user.setFirstName(updateRequest.getFirstName());
         }
@@ -236,7 +105,68 @@ public class AuthService {
         if (updateRequest.getProfilePictureUrl() != null) {
             user.setProfilePictureUrl(updateRequest.getProfilePictureUrl());
         }
-
+        
         userRepository.save(user);
+        return getUserProfile(userId);
     }
+
+    public AuthResponse createAdminUser(AdminUserCreationRequest request) {
+        try {
+            // Create user in Firebase
+            UserRecord.CreateRequest createRequest = new UserRecord.CreateRequest()
+                    .setEmail(request.getEmail())
+                    .setEmailVerified(true)
+                    .setPassword(request.getPassword())
+                    .setDisplayName(request.getFirstName() + " " + request.getLastName())
+                    .setDisabled(false);
+
+            UserRecord userRecord = FirebaseAuth.getInstance().createUser(createRequest);
+
+            // Get role from database
+            Role.Role_Type roleType = Role.Role_Type.valueOf(request.getRole().toUpperCase());
+            Role role = roleRepository.findByRole(roleType)
+                    .orElseThrow(() -> new RuntimeException("Role not found: " + request.getRole()));
+
+            // Get branch from database (use Main Branch if not specified)
+            Branch branch;
+            if (request.getBranchId() != null) {
+                branch = branchRepository.findById(request.getBranchId())
+                        .orElseThrow(() -> new RuntimeException("Branch not found: " + request.getBranchId()));
+            } else {
+                branch = branchRepository.findByName("Main Branch")
+                        .orElseThrow(() -> new RuntimeException("Default branch not found"));
+            }
+
+            // Save user to local database
+            User user = new User();
+            user.setId(userRecord.getUid());
+            user.setUsername(request.getEmail().split("@")[0]); // Use email prefix as username
+            user.setEmail(request.getEmail());
+            user.setFirstName(request.getFirstName());
+            user.setLastName(request.getLastName());
+            user.setPhoneNumber(request.getPhoneNumber());
+            user.setRole(role);
+            user.setBranch(branch);
+            user.setIsActive(true);
+            userRepository.save(user);
+
+            System.out.println("Created " + request.getRole() + " user: " + request.getEmail() + " (" + userRecord.getUid() + ")");
+
+            return new AuthResponse(null, null, "Firebase", 0L, userRecord.getUid());
+        } catch (FirebaseAuthException e) {
+            throw new RuntimeException("Failed to create user in Firebase: " + e.getMessage());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create user: " + e.getMessage());
+        }
+    }
+
+    public List<Role> getAllRoles() {
+        return roleRepository.findAll();
+    }
+
+    public List<Branch> getAllBranches() {
+        return branchRepository.findAll();
+    }
+
+    // Profile methods can be implemented using Firebase APIs if needed
 }

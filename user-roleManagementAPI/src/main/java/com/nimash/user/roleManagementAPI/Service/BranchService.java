@@ -5,14 +5,16 @@ import com.nimash.user.roleManagementAPI.Entity.Branch;
 import com.nimash.user.roleManagementAPI.Mapper.BranchMapper;
 import com.nimash.user.roleManagementAPI.Repository.BranchRepository;
 import jakarta.persistence.EntityNotFoundException;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 public class BranchService {
 
     private final BranchRepository branchRepository;
+    
+    public BranchService(BranchRepository branchRepository) {
+        this.branchRepository = branchRepository;
+    }
     public Branch createBranch(BranchRequest request) {
         System.out.println("entering the create branch");
         // Check for duplicate branch name
