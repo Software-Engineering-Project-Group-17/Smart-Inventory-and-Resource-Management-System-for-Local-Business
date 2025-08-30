@@ -1,6 +1,8 @@
 // Authentication utility functions
 
 export interface UserProfile {
+  address: string;
+  department: string;
   id: string;
   username: string;
   email: string;

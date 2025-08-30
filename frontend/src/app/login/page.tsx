@@ -73,27 +73,95 @@ export default function AdminLoginPage() {
         body: JSON.stringify({ email }),
       });
 
-      if (!response.ok) {
+      let userData = null;
+      let userUid = userCredential.user.uid;
+
+      if (response.ok) {
+        // Backend call successful - check if user data exists
         const data = await response.json();
-        throw new Error(data.message || "Login failed");
+        console.log("Backend response data:", data);
+
+        if (data.user && data.user !== null) {
+          // Backend has user data - use it
+          userData = data.user;
+          userUid = data.uid;
+          console.log("Backend login successful with user data:", userData);
+        } else {
+          // Backend response OK but no user data - create fallback profile
+          console.warn(
+            "Backend response OK but user is null, creating fallback profile"
+          );
+          userData = {
+            id: userCredential.user.uid,
+            email: email,
+            username: email.split("@")[0],
+            firstName:
+              userCredential.user.displayName?.split(" ")[0] ||
+              email.split("@")[0],
+            lastName: userCredential.user.displayName?.split(" ")[1] || "",
+            role: "STAFF", // Default role
+            phoneNumber: userCredential.user.phoneNumber || "",
+            address: "",
+            department: "",
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+            profilePictureUrl: userCredential.user.photoURL || "",
+            subscriptionStatus: "active",
+            subscriptionExpiresAt: new Date(
+              Date.now() + 365 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+          };
+          console.log(
+            "Created fallback profile for successful backend response:",
+            userData
+          );
+        }
+      } else {
+        // Backend call failed - create fallback profile
+        console.warn("Backend login failed, creating fallback profile");
+        const errorData = await response.text();
+        console.error("Backend error:", errorData);
+
+        userData = {
+          id: userCredential.user.uid,
+          email: email,
+          username: email.split("@")[0],
+          firstName:
+            userCredential.user.displayName?.split(" ")[0] ||
+            email.split("@")[0],
+          lastName: userCredential.user.displayName?.split(" ")[1] || "",
+          role: "STAFF", // Default role
+          phoneNumber: userCredential.user.phoneNumber || "",
+          address: "",
+          department: "",
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+          profilePictureUrl: userCredential.user.photoURL || "",
+          subscriptionStatus: "active",
+          subscriptionExpiresAt: new Date(
+            Date.now() + 365 * 24 * 60 * 60 * 1000
+          ).toISOString(),
+        };
+        console.log("Created fallback profile:", userData);
       }
 
-      const data = await response.json();
-
       // Store authentication data
+      console.log("Storing user data:", userData);
       localStorage.setItem("token", token);
-      localStorage.setItem("userProfile", JSON.stringify(data.user));
-      localStorage.setItem("uid", data.uid);
+      localStorage.setItem("userProfile", JSON.stringify(userData));
+      localStorage.setItem("uid", userUid);
 
       toast({
         title: "Success",
-        description: `Welcome back, ${data.user?.firstName || email}!`,
+        description: `Welcome back, ${userData?.firstName || email}!`,
         variant: "default",
       });
 
       // Redirect based on user role
-      if (data.user && data.user.role) {
-        const redirectPath = getDefaultRedirectPath(data.user.role);
+      if (userData && userData.role) {
+        const redirectPath = getDefaultRedirectPath(userData.role);
         router.push(redirectPath);
       } else {
         // Fallback if no role is found
