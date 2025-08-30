@@ -9,22 +9,20 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
-@Validated
 public class AuthController {
 
     private final AuthService authService;
+    
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
 
     @PostMapping("/register")
     @Operation(summary = "Register a new user", description = "Creates a new user account in both Keycloak and local database")
@@ -33,18 +31,23 @@ public class AuthController {
             @ApiResponse(responseCode = "400", description = "Invalid input data"),
             @ApiResponse(responseCode = "409", description = "User already exists")
     })
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody UserRegistrationRequest request) {
+    public ResponseEntity<AuthResponse> register(@RequestBody UserRegistrationRequest request) {
         AuthResponse response = authService.registerUser(request);
         return ResponseEntity.ok(response);
     }
     @PostMapping("/login")
-    @Operation(summary = "User login", description = "Authenticates user and returns JWT tokens")
+    @Operation(summary = "User login", description = "Authenticates user using Firebase token")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Login successful"),
             @ApiResponse(responseCode = "401", description = "Invalid credentials")
     })
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        AuthResponse response = authService.authenticateUser(request.getUsername(), request.getPassword());
+    public ResponseEntity<AuthResponse> login(@RequestHeader("Authorization") String authorization) {
+        // Expecting 'Bearer <token>'
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).build();
+        }
+        String idToken = authorization.substring(7);
+        AuthResponse response = authService.authenticateUser(idToken);
         return ResponseEntity.ok(response);
     }
 
@@ -58,6 +61,37 @@ public class AuthController {
             @Parameter(description = "Refresh token") @RequestParam String refreshToken) {
         AuthResponse response = authService.refreshToken(refreshToken);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/admin/create-user")
+    @Operation(summary = "Create user by admin", description = "Admin creates users (managers/staff) with credentials")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid input data"),
+            @ApiResponse(responseCode = "409", description = "User already exists")
+    })
+    public ResponseEntity<String> createUserByAdmin(@RequestBody AdminUserCreationRequest request) {
+        try {
+            System.out.println("Creating user: " + request.getEmail() + " with role: " + request.getRole());
+            
+            // Validate input
+            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("{\"error\":\"Email is required\"}");
+            }
+            if (request.getRole() == null || request.getRole().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("{\"error\":\"Role is required\"}");
+            }
+            if (request.getBranchId() == null) {
+                return ResponseEntity.badRequest().body("{\"error\":\"Branch ID is required\"}");
+            }
+            
+            AuthResponse response = authService.createAdminUser(request);
+            return ResponseEntity.ok("{\"message\":\"User created successfully\",\"uid\":\"" + response.getUid() + "\"}");
+        } catch (Exception e) {
+            System.err.println("Error creating user: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("{\"error\":\"" + e.getMessage().replace("\"", "'") + "\"}");
+        }
     }
 
     @GetMapping("/profile")
@@ -104,5 +138,27 @@ public class AuthController {
             return jwt.getClaimAsString("sub");
         }
         throw new RuntimeException("Invalid token format");
+    }
+
+    @GetMapping("/roles")
+    @Operation(summary = "Get all roles", description = "Retrieves all available user roles")
+    @ApiResponse(responseCode = "200", description = "Roles retrieved successfully")
+    public ResponseEntity<?> getAllRoles() {
+        try {
+            return ResponseEntity.ok(authService.getAllRoles());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/branches")
+    @Operation(summary = "Get all branches", description = "Retrieves all available branches")
+    @ApiResponse(responseCode = "200", description = "Branches retrieved successfully")
+    public ResponseEntity<?> getAllBranches() {
+        try {
+            return ResponseEntity.ok(authService.getAllBranches());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

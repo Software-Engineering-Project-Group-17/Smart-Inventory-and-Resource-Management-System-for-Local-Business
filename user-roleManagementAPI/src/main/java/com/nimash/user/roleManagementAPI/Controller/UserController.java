@@ -4,7 +4,6 @@ import com.nimash.user.roleManagementAPI.Dto.UserProfileResponse;
 import com.nimash.user.roleManagementAPI.Entity.User;
 import com.nimash.user.roleManagementAPI.Service.UserService;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -14,11 +13,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/owner/users")
-@RequiredArgsConstructor
 @PreAuthorize("hasRole('OWNER')")
 public class UserController {
 
     private final UserService userService;
+    
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
     @GetMapping
     public ResponseEntity<List<UserProfileResponse>> getAllUsers() {

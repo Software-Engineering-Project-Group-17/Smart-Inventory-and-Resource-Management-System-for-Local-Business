@@ -30,4 +30,21 @@ public class UserRegistrationRequest {
 
     @NotBlank(message = "Role is required")
     private String role; // STUDENT, INSTRUCTOR
+    
+    // Explicit getters for critical fields
+    public String getEmail() {
+        return email;
+    }
+    
+    public String getPassword() {
+        return password;
+    }
+    
+    public String getFirstName() {
+        return firstName;
+    }
+    
+    public String getLastName() {
+        return lastName;
+    }
 }

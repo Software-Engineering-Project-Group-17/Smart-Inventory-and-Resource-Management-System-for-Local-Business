@@ -1,30 +1,26 @@
 package com.nimash.user.roleManagementAPI.Service;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.UserRecord;
 import com.nimash.user.roleManagementAPI.Dto.UserProfileResponse;
 import com.nimash.user.roleManagementAPI.Entity.User;
 import com.nimash.user.roleManagementAPI.Repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.keycloak.admin.client.Keycloak;
-import org.keycloak.admin.client.resource.RealmResource;
-import org.keycloak.admin.client.resource.UserResource;
-import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class UserService {
 
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
     private final UserRepository userRepository;
-    private final Keycloak keycloak;
-
-    @Value("${keycloak.realm}")
-    private String realm;
+    
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     public List<UserProfileResponse> getAllUsers() {
         return userRepository.findAll().stream()
@@ -32,8 +28,9 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public List<UserProfileResponse> getUsersByRole(User.UserRole role) {
-        return userRepository.findByRole(role).stream()
+    public List<UserProfileResponse> getUsersByRole(String roleName) {
+        return userRepository.findAll().stream()
+                .filter(user -> user.getRole().name().equals(roleName))
                 .map(this::mapToUserProfileResponse)
                 .collect(Collectors.toList());
     }
@@ -45,15 +42,13 @@ public class UserService {
         user.setIsActive(false);
         userRepository.save(user);
 
-        // Also disable in Keycloak
+        // Also disable in Firebase
         try {
-            RealmResource realmResource = keycloak.realm(realm);
-            UserResource userResource = realmResource.users().get(userId);
-            org.keycloak.representations.idm.UserRepresentation keycloakUser = userResource.toRepresentation();
-            keycloakUser.setEnabled(false);
-            userResource.update(keycloakUser);
+            UserRecord.UpdateRequest request = new UserRecord.UpdateRequest(userId)
+                    .setDisabled(true);
+            FirebaseAuth.getInstance().updateUser(request);
         } catch (Exception e) {
-            log.error("Failed to deactivate user in Keycloak: ", e);
+            log.error("Failed to deactivate user in Firebase: ", e);
         }
     }
 
@@ -64,15 +59,13 @@ public class UserService {
         user.setIsActive(true);
         userRepository.save(user);
 
-        // Also enable in Keycloak
+        // Also enable in Firebase
         try {
-            RealmResource realmResource = keycloak.realm(realm);
-            UserResource userResource = realmResource.users().get(userId);
-            org.keycloak.representations.idm.UserRepresentation keycloakUser = userResource.toRepresentation();
-            keycloakUser.setEnabled(true);
-            userResource.update(keycloakUser);
+            UserRecord.UpdateRequest request = new UserRecord.UpdateRequest(userId)
+                    .setDisabled(false);
+            FirebaseAuth.getInstance().updateUser(request);
         } catch (Exception e) {
-            log.error("Failed to activate user in Keycloak: ", e);
+            log.error("Failed to activate user in Firebase: ", e);
         }
     }
 
