@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { withAuth } from "@/hooks/useAuth";
 import Input from "@/components/admin/Input";
 
 interface Role {
@@ -18,7 +19,7 @@ interface Branch {
   contactNumber: string;
 }
 
-export default function AdminDashboard() {
+function AdminDashboard() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -281,3 +282,8 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+// Protect this page for ADMIN and OWNER roles only
+export default withAuth(AdminDashboard, {
+  requiredRoles: ["ADMIN", "OWNER"],
+});
