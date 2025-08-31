@@ -105,18 +105,21 @@ export const staffAPI = {
   },
 
   async getStaffByManager(token: string): Promise<{ staff: StaffResponse[] }> {
-    // Get Firebase UID from localStorage 
-    const firebaseUid = localStorage.getItem('firebaseUid');
+    // Get Firebase UID from localStorage
+    const firebaseUid = localStorage.getItem("firebaseUid");
     if (!firebaseUid) {
-      throw new Error('Firebase UID not found');
+      throw new Error("Firebase UID not found");
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/roles/staff/manager/${firebaseUid}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/roles/staff/manager/${firebaseUid}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -131,15 +134,15 @@ export const staffAPI = {
       firstName: staff.firstName,
       lastName: staff.lastName,
       email: staff.email,
-      address: staff.address || '',
-      tel: staff.phone || '',
+      address: staff.address || "",
+      tel: staff.phone || "",
       salary: staff.salary || 0,
       staffTypes: Array.isArray(staff.staffTypes) ? staff.staffTypes : [],
       branchId: 0, // Backend doesn't return this in the new format
-      branchName: '', // Backend doesn't return this in the new format
+      branchName: "", // Backend doesn't return this in the new format
       managerId: 0, // Backend doesn't return this in the new format
-      managerName: '', // Backend doesn't return this in the new format
-      userFirebaseUid: staff.firebaseUid || '',
+      managerName: "", // Backend doesn't return this in the new format
+      userFirebaseUid: staff.firebaseUid || "",
     }));
 
     return { staff: convertedStaff };
