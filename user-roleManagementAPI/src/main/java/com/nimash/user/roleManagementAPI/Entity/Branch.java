@@ -1,31 +1,19 @@
 package com.nimash.user.roleManagementAPI.Entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "branches")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Branch {
-    public void setName(String name) {
-        this.name = name;
-    }
-    public void setLocation(String location) {
-        this.location = location;
-    }
-    public void setContactNumber(String contactNumber) {
-        this.contactNumber = contactNumber;
-    }
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -36,35 +24,39 @@ public class Branch {
     private String location;
     private String contactNumber;
     private String description;
-
-    @OneToMany(mappedBy = "branch", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    @JsonIgnore
-    private Set<User> users = new HashSet<>();
     
-    // Explicit getters for JSON serialization
-    public Long getId() {
-        return id;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true) // Make nullable for existing data
+    @Builder.Default
+    private BranchStatus status = BranchStatus.ACTIVE;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manager_id")
+    private User manager;
+    
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false, nullable = true) // Make nullable for existing data
+    private LocalDateTime createdAt;
+    
+    public enum BranchStatus {
+        ACTIVE,
+        INACTIVE
     }
     
-    public String getName() {
-        return name;
+    // Setters for backwards compatibility
+    public void setName(String name) {
+        this.name = name;
     }
     
-    public String getLocation() {
-        return location;
+    public void setLocation(String location) {
+        this.location = location;
     }
     
-    public String getContactNumber() {
-        return contactNumber;
+    public void setContactNumber(String contactNumber) {
+        this.contactNumber = contactNumber;
     }
     
-    public String getDescription() {
-        return description;
-    }
-    
-    public Set<User> getUsers() {
-        return users;
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

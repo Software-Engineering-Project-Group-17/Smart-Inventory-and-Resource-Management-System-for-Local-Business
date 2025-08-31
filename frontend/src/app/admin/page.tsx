@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { withAuth } from "@/hooks/useAuth";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import Input from "@/components/admin/Input";
 
 interface Role {
@@ -20,6 +22,8 @@ interface Branch {
 }
 
 function AdminDashboard() {
+  const router = useRouter();
+  const { user } = useCurrentUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -126,17 +130,79 @@ function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+      <div className="sm:mx-auto sm:w-full sm:max-w-4xl">
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Admin Dashboard - Create User
+          Admin Dashboard
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Create new managers, staff, or other users
+          Manage users and create new accounts
         </p>
       </div>
 
+      {/* Role Creation Navigation */}
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-4xl">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <h3 className="text-lg font-medium text-gray-900 mb-6">
+            Role-Based User Creation
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Owner Creation - Restricted */}
+            <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+              <h4 className="font-medium text-red-800 mb-2">Owner Creation</h4>
+              <p className="text-sm text-red-600 mb-4">System Admin Only</p>
+              <button
+                onClick={() => router.push("/admin/owner-creation")}
+                className="w-full py-2 px-4 border border-red-300 rounded-md shadow-sm bg-red-100 text-red-700 text-sm font-medium hover:bg-red-200"
+              >
+                Create Owner
+              </button>
+            </div>
+
+            {/* Manager Creation - Owner Only */}
+            <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+              <h4 className="font-medium text-blue-800 mb-2">
+                Manager Creation
+              </h4>
+              <p className="text-sm text-blue-600 mb-4">
+                {user?.role === "OWNER" ? "Available" : "Owner Only"}
+              </p>
+              <button
+                onClick={() => router.push("/admin/manager-creation")}
+                disabled={user?.role !== "OWNER"}
+                className="w-full py-2 px-4 border border-blue-300 rounded-md shadow-sm bg-blue-100 text-blue-700 text-sm font-medium hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Create Manager
+              </button>
+            </div>
+
+            {/* Staff Creation - Manager+ */}
+            <div className="border border-green-200 rounded-lg p-4 bg-green-50">
+              <h4 className="font-medium text-green-800 mb-2">
+                Staff Creation
+              </h4>
+              <p className="text-sm text-green-600 mb-4">
+                {user?.role === "OWNER" || user?.role === "MANAGER"
+                  ? "Available"
+                  : "Manager+ Only"}
+              </p>
+              <button
+                onClick={() => router.push("/admin/staff-creation")}
+                disabled={user?.role !== "OWNER" && user?.role !== "MANAGER"}
+                className="w-full py-2 px-4 border border-green-300 rounded-md shadow-sm bg-green-100 text-green-700 text-sm font-medium hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Create Staff
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Legacy User Creation Form */}
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <h3 className="text-lg font-medium text-gray-900 mb-6">
+            Legacy User Creation
+          </h3>
           <form className="space-y-6" onSubmit={handleSubmit}>
             <Input
               name="firstName"
@@ -186,8 +252,8 @@ function AdminDashboard() {
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               >
                 <option value="">Select Role</option>
-                {roles.map((role) => (
-                  <option key={role.id} value={role.role}>
+                {roles.map((role, i) => (
+                  <option key={i} value={role.role}>
                     {role.role} - {role.description}
                   </option>
                 ))}

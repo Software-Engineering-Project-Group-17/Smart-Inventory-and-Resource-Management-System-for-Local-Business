@@ -73,18 +73,17 @@ export const clearAuthData = (): void => {
 export const getDefaultRedirectPath = (role: string): string => {
   switch (role.toUpperCase()) {
     case "OWNER":
-      return "/branches";
+      return "/admin";
     case "MANAGER":
-    case "BRANCH_MANAGER":
       return "/branches";
+    case "BRANCH":
+    case "INVENTORY":
+    case "RESOURCE":
+    case "SALES":
+    case "NORMAL_EMPLOYEE":
+      return "/inventory";
     case "STAFF":
       return "/inventory";
-    case "RESOURCE_MANAGER":
-      return "/resources";
-    case "INVENTORY_MANAGER":
-      return "/inventory";
-    case "SALES_MANAGER":
-      return "/profile";
     case "SUPPLIER":
       return "/profile";
     case "CUSTOMER":
@@ -94,16 +93,16 @@ export const getDefaultRedirectPath = (role: string): string => {
   }
 };
 
-// Role hierarchy for permission checking
+// Role hierarchy for permission checking (based on new schema)
 export const ROLE_HIERARCHY = {
   OWNER: 100,
-  ADMIN: 90,
   MANAGER: 70,
-  BRANCH_MANAGER: 70,
-  SALES_MANAGER: 60,
-  INVENTORY_MANAGER: 60,
-  RESOURCE_MANAGER: 60,
-  STAFF: 50,
+  BRANCH: 50,
+  INVENTORY: 50,
+  RESOURCE: 50,
+  SALES: 50,
+  NORMAL_EMPLOYEE: 40,
+  STAFF: 50, // Legacy role
   SUPPLIER: 30,
   CUSTOMER: 10,
 };
