@@ -9,6 +9,7 @@ import AddManagerModal from "@/components/branch/AddManagerModal";
 import RemoveManagerModal from "@/components/branch/RemoveManagerModal";
 import DeleteBranchModal from "@/components/branch/DeleteBranchModal";
 import { Branch } from "@/types/branches";
+import { useRouter } from "next/navigation";
 
 
 const BranchesPage = () => {
@@ -147,7 +148,5 @@ const BranchesPage = () => {
 
 
 // Protect this page for OWNER role (owners manage their branches)
-export default withAuth(BranchesPage, {
-  requiredRoles: ["OWNER"],
-});
+export default BranchesPage;
 

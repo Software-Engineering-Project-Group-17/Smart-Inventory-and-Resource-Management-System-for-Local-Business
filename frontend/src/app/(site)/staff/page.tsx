@@ -1,6 +1,5 @@
 "use client";
 import React, { useState } from "react";
-import { Users } from "lucide-react";
 import { StaffMember } from "@/types/staff";
 import StaffSummaryCards from "@/components/staff/SummaryCard";
 import StaffFilters from "@/components/staff/Filters";
@@ -103,35 +102,7 @@ const StaffManagementPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
-      {/* Notification */}
-      {notification.show && (
-        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border-l-4 ${
-          notification.type === 'success' 
-            ? 'bg-green-50 border-green-400 text-green-800' 
-            : 'bg-red-50 border-red-400 text-red-800'
-        } max-w-md`}>
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              {notification.type === 'success' ? (
-                <Check className="h-5 w-5 text-green-400" />
-              ) : (
-                <X className="h-5 w-5 text-red-400" />
-              )}
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium">{notification.message}</p>
-            </div>
-            <div className="ml-auto pl-3">
-              <button
-                onClick={() => setNotification({ show: false, message: '', type: 'success' })}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+     
 
       <div className="max-w-7xl mx-auto">
         {/* Header */}

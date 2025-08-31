@@ -293,6 +293,4 @@ const InventoryPage = () => {
 };
 
 // Protect this page for STAFF, INVENTORY_MANAGER, and higher roles
-export default withAuth(InventoryPage, {
-  requiredRoles: ["STAFF", "INVENTORY_MANAGER", "MANAGER", "OWNER", "ADMIN"],
-});
+export default InventoryPage;
