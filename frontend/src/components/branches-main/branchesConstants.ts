@@ -1,0 +1,31 @@
+export const BRANCHES_CONSTANTS = {
+  labels: {
+    pageTitle: "Branches",
+    pageSubtitle: "Manage your branch locations and staff",
+    showingBranches: "Showing branches for:",
+    searchPlaceholder: "Search branches...",
+    refresh: "Refresh",
+    addBranch: "Add Branch",
+    branchName: "Branch Name",
+    employeeCount: "Employee Count",
+    actions: "Actions",
+    managers: "Managers:",
+    staff: "Staff:",
+    createManager: "Create Manager",
+    removeManager: "Remove Manager",
+    login: "Login",
+    delete: "Delete",
+    noBranches: "No branches found",
+    noBranchesSearch: "Try adjusting your search criteria",
+    noBranchesCreate: "Create your first branch to get started",
+    createFirstBranch: "Create First Branch",
+    loadingBranches: "Loading branches...",
+    errorTitle: "Error Loading Branches",
+    retry: "Retry",
+  },
+
+  styles: {
+    primary: "#3674B5",
+    secondary: "#FADA7A",
+  },
+};

@@ -16,12 +16,12 @@ const InventoryPage = () => {
     categories,
     units,
     filters,
-    
+
     // Modal state
     isModalOpen,
     modalMode,
     editingItem,
-    
+
     // Actions
     handleSearch,
     handleCategoryFilter,
@@ -36,9 +36,9 @@ const InventoryPage = () => {
   } = useInventoryManagement();
 
   const handleSave = (formData: any) => {
-    if (modalMode === 'add') {
+    if (modalMode === "add") {
       addItem(formData);
-    } else if (modalMode === 'edit') {
+    } else if (modalMode === "edit") {
       updateItem(formData);
     }
   };
