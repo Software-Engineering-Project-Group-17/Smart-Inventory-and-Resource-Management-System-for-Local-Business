@@ -1,21 +1,21 @@
 import React from "react";
 import { Building2, User, Users } from "lucide-react";
+import { Branch } from "@/types/branches";
 
-type Branch = {
-  id: string;
-  name: string;
-  managerCount: number;
-  staffCount: number;
-};
-
-type SummaryCardsProps = {
+interface SummaryCardsProps {
   branches: Branch[];
-};
+}
 
 const SummaryCards: React.FC<SummaryCardsProps> = ({ branches }) => {
+  const totalManagers = branches.reduce(
+    (sum, branch) => sum + branch.managerCount,
+    0
+  );
+
+  const totalStaff = branches.reduce((sum, branch) => sum + branch.staffCount, 0);
+
   return (
     <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-      {/* Total Branches */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center gap-3">
           <div
@@ -33,7 +33,6 @@ const SummaryCards: React.FC<SummaryCardsProps> = ({ branches }) => {
         </div>
       </div>
 
-      {/* Total Managers */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center gap-3">
           <div
@@ -45,13 +44,12 @@ const SummaryCards: React.FC<SummaryCardsProps> = ({ branches }) => {
           <div>
             <p className="text-sm text-gray-600">Total Managers</p>
             <p className="text-2xl font-bold text-gray-900">
-              {branches.reduce((sum, branch) => sum + branch.managerCount, 0)}
+              {totalManagers}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Total Staff */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center gap-3">
           <div
@@ -63,7 +61,7 @@ const SummaryCards: React.FC<SummaryCardsProps> = ({ branches }) => {
           <div>
             <p className="text-sm text-gray-600">Total Staff</p>
             <p className="text-2xl font-bold text-gray-900">
-              {branches.reduce((sum, branch) => sum + branch.staffCount, 0)}
+              {totalStaff}
             </p>
           </div>
         </div>
