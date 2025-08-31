@@ -17,7 +17,8 @@ public interface StaffRepository extends JpaRepository<Staff, Long> {
     
     List<Staff> findAllByUser(User user);
     
-    List<Staff> findByStaffRole(Staff.StaffRole staffRole);
+    // For now, we'll implement staff type filtering in the service layer
+    // since PostgreSQL array queries in JPA can be complex
     
     boolean existsByEmail(String email);
 }
