@@ -79,6 +79,13 @@ public class Staff {
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
     
     // Explicit getters to work around Lombok issues
+    public Long getId() { return id; }
+    public String getFirstName() { return firstName; }
+    public String getLastName() { return lastName; }
+    public String getEmail() { return email; }
+    public String getAddress() { return address; }
+    public String getTel() { return tel; }
+    public User getManager() { return manager; }
     public Branch getBranch() { return branch; }
     public User getUser() { return user; }
     public Set<String> getStaffTypes() { 

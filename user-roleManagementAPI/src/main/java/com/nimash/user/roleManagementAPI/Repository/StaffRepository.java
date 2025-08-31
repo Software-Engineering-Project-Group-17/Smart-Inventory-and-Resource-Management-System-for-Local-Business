@@ -17,6 +17,8 @@ public interface StaffRepository extends JpaRepository<Staff, Long> {
     
     List<Staff> findAllByUser(User user);
     
+    List<Staff> findByManager(User manager);
+    
     // For now, we'll implement staff type filtering in the service layer
     // since PostgreSQL array queries in JPA can be complex
     

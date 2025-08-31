@@ -374,4 +374,68 @@ public class RoleController {
                 .body("{\"message\":\"Failed to get profile: " + e.getMessage() + "\",\"status\":\"error\"}");
         }
     }
+
+    /**
+     * Get staff members for a specific manager
+     */
+    @GetMapping("/staff/manager/{managerFirebaseUid}")
+    public ResponseEntity<String> getStaffByManager(@PathVariable String managerFirebaseUid) {
+        try {
+            // Find the manager user
+            Optional<User> managerUser = userRepository.findByFirebaseUid(managerFirebaseUid);
+            if (managerUser.isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body("{\"message\":\"Manager not found\",\"status\":\"error\"}");
+            }
+
+            // Check if user is actually a manager
+            if (!managerUser.get().getRole().getRole().equals(Role.Role_Type.BRANCH_MANAGER)) {
+                return ResponseEntity.badRequest()
+                    .body("{\"message\":\"User is not a branch manager\",\"status\":\"error\"}");
+            }
+
+            // Find staff members managed by this manager
+            List<Staff> staffMembers = staffRepository.findByManager(managerUser.get());
+
+            StringBuilder result = new StringBuilder();
+            result.append("{\"staff\":[");
+            
+            for (int i = 0; i < staffMembers.size(); i++) {
+                Staff staff = staffMembers.get(i);
+                if (i > 0) result.append(",");
+                
+                result.append("{")
+                    .append("\"id\":").append(staff.getId()).append(",")
+                    .append("\"firstName\":\"").append(staff.getFirstName()).append("\",")
+                    .append("\"lastName\":\"").append(staff.getLastName()).append("\",")
+                    .append("\"email\":\"").append(staff.getEmail()).append("\",")
+                    .append("\"phone\":\"").append(staff.getTel() != null ? staff.getTel() : "").append("\",")
+                    .append("\"address\":\"").append(staff.getAddress() != null ? staff.getAddress() : "").append("\",")
+                    .append("\"salary\":").append(staff.getSalary() != null ? staff.getSalary() : 0).append(",")
+                    .append("\"isActive\":").append(staff.getIsActive() != null ? staff.getIsActive() : true).append(",")
+                    .append("\"staffTypes\":[");
+                
+                // Handle staff types
+                if (staff.getStaffTypes() != null && !staff.getStaffTypes().isEmpty()) {
+                    int typeIndex = 0;
+                    for (String type : staff.getStaffTypes()) {
+                        if (typeIndex > 0) result.append(",");
+                        result.append("\"").append(type.toLowerCase()).append("\"");
+                        typeIndex++;
+                    }
+                }
+                
+                result.append("],")
+                    .append("\"firebaseUid\":\"").append(staff.getUser().getFirebaseUid()).append("\"")
+                    .append("}");
+            }
+            
+            result.append("],\"status\":\"success\"}");
+            return ResponseEntity.ok(result.toString());
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body("{\"message\":\"Failed to get staff: " + e.getMessage() + "\",\"status\":\"error\"}");
+        }
+    }
 }
