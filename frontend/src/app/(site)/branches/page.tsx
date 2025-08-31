@@ -10,55 +10,20 @@ import RemoveManagerModal from "@/components/branch/RemoveManagerModal";
 import DeleteBranchModal from "@/components/branch/DeleteBranchModal";
 import { Branch } from "@/types/branches";
 
-const BranchesPage = () => {
-  const [branches, setBranches] = useState<Branch[]>([
-    {
-      id: "1",
-      name: "Downtown Branch",
-      managerCount: 2,
-      staffCount: 8,
-      managers: ["john.doe@company.com", "jane.smith@company.com"],
-    },
-    {
-      id: "2",
-      name: "Westside Branch",
-      managerCount: 1,
-      staffCount: 5,
-      managers: ["mike.wilson@company.com"],
-    },
-    {
-      id: "3",
-      name: "North Plaza",
-      managerCount: 3,
-      staffCount: 12,
-      managers: [
-        "sarah.davis@company.com",
-        "tom.brown@company.com",
-        "lisa.garcia@company.com",
-      ],
-    },
-    {
-      id: "4",
-      name: "City Center",
-      managerCount: 1,
-      staffCount: 6,
-      managers: ["david.martinez@company.com"],
-    },
-    {
-      id: "5",
-      name: "Riverside Branch",
-      managerCount: 2,
-      staffCount: 9,
-      managers: ["amy.johnson@company.com", "robert.lee@company.com"],
-    },
-  ]);
 
+const BranchesPage = () => {
+  const router = useRouter();
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddManagerModal, setShowAddManagerModal] = useState(false);
   const [showRemoveManagerModal, setShowRemoveManagerModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAddBranchModal, setShowAddBranchModal] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+
 
   const filteredBranches = branches.filter((branch) =>
     branch.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -174,9 +139,15 @@ const BranchesPage = () => {
           selectedBranch={selectedBranch}
           onDeleteBranch={handleDeleteBranch}
         />
+
       </div>
     </div>
   );
 };
 
-export default BranchesPage;
+
+// Protect this page for OWNER role (owners manage their branches)
+export default withAuth(BranchesPage, {
+  requiredRoles: ["OWNER"],
+});
+

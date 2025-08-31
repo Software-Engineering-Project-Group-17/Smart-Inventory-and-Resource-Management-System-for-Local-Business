@@ -34,10 +34,12 @@ const ProfilePage = () => {
     setProfile(prev => ({
       ...prev,
       remainingLeave: prev.remainingLeave - days
+
     }));
   };
 
   return (
+
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
@@ -63,6 +65,7 @@ const ProfilePage = () => {
           profile={profile}
           onApplyLeave={handleApplyLeave}
         />
+
       </div>
     </div>
   );

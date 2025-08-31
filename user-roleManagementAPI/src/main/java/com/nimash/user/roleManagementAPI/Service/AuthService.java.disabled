@@ -1,0 +1,182 @@
+package com.nimash.user.roleManagementAPI.Service;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.UserRecord;
+import com.google.firebase.auth.FirebaseToken;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.nimash.user.roleManagementAPI.Entity.User;
+import com.nimash.user.roleManagementAPI.Entity.Staff;
+import com.nimash.user.roleManagementAPI.Entity.Owner;
+import com.nimash.user.roleManagementAPI.Repository.UserRepository;
+import com.nimash.user.roleManagementAPI.Repository.StaffRepository;
+import com.nimash.user.roleManagementAPI.Repository.OwnerRepository;
+import org.springframework.stereotype.Service;
+import java.util.Optional;
+import java.time.LocalDateTime;
+
+import com.nimash.user.roleManagementAPI.Dto.*;
+import lombok.extern.slf4j.Slf4j;
+
+@Service
+@Slf4j
+public class AuthService {
+
+    private final UserRepository userRepository;
+    private final StaffRepository staffRepository;
+    private final OwnerRepository ownerRepository;
+    
+    public AuthService(UserRepository userRepository, StaffRepository staffRepository, OwnerRepository ownerRepository) {
+        this.userRepository = userRepository;
+        this.staffRepository = staffRepository;
+        this.ownerRepository = ownerRepository;
+    }
+
+    public AuthResponse registerUser(UserRegistrationRequest request) {
+        try {
+            UserRecord.CreateRequest createRequest = new UserRecord.CreateRequest()
+                    .setEmail(request.getEmail())
+                    .setEmailVerified(true)
+                    .setPassword(request.getPassword())
+                    .setDisplayName(request.getFirstName() + " " + request.getLastName())
+                    .setDisabled(false);
+
+            UserRecord userRecord = FirebaseAuth.getInstance().createUser(createRequest);
+
+            // Create user in local database
+            User user = User.builder()
+                    .firebaseUid(userRecord.getUid())
+                    .email(request.getEmail())
+                    .name(request.getFirstName() + " " + request.getLastName())
+                    .isActive(true)
+                    .build();
+            
+            userRepository.save(user);
+
+            return new AuthResponse(null, null, "Firebase", 0L, userRecord.getUid());
+        } catch (FirebaseAuthException e) {
+            throw new RuntimeException("Failed to register user: " + e.getMessage());
+        }
+    }
+
+    public AuthResponse authenticateUser(String idToken) {
+        try {
+            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+            String firebaseUid = decodedToken.getUid();
+            String email = decodedToken.getEmail();
+            String name = decodedToken.getName();
+
+            // Find or create user in local database
+            User user = userRepository.findByFirebaseUid(firebaseUid)
+                    .orElseGet(() -> {
+                        User newUser = User.builder()
+                                .firebaseUid(firebaseUid)
+                                .email(email)
+                                .name(name)
+                                .isActive(true)
+                                .build();
+                        return userRepository.save(newUser);
+                    });
+
+            // Update last login
+            user.setLastLogin(LocalDateTime.now());
+            userRepository.save(user);
+
+            // Get user profile
+            UserProfileResponse userProfile = buildUserProfile(user);
+
+            return new AuthResponse(idToken, null, "Bearer", 3600, userProfile, firebaseUid);
+        } catch (FirebaseAuthException e) {
+            throw new RuntimeException("Invalid token: " + e.getMessage());
+        }
+    }
+
+    private UserProfileResponse buildUserProfile(User user) {
+        UserProfileResponse profile = new UserProfileResponse();
+        
+        // Set basic user info
+        profile.setId(user.getUserId().toString());
+        profile.setEmail(user.getEmail());
+        profile.setIsActive(user.getIsActive());
+        profile.setCreatedAt(user.getCreatedAt());
+        profile.setLastLoginAt(user.getLastLogin());
+        
+        // Determine role and additional info from Staff or Owner tables
+        Optional<Staff> staff = staffRepository.findByUser(user).stream().findFirst();
+        Optional<Owner> owner = ownerRepository.findByUser(user);
+        
+        if (owner.isPresent()) {
+            profile.setRole("OWNER");
+            profile.setFirstName(owner.get().getName());
+            profile.setLastName("");
+            profile.setUsername(owner.get().getName());
+        } else if (staff.isPresent()) {
+            Staff staffInfo = staff.get();
+            profile.setRole(staffInfo.getRole().name());
+            profile.setFirstName(staffInfo.getFirstName());
+            profile.setLastName(staffInfo.getLastName());
+            profile.setPhoneNumber(staffInfo.getTel());
+            profile.setUsername(staffInfo.getFirstName() + " " + staffInfo.getLastName());
+        } else {
+            // Default fallback role
+            profile.setRole("CUSTOMER");
+            profile.setFirstName(user.getName());
+            profile.setLastName("");
+            profile.setUsername(user.getName());
+        }
+        
+        return profile;
+    }
+
+    public UserProfileResponse getUserProfile(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        return buildUserProfile(user);
+    }
+
+    public UserProfileResponse updateUserProfile(Long userId, UserProfileResponse updateRequest) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Update basic user info
+        if (updateRequest.getEmail() != null) {
+            user.setEmail(updateRequest.getEmail());
+        }
+
+        userRepository.save(user);
+
+        // Update staff/owner specific info if exists
+        Optional<Staff> staff = staffRepository.findByUser(user).stream().findFirst();
+        if (staff.isPresent()) {
+            Staff staffInfo = staff.get();
+            if (updateRequest.getFirstName() != null) {
+                staffInfo.setFirstName(updateRequest.getFirstName());
+            }
+            if (updateRequest.getLastName() != null) {
+                staffInfo.setLastName(updateRequest.getLastName());
+            }
+            if (updateRequest.getPhoneNumber() != null) {
+                staffInfo.setTel(updateRequest.getPhoneNumber());
+            }
+            staffRepository.save(staffInfo);
+        }
+
+        return buildUserProfile(user);
+    }
+
+    public void deactivateUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        user.setIsActive(false);
+        userRepository.save(user);
+    }
+
+    public void activateUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        user.setIsActive(true);
+        userRepository.save(user);
+    }
+}

@@ -2,9 +2,8 @@ package com.nimash.user.roleManagementAPI.Controller;
 
 import com.nimash.user.roleManagementAPI.Dto.UserProfileResponse;
 import com.nimash.user.roleManagementAPI.Entity.User;
-import com.nimash.user.roleManagementAPI.Service.UserService;
+// import com.nimash.user.roleManagementAPI.Service.UserService;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -14,16 +13,18 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/owner/users")
-@RequiredArgsConstructor
 @PreAuthorize("hasRole('OWNER')")
 public class UserController {
 
-    private final UserService userService;
+    // private final UserService userService;
+    
+    // public UserController(UserService userService) {
+    //     this.userService = userService;
+    // }
 
     @GetMapping
-    public ResponseEntity<List<UserProfileResponse>> getAllUsers() {
-        List<UserProfileResponse> users = userService.getAllUsers();
-        return ResponseEntity.ok(users);
+    public ResponseEntity<String> getAllUsers() {
+        return ResponseEntity.status(501).body("{\"error\":\"Not yet implemented\"}");
     }
 
 //    @GetMapping("/role/{role}")
@@ -35,14 +36,12 @@ public class UserController {
 
     @PostMapping("/{userId}/deactivate")
     public ResponseEntity<Void> deactivateUser(@PathVariable String userId) {
-        userService.deactivateUser(userId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.status(501).build();
     }
 
     @PostMapping("/{userId}/activate")
     public ResponseEntity<Void> activateUser(@PathVariable String userId) {
-        userService.activateUser(userId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.status(501).build();
     }
 
 }

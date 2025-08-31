@@ -32,54 +32,61 @@ const InventoryPage = () => {
     { id: '8', name: 'pcs' },
     { id: '9', name: 'box' },
     { id: '10', name: 'pack' }
+
   ]);
 
   const [inventory, setInventory] = useState<InventoryItem[]>([
     {
+
       id: '1',
       name: 'Portland Cement 50kg',
       category: 'Cement',
       sku: 'CEM001',
+
       quantity: 125,
-      unit: 'kg',
-      expiryDate: '2025-12-31',
-      costPrice: 8.50,
-      sellingPrice: 12.99
+      unit: "kg",
+      expiryDate: "2025-12-31",
+      costPrice: 8.5,
+      sellingPrice: 12.99,
     },
     {
+
       id: '2',
       name: 'Steel Nails 3 inch',
       category: 'Nails',
       sku: 'NAL003',
       quantity: 500,
-      unit: 'pcs',
-      expiryDate: '2026-06-15',
+      unit: "pcs",
+      expiryDate: "2026-06-15",
       costPrice: 0.05,
-      sellingPrice: 0.08
+      sellingPrice: 0.08,
     },
     {
+
       id: '3',
       name: 'Copper Wire 14 AWG',
       category: 'Wires',
       sku: 'WIR014',
       quantity: 75,
-      unit: 'm',
-      expiryDate: '2027-03-20',
+      unit: "m",
+      expiryDate: "2027-03-20",
       costPrice: 1.25,
-      sellingPrice: 2.10
+      sellingPrice: 2.1,
     },
     {
+
       id: '4',
       name: 'PVC Pipe 2 inch',
       category: 'Pipes',
       sku: 'PIP002',
       quantity: 200,
-      unit: 'm',
-      expiryDate: '2030-01-01',
-      costPrice: 5.40,
-      sellingPrice: 8.99
-    }
+      unit: "m",
+      expiryDate: "2030-01-01",
+      costPrice: 5.4,
+      sellingPrice: 8.99,
+    },
   ]);
+
 
   // State for filters and UI
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,38 +99,45 @@ const InventoryPage = () => {
   // Dropdown states
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showUnitDropdown, setShowUnitDropdown] = useState(false);
+
   const [showCategoryFilterDropdown, setShowCategoryFilterDropdown] = useState(false);
   const [showExpiryFilterDropdown, setShowExpiryFilterDropdown] = useState(false);
 
   // Modal states
+
   const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
   const [showNewUnitModal, setShowNewUnitModal] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newUnitName, setNewUnitName] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newUnitName, setNewUnitName] = useState("");
 
   // Add form state
   const [newItem, setNewItem] = useState({
-    name: '',
-    category: '',
-    sku: '',
+    name: "",
+    category: "",
+    sku: "",
     quantity: 0,
-    unit: '',
-    expiryDate: '',
+    unit: "",
+    expiryDate: "",
     costPrice: 0,
-    sellingPrice: 0
+    sellingPrice: 0,
   });
 
   // Filter and sort inventory
   const filteredInventory = inventory
-    .filter(item => 
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (selectedCategory === '' || item.category === selectedCategory)
+    .filter(
+      (item) =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        (selectedCategory === "" || item.category === selectedCategory)
     )
     .sort((a, b) => {
-      if (sortByExpiry === 'earliest') {
-        return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
-      } else if (sortByExpiry === 'latest') {
-        return new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime();
+      if (sortByExpiry === "earliest") {
+        return (
+          new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime()
+        );
+      } else if (sortByExpiry === "latest") {
+        return (
+          new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime()
+        );
       }
       return 0;
     });
@@ -131,15 +145,13 @@ const InventoryPage = () => {
   // Event handlers
   const handleEdit = (item: InventoryItem) => {
     setEditingId(item.id);
-    setEditingItem({...item});
+    setEditingItem({ ...item });
   };
 
   const handleSave = () => {
     if (editingItem) {
-      setInventory(prev => 
-        prev.map(item => 
-          item.id === editingItem.id ? editingItem : item
-        )
+      setInventory((prev) =>
+        prev.map((item) => (item.id === editingItem.id ? editingItem : item))
       );
       setEditingId(null);
       setEditingItem(null);
@@ -156,21 +168,23 @@ const InventoryPage = () => {
       const item: InventoryItem = {
         id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         ...newItem
+
       };
-      setInventory(prev => [...prev, item]);
+      setInventory((prev) => [...prev, item]);
       setNewItem({
-        name: '',
-        category: '',
-        sku: '',
+        name: "",
+        category: "",
+        sku: "",
         quantity: 0,
-        unit: '',
-        expiryDate: '',
+        unit: "",
+        expiryDate: "",
         costPrice: 0,
-        sellingPrice: 0
+        sellingPrice: 0,
       });
       setShowAddForm(false);
     }
   };
+
 
   const handleAddCategory = () => {
     if (newCategoryName.trim()) {
@@ -183,6 +197,7 @@ const InventoryPage = () => {
       setShowNewCategoryModal(false);
     }
   };
+
 
   const handleAddUnit = () => {
     if (newUnitName.trim()) {
@@ -271,9 +286,13 @@ const InventoryPage = () => {
           onUnitNameChange={setNewUnitName}
           onAddUnit={handleAddUnit}
         />
+
       </div>
     </div>
   );
 };
 
-export default InventoryPage;
+// Protect this page for STAFF, INVENTORY_MANAGER, and higher roles
+export default withAuth(InventoryPage, {
+  requiredRoles: ["STAFF", "INVENTORY_MANAGER", "MANAGER", "OWNER", "ADMIN"],
+});
