@@ -9,6 +9,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    networks: [ backend ]
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -16,7 +17,7 @@ services:
     depends_on:
       - zookeeper
     ports:
-      - "29092:29092"
+      - "29092:29092"   # host access via localhost:29092
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -25,124 +26,133 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks: [ backend ]
 
-  mysql:
-    image: mysql:8.0
-    container_name: mysql-db
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    restart: unless-stopped
     ports:
-      - "3307:3306"
-    volumes:
-      - mysql-data:/var/lib/mysql
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Asia/Colombo
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
       interval: 5s
-      timeout: 10s
-      retries: 5
+      timeout: 5s
+      retries: 10
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    networks: [ backend ]
+
 
   inventory-api:
     build: ./inventoryAPI
     container_name: inventory-api
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
       kafka:
         condition: service_started
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/${MYSQL_DATABASE}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
       SPRING_JPA_SHOW_SQL: "true"
+
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/myrealm
-      SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/myrealm
-      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID: springboot-app
-      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET: ks631jXyyFXo7sFAl7vxiyk4SmbgQ68S
-      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_PROVIDER: keycloak
-
-  notification-api:
-    build: ./notificationAPI
-    container_name: notification-api
-    ports:
-      - "8081:8081"
-    depends_on:
-      kafka:
-        condition: service_started
-    environment:
-      SPRING_APPLICATION_NAME: notificationAPI
-      SERVER_PORT: 8081
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SPRING_KAFKA_CONSUMER_GROUP_ID: notification-group
-      SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET: earliest
-      SPRING_MAIL_HOST: smtp.gmail.com
-      SPRING_MAIL_PORT: 587
-      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
-      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: true
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: true
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/myrealm
-      SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/myrealm
-      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID: springboot-app
-      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET: ks631jXyyFXo7sFAl7vxiyk4SmbgQ68S
-      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_PROVIDER: keycloak
-
-    command: >
-      java -jar app.jar
-      --spring.kafka.bootstrap-servers=kafka:9092
-
-  resource-mongo:
-    image: mongo:6
-    container_name: resource-mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - resource-mongo-data:/data/db
-    healthcheck:
-      test: [ "CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand(\"ping\")' || exit 1" ]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-  
+    networks: [ backend ]
 
 
-  # 👇 Node.js Resource API
-  resource-api:
-    build: ./resourceManagementAPI
-    container_name: resource-api
-    depends_on:
-      resource-mongo:
-        condition: service_healthy
-    ports:
-      - "8082:8082"
-    volumes:
-      - /app/node_modules
-    environment:
-      MONGO_URI: mongodb://resource-mongo:27017/resource_mgmt
-      PORT: 8082
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/myrealm
-      SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/myrealm
-      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID: springboot-app
-      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET: ks631jXyyFXo7sFAl7vxiyk4SmbgQ68S
-      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_PROVIDER: keycloak
+
+#  notification-api:
+#    build: ./notificationAPI
+#    container_name: notification-api
+#    ports:
+#      - "8081:8081"
+#    depends_on:
+#      kafka:
+#        condition: service_started
+#    environment:
+#      SPRING_APPLICATION_NAME: notificationAPI
+#      SERVER_PORT: 8081
+#      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+#      SPRING_KAFKA_CONSUMER_GROUP_ID: notification-group
+#      SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET: earliest
+#      SPRING_MAIL_HOST: smtp.gmail.com
+#      SPRING_MAIL_PORT: 587
+#      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
+#      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
+#      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: true
+#      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: true
+#      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/myrealm
+#      SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/myrealm
+#      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID: springboot-app
+#      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET: ks631jXyyFXo7sFAl7vxiyk4SmbgQ68S
+#      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_PROVIDER: keycloak
+
+#    command: >
+#      java -jar app.jar
+#      --spring.kafka.bootstrap-servers=kafka:9092
+#
+#  resource-mongo:
+#    image: mongo:6
+#    container_name: resource-mongo
+#    ports:
+#      - "27017:27017"
+#    volumes:
+#      - resource-mongo-data:/data/db
+#    healthcheck:
+#      test: [ "CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand(\"ping\")' || exit 1" ]
+#      interval: 10s
+#      timeout: 10s
+#      retries: 5
+#
 
 
-  keycloak:
-    image: quay.io/keycloak/keycloak:24.0.2
-    container_name: keycloak
-    command: start-dev
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-    ports:
-      - "8083:8080"
+  #  Node.js Resource API
+#  resource-api:
+#    build: ./resourceManagementAPI
+#    container_name: resource-api
+#    depends_on:
+#      resource-mongo:
+#        condition: service_healthy
+#    ports:
+#      - "8082:8082"
+#    volumes:
+#      - /app/node_modules
+#    environment:
+#      MONGO_URI: mongodb://resource-mongo:27017/resource_mgmt
+#      PORT: 8082
+#      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/myrealm
+#      SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/myrealm
+#      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID: springboot-app
+#      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET: ks631jXyyFXo7sFAl7vxiyk4SmbgQ68S
+#      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_PROVIDER: keycloak
+#
+
+#  keycloak:
+#    image: quay.io/keycloak/keycloak:24.0.2
+#    container_name: keycloak
+#    command: start-dev
+#    environment:
+#      KEYCLOAK_ADMIN: admin
+#      KEYCLOAK_ADMIN_PASSWORD: admin
+#    ports:
+#      - "8083:8080"
 
 
 volumes:
-  mysql-data:
-  resource-mongo-data:
+  pgdata:
+
+networks:
+  backend:
+#  mysql-data:
+#  resource-mongo-data:
