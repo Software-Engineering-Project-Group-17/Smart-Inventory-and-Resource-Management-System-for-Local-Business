@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   Plus,
@@ -45,44 +45,9 @@ const StaffManagementPage = () => {
     { id: "resources", name: "Resources", color: "#10B981" },
   ];
 
-  const [staff, setStaff] = useState<StaffMember[]>([
-    {
-      id: 1,
-      firstName: "John",
-      lastName: "Doe",
-      email: "john.doe@example.com",
-      phone: "+94 77 123 4567",
-      address: "123 Main St, Colombo 01",
-      types: ["sales", "inventory"],
-      salary: 75000,
-      remainingLeave: 18,
-      isActive: true,
-    },
-    {
-      id: 2,
-      firstName: "Jane",
-      lastName: "Smith",
-      email: "jane.smith@example.com",
-      phone: "+94 71 987 6543",
-      address: "456 Park Ave, Kandy",
-      types: ["resources"],
-      salary: 80000,
-      remainingLeave: 21,
-      isActive: true,
-    },
-    {
-      id: 3,
-      firstName: "Mike",
-      lastName: "Johnson",
-      email: "mike.johnson@example.com",
-      phone: "+94 76 555 0123",
-      address: "789 Queen St, Galle",
-      types: ["sales", "inventory", "resources"],
-      salary: 90000,
-      remainingLeave: 15,
-      isActive: false,
-    },
-  ]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
@@ -93,6 +58,101 @@ const StaffManagementPage = () => {
   const [showAddTypeDropdown, setShowAddTypeDropdown] = useState(false);
   const [showEditTypeDropdown, setShowEditTypeDropdown] = useState(false);
 
+  // Notification state
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error';
+  }>({ show: false, message: '', type: 'success' });
+
+  // Show notification function
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => {
+      setNotification({ show: false, message: '', type: 'success' });
+    }, 5000); // Hide after 5 seconds
+  };
+
+  // Fetch staff data for current manager
+  const fetchStaff = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Get current user Firebase UID from localStorage
+      const uid = localStorage.getItem("uid");
+      console.log("Firebase UID from localStorage:", uid);
+      
+      if (!uid) {
+        showNotification("Please log in as a manager to view staff", "error");
+        setLoading(false);
+        return;
+      }
+
+      const managerFirebaseUid = uid;
+      console.log("Manager Firebase UID:", managerFirebaseUid);
+
+      if (!managerFirebaseUid) {
+        showNotification("Manager authentication not found", "error");
+        setLoading(false);
+        return;
+      }
+
+      // Use the dedicated staff endpoint for this manager
+      const apiUrl = `http://localhost:8084/api/roles/staff/manager/${managerFirebaseUid}`;
+      console.log("API URL:", apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("Response status:", response.status);
+      
+      if (response.ok) {
+        const result = await response.text();
+        console.log("Raw API response:", result);
+        
+        const parsedResult = JSON.parse(result);
+        console.log("Parsed API response:", parsedResult);
+        
+        // Map the staff data from the API response
+        const staffMembers = parsedResult.staff?.map((staff: any) => ({
+          id: staff.id,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          email: staff.email,
+          phone: staff.phoneNumber || '',
+          address: staff.address || '',
+          types: staff.staffTypes || ['sales'], // Use the actual staff types from database
+          salary: staff.salary || 0,
+          remainingLeave: 21, // Default leave days
+          isActive: staff.isActive !== false, // Default to true if not specified
+        })) || [];
+
+        console.log("Mapped staff members:", staffMembers);
+        setStaff(staffMembers);
+      } else {
+        const errorText = await response.text();
+        console.error("API Error:", response.status, errorText);
+        showNotification("Failed to fetch staff data", "error");
+      }
+    } catch (error) {
+      console.error("Error fetching staff:", error);
+      showNotification("Failed to load staff data", "error");
+      setError("Failed to load staff data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load staff data when component mounts
+  useEffect(() => {
+    fetchStaff();
+  }, []);
+
   // Add form state
   const [newMember, setNewMember] = useState({
     firstName: "",
@@ -100,6 +160,7 @@ const StaffManagementPage = () => {
     email: "",
     phone: "",
     address: "",
+    password: "",
     types: [] as string[],
     salary: 0,
   });
@@ -152,30 +213,102 @@ const StaffManagementPage = () => {
     }
   };
 
-  const handleAddMember = () => {
+  const handleAddMember = async () => {
     if (
       newMember.firstName &&
       newMember.lastName &&
       newMember.email &&
+      newMember.password &&
       newMember.types.length > 0
     ) {
-      const member: StaffMember = {
-        id: Math.max(...staff.map((s) => s.id)) + 1,
-        ...newMember,
-        remainingLeave: 21,
-        isActive: true,
-      };
-      setStaff((prev) => [...prev, member]);
-      setNewMember({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        address: "",
-        types: [],
-        salary: 0,
-      });
-      setShowAddForm(false);
+      try {
+        // Get current user authentication info
+        const uid = localStorage.getItem("uid");
+        
+        if (!uid) {
+          showNotification("Please log in as a manager to create staff", "error");
+          return;
+        }
+
+        const managerFirebaseUid = uid;
+        
+        if (!managerFirebaseUid) {
+          showNotification("Manager Firebase UID not found. Please log in again.", "error");
+          return;
+        }
+
+        // Map frontend types to backend format (uppercase)
+        const staffTypes = newMember.types.map((type) => type.toUpperCase());
+
+        // Create staff request payload
+        const createStaffRequest = {
+          creatorFirebaseUid: managerFirebaseUid,
+          firstName: newMember.firstName,
+          lastName: newMember.lastName,
+          email: newMember.email,
+          password: newMember.password || "defaultPassword123", // Use form password or default
+          phoneNumber: newMember.phone || "",
+          address: newMember.address || "",
+          staffTypes: staffTypes,
+          salary: newMember.salary || 0,
+        };
+
+        // Call the staff creation API
+        const response = await fetch("http://localhost:8084/api/roles/staff", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(createStaffRequest),
+        });
+
+        const result = await response.text();
+        let parsedResult;
+
+        try {
+          parsedResult = JSON.parse(result);
+        } catch (e) {
+          parsedResult = {
+            message: result,
+            status: response.ok ? "success" : "error",
+          };
+        }
+
+        if (response.ok && parsedResult.status === "success") {
+          // Reset form
+          setNewMember({
+            firstName: "",
+            lastName: "",
+            email: "",
+            phone: "",
+            address: "",
+            password: "",
+            types: [],
+            salary: 0,
+          });
+          setShowAddForm(false);
+          setShowAddTypeDropdown(false);
+
+          // Refresh staff list
+          await fetchStaff();
+
+          showNotification(
+            `Staff member created successfully! Welcome ${newMember.firstName} ${newMember.lastName}`,
+            "success"
+          );
+        } else {
+          showNotification(
+            `Failed to create staff: ${parsedResult.message || "Unknown error"}`,
+            "error"
+          );
+        }
+      } catch (error) {
+        console.error("Error creating staff:", error);
+        showNotification(
+          "Failed to create staff. Please check your connection and try again.",
+          "error"
+        );
+      }
     }
   };
 
@@ -233,6 +366,36 @@ const StaffManagementPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+      {/* Notification */}
+      {notification.show && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border-l-4 ${
+          notification.type === 'success' 
+            ? 'bg-green-50 border-green-400 text-green-800' 
+            : 'bg-red-50 border-red-400 text-red-800'
+        } max-w-md`}>
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              {notification.type === 'success' ? (
+                <Check className="h-5 w-5 text-green-400" />
+              ) : (
+                <X className="h-5 w-5 text-red-400" />
+              )}
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium">{notification.message}</p>
+            </div>
+            <div className="ml-auto pl-3">
+              <button
+                onClick={() => setNotification({ show: false, message: '', type: 'success' })}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -489,6 +652,24 @@ const StaffManagementPage = () => {
                   }
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
                   placeholder="Enter email address"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={newMember.password}
+                  onChange={(e) =>
+                    setNewMember((prev) => ({
+                      ...prev,
+                      password: e.target.value,
+                    }))
+                  }
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
+                  placeholder="Enter password"
                 />
               </div>
 
@@ -802,7 +983,6 @@ const StaffManagementPage = () => {
                                       }
                                       className="rounded border-gray-300 text-[#3674B5] focus:ring-[#3674B5]"
                                     />
-                                  
 
                                     <span className="text-sm text-gray-700">
                                       {type.name}
@@ -915,10 +1095,41 @@ const StaffManagementPage = () => {
               </tbody>
             </table>
 
-            {filteredStaff.length === 0 && (
+            {loading && (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3674B5] mx-auto mb-4"></div>
+                <p className="text-gray-500 text-lg">Loading staff members...</p>
+              </div>
+            )}
+
+            {error && !loading && (
+              <div className="text-center py-12">
+                <X size={48} className="mx-auto text-red-300 mb-4" />
+                <p className="text-red-500 text-lg">Error loading staff</p>
+                <p className="text-gray-400 mb-4">{error}</p>
+                <button
+                  onClick={fetchStaff}
+                  className="px-4 py-2 bg-[#3674B5] text-white rounded-lg hover:opacity-90"
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+
+            {!loading && !error && filteredStaff.length === 0 && staff.length === 0 && (
               <div className="text-center py-12">
                 <Users size={48} className="mx-auto text-gray-300 mb-4" />
                 <p className="text-gray-500 text-lg">No staff members found</p>
+                <p className="text-gray-400">
+                  Start by adding your first staff member
+                </p>
+              </div>
+            )}
+
+            {!loading && !error && filteredStaff.length === 0 && staff.length > 0 && (
+              <div className="text-center py-12">
+                <Users size={48} className="mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-500 text-lg">No staff members match your search</p>
                 <p className="text-gray-400">
                   Try adjusting your search criteria
                 </p>

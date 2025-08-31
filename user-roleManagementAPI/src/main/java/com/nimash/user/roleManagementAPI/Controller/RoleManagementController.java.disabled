@@ -1,0 +1,80 @@
+package com.nimash.user.roleManagementAPI.Controller;
+
+import com.nimash.user.roleManagementAPI.Dto.*;
+import com.nimash.user.roleManagementAPI.Service.RoleManagementService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/admin")
+@Tag(name = "Role Management", description = "API for creating users with different roles")
+public class RoleManagementController {
+    
+    @Autowired
+    private RoleManagementService roleManagementService;
+    
+    @PostMapping("/staff")
+    @Operation(summary = "Create Staff", description = "Creates a new staff member. Requires MANAGER or OWNER role.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Staff created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request data"),
+            @ApiResponse(responseCode = "403", description = "Insufficient permissions"),
+            @ApiResponse(responseCode = "409", description = "Email already exists")
+    })
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('OWNER')")
+    public ResponseEntity<AuthResponse> createStaff(@RequestBody StaffCreationRequest request) {
+        try {
+            AuthResponse response = roleManagementService.createStaff(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @PostMapping("/manager")
+    @Operation(summary = "Create Manager", description = "Creates a new manager. Requires OWNER role.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Manager created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request data"),
+            @ApiResponse(responseCode = "403", description = "Insufficient permissions - Owner only"),
+            @ApiResponse(responseCode = "409", description = "Email already exists")
+    })
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<AuthResponse> createManager(@RequestBody ManagerCreationRequest request) {
+        try {
+            AuthResponse response = roleManagementService.createManager(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @PostMapping("/owner")
+    @Operation(summary = "Create Owner", description = "Creates a new owner. Requires admin secret key.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Owner created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request data or secret key"),
+            @ApiResponse(responseCode = "403", description = "Invalid secret key"),
+            @ApiResponse(responseCode = "409", description = "Email already exists")
+    })
+    public ResponseEntity<AuthResponse> createOwner(@RequestBody OwnerCreationRequest request) {
+        try {
+            AuthResponse response = roleManagementService.createOwner(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            if (e.getMessage().contains("Invalid secret key")) {
+                return ResponseEntity.status(403).build();
+            }
+            return ResponseEntity.badRequest().build();
+        }
+    }
+}
