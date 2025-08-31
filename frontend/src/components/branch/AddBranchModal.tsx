@@ -1,26 +1,52 @@
-import React from "react";
-import { Building2, Plus } from "lucide-react";
-import Modal from "./Modal";
+import React, { useState } from "react";
+import { Plus, Building2 } from "lucide-react";
+import Modal from "@/components/inventory/Modal";
+import { Branch } from "@/types/branches";
 
-type AddBranchModalProps = {
+interface AddBranchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  branchName: string;
-  setBranchName: (name: string) => void;
-  handleAddBranch: () => void;
-  isProcessing: boolean;
-};
+  onAddBranch: (newBranch: Branch) => void;
+  branches: Branch[];
+}
 
 const AddBranchModal: React.FC<AddBranchModalProps> = ({
   isOpen,
   onClose,
-  branchName,
-  setBranchName,
-  handleAddBranch,
-  isProcessing,
+  onAddBranch,
+  branches,
 }) => {
+  const [branchName, setBranchName] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleAddBranch = async () => {
+    if (!branchName.trim()) return;
+
+    setIsProcessing(true);
+    // Simulate API call
+    setTimeout(() => {
+      const newBranch: Branch = {
+        id: (Math.max(...branches.map(b => parseInt(b.id))) + 1).toString(),
+        name: branchName.trim(),
+        managerCount: 0,
+        staffCount: 0,
+        managers: []
+      };
+      
+      onAddBranch(newBranch);
+      setBranchName("");
+      setIsProcessing(false);
+      onClose();
+    }, 1000);
+  };
+
+  const handleClose = () => {
+    setBranchName("");
+    onClose();
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add New Branch">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Add New Branch">
       <div className="space-y-4">
         <p className="text-gray-600">Enter the name for the new branch</p>
 
@@ -44,7 +70,7 @@ const AddBranchModal: React.FC<AddBranchModalProps> = ({
         {/* Action Buttons */}
         <div className="flex gap-3 justify-end pt-4">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg 
                        hover:bg-gray-200 transition-colors"
             disabled={isProcessing}

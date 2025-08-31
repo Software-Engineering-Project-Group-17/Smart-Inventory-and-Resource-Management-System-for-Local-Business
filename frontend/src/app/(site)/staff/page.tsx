@@ -1,53 +1,17 @@
 "use client";
 import React, { useState } from "react";
-import {
-  Search,
-  Plus,
-  Edit,
-  Trash2,
-  Save,
-  X,
-  Check,
-  ChevronDown,
-  Users,
-  Mail,
-  Phone,
-  MapPin,
-  DollarSign,
-  Calendar,
-  UserCheck,
-  Filter,
-} from "lucide-react";
-
-interface StaffMember {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  address: string;
-  types: string[];
-  salary: number;
-  remainingLeave: number;
-  isActive: boolean;
-}
-
-interface StaffType {
-  id: string;
-  name: string;
-  color: string;
-}
+import { Users } from "lucide-react";
+import { StaffMember } from "@/types/staff";
+import StaffSummaryCards from "@/components/staff/SummaryCard";
+import StaffFilters from "@/components/staff/Filters";
+import AddMemberForm from "@/components/staff/AddMemberForm";
+import StaffTable from "@/components/staff/StaffTable";
+import Header from "@/components/staff/Header";
 
 const StaffManagementPage = () => {
-  const staffTypes: StaffType[] = [
-    { id: "sales", name: "Sales", color: "#3674B5" },
-    { id: "inventory", name: "Inventory", color: "#FADA7A" },
-    { id: "resources", name: "Resources", color: "#10B981" },
-  ];
-
   const [staff, setStaff] = useState<StaffMember[]>([
     {
-      id: 1,
+      id: "1",
       firstName: "John",
       lastName: "Doe",
       email: "john.doe@example.com",
@@ -59,7 +23,7 @@ const StaffManagementPage = () => {
       isActive: true,
     },
     {
-      id: 2,
+      id: "2",
       firstName: "Jane",
       lastName: "Smith",
       email: "jane.smith@example.com",
@@ -71,7 +35,7 @@ const StaffManagementPage = () => {
       isActive: true,
     },
     {
-      id: 3,
+      id: "3",
       firstName: "Mike",
       lastName: "Johnson",
       email: "mike.johnson@example.com",
@@ -87,22 +51,7 @@ const StaffManagementPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingItem, setEditingItem] = useState<StaffMember | null>(null);
   const [showTypeFilter, setShowTypeFilter] = useState(false);
-  const [showAddTypeDropdown, setShowAddTypeDropdown] = useState(false);
-  const [showEditTypeDropdown, setShowEditTypeDropdown] = useState(false);
-
-  // Add form state
-  const [newMember, setNewMember] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    address: "",
-    types: [] as string[],
-    salary: 0,
-  });
 
   // Filter staff
   const filteredStaff = staff.filter((member) => {
@@ -114,31 +63,15 @@ const StaffManagementPage = () => {
     return matchesSearch && matchesType;
   });
 
-  const handleEdit = (member: StaffMember) => {
-    setEditingId(member.id);
-    setEditingItem({ ...member });
+  const handleEdit = (updatedMember: StaffMember) => {
+    setStaff((prev) =>
+      prev.map((member) =>
+        member.id === updatedMember.id ? updatedMember : member
+      )
+    );
   };
 
-  const handleSave = () => {
-    if (editingItem) {
-      setStaff((prev) =>
-        prev.map((member) =>
-          member.id === editingItem.id ? editingItem : member
-        )
-      );
-      setEditingId(null);
-      setEditingItem(null);
-      setShowEditTypeDropdown(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditingId(null);
-    setEditingItem(null);
-    setShowEditTypeDropdown(false);
-  };
-
-  const handleToggleActive = (id: number) => {
+  const handleToggleActive = (id: string) => {
     setStaff((prev) =>
       prev.map((member) =>
         member.id === id ? { ...member, isActive: !member.isActive } : member
@@ -146,786 +79,60 @@ const StaffManagementPage = () => {
     );
   };
 
-  const handleRemove = (id: number) => {
+  const handleRemove = (id: string) => {
     if (confirm("Are you sure you want to remove this staff member?")) {
       setStaff((prev) => prev.filter((member) => member.id !== id));
     }
   };
 
-  const handleAddMember = () => {
-    if (
-      newMember.firstName &&
-      newMember.lastName &&
-      newMember.email &&
-      newMember.types.length > 0
-    ) {
-      const member: StaffMember = {
-        id: Math.max(...staff.map((s) => s.id)) + 1,
-        ...newMember,
-        remainingLeave: 21,
-        isActive: true,
-      };
-      setStaff((prev) => [...prev, member]);
-      setNewMember({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        address: "",
-        types: [],
-        salary: 0,
-      });
-      setShowAddForm(false);
-    }
-  };
-
-  const handleTypeFilterChange = (typeId: string) => {
-    setSelectedTypes((prev) =>
-      prev.includes(typeId)
-        ? prev.filter((t) => t !== typeId)
-        : [...prev, typeId]
-    );
-  };
-
-  const handleAddFormTypeChange = (typeId: string) => {
-    setNewMember((prev) => ({
-      ...prev,
-      types: prev.types.includes(typeId)
-        ? prev.types.filter((t) => t !== typeId)
-        : [...prev.types, typeId],
-    }));
-  };
-
-  const handleEditFormTypeChange = (typeId: string) => {
-    if (editingItem) {
-      setEditingItem((prev) =>
-        prev
-          ? {
-              ...prev,
-              types: prev.types.includes(typeId)
-                ? prev.types.filter((t) => t !== typeId)
-                : [...prev.types, typeId],
-            }
-          : null
-      );
-    }
-  };
-
-  const getTypeColor = (typeId: string) => {
-    return staffTypes.find((t) => t.id === typeId)?.color || "#6B7280";
-  };
-
-  const getTypeName = (typeId: string) => {
-    return staffTypes.find((t) => t.id === typeId)?.name || typeId;
-  };
-
-  const getTypeInitials = (typeId: string) => {
-    const initials = {
-      sales: "S",
-      inventory: "I",
-      resources: "R",
+  const handleAddMember = (memberData: Omit<StaffMember, 'id' | 'remainingLeave' | 'isActive'>) => {
+    const newId = Math.max(...staff.map((s) => parseInt(s.id))) + 1;
+    const member: StaffMember = {
+      id: newId.toString(),
+      ...memberData,
+      remainingLeave: 21,
+      isActive: true,
     };
-    return (
-      initials[typeId as keyof typeof initials] ||
-      typeId.charAt(0).toUpperCase()
-    );
+    setStaff((prev) => [...prev, member]);
+    setShowAddForm(false);
   };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div
-              className="p-3 rounded-xl text-white"
-              style={{ backgroundColor: "#3674B5" }}
-            >
-              <Users size={24} />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Staff Management
-              </h1>
-              <p className="text-gray-600">
-                Manage your team members and their roles
-              </p>
-            </div>
-          </div>
-        </div>
+        <Header/>
+
 
         {/* Summary Cards */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-3">
-              <div
-                className="p-3 rounded-lg text-white"
-                style={{ backgroundColor: "#3674B5" }}
-              >
-                <Users size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Staff</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {staff.length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-3">
-              <div
-                className="p-3 rounded-lg text-white"
-                style={{ backgroundColor: "#10B981" }}
-              >
-                <UserCheck size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Active Staff</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {staff.filter((member) => member.isActive).length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-3">
-              <div
-                className="p-3 rounded-lg text-white"
-                style={{ backgroundColor: "#FADA7A" }}
-              >
-                <Calendar size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Avg. Leave Days</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {Math.round(
-                    staff.reduce(
-                      (sum, member) => sum + member.remainingLeave,
-                      0
-                    ) / staff.length
-                  ) || 0}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-3">
-              <div
-                className="p-3 rounded-lg text-white"
-                style={{ backgroundColor: "#3674B5" }}
-              >
-                <DollarSign size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Payroll</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  LKR{" "}
-                  {staff
-                    .reduce((sum, member) => sum + member.salary, 0)
-                    .toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <StaffSummaryCards staff={staff} />
 
         {/* Filters and Add Button */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search
-                size={20}
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              />
-              <input
-                type="text"
-                placeholder="Search by name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent transition-all duration-200 focus:outline-none"
-              />
-            </div>
-
-            {/* Type Filter */}
-            <div className="relative">
-              <button
-                onClick={() => setShowTypeFilter(!showTypeFilter)}
-                className="px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent flex items-center justify-between min-w-[150px]"
-              >
-                <div className="flex items-center gap-2">
-                  <Filter size={16} />
-                  <span
-                    className={
-                      selectedTypes.length > 0
-                        ? "text-gray-900"
-                        : "text-gray-500"
-                    }
-                  >
-                    {selectedTypes.length > 0
-                      ? `${selectedTypes.length} selected`
-                      : "Filter by Role"}
-                  </span>
-                </div>
-                <ChevronDown size={20} className="text-gray-400 ml-2" />
-              </button>
-
-              {showTypeFilter && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
-                  <div className="p-2">
-                    {staffTypes.map((type) => (
-                      <label
-                        key={type.id}
-                        className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedTypes.includes(type.id)}
-                          onChange={() => handleTypeFilterChange(type.id)}
-                          className="rounded border-gray-300 text-[#3674B5] focus:ring-[#3674B5]"
-                        />
-                        <span
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: type.color }}
-                        ></span>
-                        <span className="text-sm text-gray-700">
-                          {type.name}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                  <div className="border-t border-gray-200 p-2">
-                    <button
-                      onClick={() => {
-                        setSelectedTypes([]);
-                        setShowTypeFilter(false);
-                      }}
-                      className="text-sm text-gray-500 hover:text-gray-700"
-                    >
-                      Clear all
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Add Member Button */}
-            <button
-              onClick={() => setShowAddForm(!showAddForm)}
-              className="flex items-center gap-2 px-6 py-3 text-white rounded-lg hover:opacity-90 transition-colors duration-200 font-medium"
-              style={{ backgroundColor: "#3674B5" }}
-            >
-              <Plus size={20} />
-              Add Member
-            </button>
-          </div>
-        </div>
+        <StaffFilters
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          selectedTypes={selectedTypes}
+          setSelectedTypes={setSelectedTypes}
+          showTypeFilter={showTypeFilter}
+          setShowTypeFilter={setShowTypeFilter}
+          onAddMember={() => setShowAddForm(!showAddForm)}
+        />
 
         {/* Add Member Form */}
         {showAddForm && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div
-                className="p-2 rounded-lg text-white"
-                style={{ backgroundColor: "#FADA7A" }}
-              >
-                <Plus size={20} />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-800">
-                Add New Member
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name
-                </label>
-                <input
-                  type="text"
-                  value={newMember.firstName}
-                  onChange={(e) =>
-                    setNewMember((prev) => ({
-                      ...prev,
-                      firstName: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                  placeholder="Enter first name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name
-                </label>
-                <input
-                  type="text"
-                  value={newMember.lastName}
-                  onChange={(e) =>
-                    setNewMember((prev) => ({
-                      ...prev,
-                      lastName: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                  placeholder="Enter last name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={newMember.email}
-                  onChange={(e) =>
-                    setNewMember((prev) => ({ ...prev, email: e.target.value }))
-                  }
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                  placeholder="Enter email address"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  value={newMember.phone}
-                  onChange={(e) =>
-                    setNewMember((prev) => ({ ...prev, phone: e.target.value }))
-                  }
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                  placeholder="Enter phone number"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Address
-                </label>
-                <input
-                  type="text"
-                  value={newMember.address}
-                  onChange={(e) =>
-                    setNewMember((prev) => ({
-                      ...prev,
-                      address: e.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                  placeholder="Enter address"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Salary (LKR)
-                </label>
-                <input
-                  type="number"
-                  value={newMember.salary}
-                  onChange={(e) =>
-                    setNewMember((prev) => ({
-                      ...prev,
-                      salary: parseInt(e.target.value) || 0,
-                    }))
-                  }
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                  placeholder="Enter salary"
-                />
-              </div>
-
-              <div className="md:col-span-2 lg:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Roles
-                </label>
-                <div className="relative">
-                  <button
-                    onClick={() => setShowAddTypeDropdown(!showAddTypeDropdown)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent text-left flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-2">
-                      {newMember.types.length > 0 ? (
-                        <div className="flex gap-2 flex-wrap">
-                          {newMember.types.map((typeId) => (
-                            <span
-                              key={typeId}
-                              className="px-2 py-1 rounded-full text-xs font-medium text-white"
-                              style={{ backgroundColor: getTypeColor(typeId) }}
-                            >
-                              {getTypeName(typeId)}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">Select roles</span>
-                      )}
-                    </div>
-                    <ChevronDown size={20} className="text-gray-400" />
-                  </button>
-
-                  {showAddTypeDropdown && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
-                      <div className="p-2">
-                        {staffTypes.map((type) => (
-                          <label
-                            key={type.id}
-                            className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={newMember.types.includes(type.id)}
-                              onChange={() => handleAddFormTypeChange(type.id)}
-                              className="rounded border-gray-300 text-[#3674B5] focus:ring-[#3674B5]"
-                            />
-                            <span
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: type.color }}
-                            ></span>
-                            <span className="text-sm text-gray-700">
-                              {type.name}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end mt-6">
-              <button
-                onClick={() => setShowAddForm(false)}
-                className="px-6 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddMember}
-                className="px-6 py-2 text-white rounded-lg hover:opacity-90 transition-colors flex items-center gap-2"
-                style={{ backgroundColor: "#3674B5" }}
-                disabled={
-                  !newMember.firstName ||
-                  !newMember.lastName ||
-                  !newMember.email ||
-                  newMember.types.length === 0
-                }
-              >
-                <Check size={16} />
-                Add Member
-              </button>
-            </div>
-          </div>
+          <AddMemberForm
+            onAddMember={handleAddMember}
+            onCancel={() => setShowAddForm(false)}
+          />
         )}
 
         {/* Staff Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead style={{ backgroundColor: "#3674B5" }}>
-                <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                    Name
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                    Email
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                    Phone
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                    Address
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                    Type
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                    Salary
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                    Remaining Leave
-                  </th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold text-white">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredStaff.map((member) => (
-                  <tr
-                    key={member.id}
-                    className="hover:bg-gray-50 transition-colors duration-150"
-                  >
-                    <td className="px-6 py-4">
-                      {editingId === member.id ? (
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={editingItem?.firstName || ""}
-                            onChange={(e) =>
-                              setEditingItem((prev) =>
-                                prev
-                                  ? { ...prev, firstName: e.target.value }
-                                  : null
-                              )
-                            }
-                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                            placeholder="First Name"
-                          />
-                          <input
-                            type="text"
-                            value={editingItem?.lastName || ""}
-                            onChange={(e) =>
-                              setEditingItem((prev) =>
-                                prev
-                                  ? { ...prev, lastName: e.target.value }
-                                  : null
-                              )
-                            }
-                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                            placeholder="Last Name"
-                          />
-                        </div>
-                      ) : (
-                        <div className="font-medium text-gray-900">{`${member.firstName} ${member.lastName}`}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {editingId === member.id ? (
-                        <input
-                          type="email"
-                          value={editingItem?.email || ""}
-                          onChange={(e) =>
-                            setEditingItem((prev) =>
-                              prev ? { ...prev, email: e.target.value } : null
-                            )
-                          }
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                        />
-                      ) : (
-                        <span className="text-gray-600">{member.email}</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {editingId === member.id ? (
-                        <input
-                          type="tel"
-                          value={editingItem?.phone || ""}
-                          onChange={(e) =>
-                            setEditingItem((prev) =>
-                              prev ? { ...prev, phone: e.target.value } : null
-                            )
-                          }
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                        />
-                      ) : (
-                        <span className="text-gray-600 whitespace-nowrap">
-                          {member.phone}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {editingId === member.id ? (
-                        <input
-                          type="text"
-                          value={editingItem?.address || ""}
-                          onChange={(e) =>
-                            setEditingItem((prev) =>
-                              prev ? { ...prev, address: e.target.value } : null
-                            )
-                          }
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                        />
-                      ) : (
-                        <span className="text-gray-600">{member.address}</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {editingId === member.id ? (
-                        <div className="relative">
-                          <button
-                            onClick={() =>
-                              setShowEditTypeDropdown(!showEditTypeDropdown)
-                            }
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent text-left flex items-center justify-between min-w-[120px]"
-                          >
-                            <div className="flex items-center gap-1">
-                              {editingItem && editingItem.types.length > 0 ? (
-                                <div className="flex gap-1">
-                                  {editingItem.types.map((typeId) => (
-                                    <span
-                                      key={typeId}
-                                      className="w-6 h-6 rounded-full text-xs font-medium text-white flex items-center justify-center"
-                                      style={{
-                                        backgroundColor: getTypeColor(typeId),
-                                      }}
-                                      title={getTypeName(typeId)}
-                                    >
-                                      {getTypeInitials(typeId)}
-                                    </span>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="text-gray-400 text-sm">
-                                  Select
-                                </span>
-                              )}
-                            </div>
-                            <ChevronDown size={16} className="text-gray-400" />
-                          </button>
-
-                          {showEditTypeDropdown && (
-                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
-                              <div className="p-2">
-                                {staffTypes.map((type) => (
-                                  <label
-                                    key={type.id}
-                                    className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={
-                                        editingItem?.types.includes(type.id) ||
-                                        false
-                                      }
-                                      onChange={() =>
-                                        handleEditFormTypeChange(type.id)
-                                      }
-                                      className="rounded border-gray-300 text-[#3674B5] focus:ring-[#3674B5]"
-                                    />
-                                  
-
-                                    <span className="text-sm text-gray-700">
-                                      {type.name}
-                                    </span>
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex gap-1 flex-wrap">
-                          {member.types.map((typeId) => (
-                            <span
-                              key={typeId}
-                              className="w-6 h-6 rounded-full text-xs font-medium text-white flex items-center justify-center"
-                              style={{ backgroundColor: getTypeColor(typeId) }}
-                              title={getTypeName(typeId)}
-                            >
-                              {getTypeInitials(typeId)}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {editingId === member.id ? (
-                        <input
-                          type="number"
-                          value={editingItem?.salary || ""}
-                          onChange={(e) =>
-                            setEditingItem((prev) =>
-                              prev
-                                ? {
-                                    ...prev,
-                                    salary: parseInt(e.target.value) || 0,
-                                  }
-                                : null
-                            )
-                          }
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                        />
-                      ) : (
-                        <span className="text-gray-900 font-medium">
-                          LKR {member.salary.toLocaleString()}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`font-medium ${
-                          member.remainingLeave < 5
-                            ? "text-red-600"
-                            : "text-gray-900"
-                        }`}
-                      >
-                        {member.remainingLeave} days
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        {editingId === member.id ? (
-                          <>
-                            <button
-                              onClick={handleSave}
-                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                            >
-                              <Save size={16} />
-                            </button>
-                            <button
-                              onClick={handleCancel}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <X size={16} />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => handleEdit(member)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            >
-                              <Edit size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleToggleActive(member.id)}
-                              className={`p-2 rounded-lg transition-colors ${
-                                member.isActive
-                                  ? "text-green-600 hover:bg-green-50"
-                                  : "text-gray-400 hover:bg-gray-50"
-                              }`}
-                              title={
-                                member.isActive ? "Deactivate" : "Activate"
-                              }
-                            >
-                              <UserCheck size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleRemove(member.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {filteredStaff.length === 0 && (
-              <div className="text-center py-12">
-                <Users size={48} className="mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500 text-lg">No staff members found</p>
-                <p className="text-gray-400">
-                  Try adjusting your search criteria
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+        <StaffTable
+          staff={filteredStaff}
+          onEdit={handleEdit}
+          onToggleActive={handleToggleActive}
+          onRemove={handleRemove}
+        />
       </div>
     </div>
   );
