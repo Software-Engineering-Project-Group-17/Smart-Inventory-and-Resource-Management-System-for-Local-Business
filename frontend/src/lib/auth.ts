@@ -73,9 +73,9 @@ export const clearAuthData = (): void => {
 export const getDefaultRedirectPath = (role: string): string => {
   switch (role.toUpperCase()) {
     case "OWNER":
-      return "/admin";
-    case "MANAGER":
       return "/branches";
+    case "MANAGER":
+      return "/staff";
     case "BRANCH":
     case "INVENTORY":
     case "RESOURCE":
