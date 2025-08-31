@@ -34,6 +34,10 @@ public class Branch {
     @JoinColumn(name = "manager_id")
     private User manager;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+    
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = true) // Make nullable for existing data
     private LocalDateTime createdAt;
@@ -58,5 +62,54 @@ public class Branch {
     
     public void setDescription(String description) {
         this.description = description;
+    }
+    
+    public void setManager(User manager) {
+        this.manager = manager;
+    }
+    
+    public void setOwner(User owner) {
+        this.owner = owner;
+    }
+    
+    public void setStatus(BranchStatus status) {
+        this.status = status;
+    }
+    
+    // Explicit getters for JSON serialization
+    public Long getId() {
+        return id;
+    }
+    
+    public String getName() {
+        return name;
+    }
+    
+    public String getLocation() {
+        return location;
+    }
+    
+    public String getContactNumber() {
+        return contactNumber;
+    }
+    
+    public String getDescription() {
+        return description;
+    }
+    
+    public BranchStatus getStatus() {
+        return status;
+    }
+    
+    public User getManager() {
+        return manager;
+    }
+    
+    public User getOwner() {
+        return owner;
+    }
+    
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 }
