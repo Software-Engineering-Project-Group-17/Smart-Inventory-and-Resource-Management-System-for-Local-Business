@@ -2,8 +2,10 @@ package com.nimash.user.roleManagementAPI;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
+@ComponentScan(basePackages = "com.nimash.user.roleManagementAPI")
 public class Application {
 
 	public static void main(String[] args) {

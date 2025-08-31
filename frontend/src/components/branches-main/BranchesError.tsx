@@ -1,0 +1,30 @@
+"use client";
+import React from "react";
+import { AlertTriangle } from "lucide-react";
+import { BranchesErrorProps } from "./types";
+import { BRANCHES_CONSTANTS } from "./branchesConstants";
+
+export const BranchesError: React.FC<BranchesErrorProps> = ({
+  error,
+  onRetry,
+}) => {
+  if (!error) return null;
+
+  return (
+    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+      <AlertTriangle size={20} className="text-red-600" />
+      <div className="flex-1">
+        <p className="text-red-800 font-medium">
+          {BRANCHES_CONSTANTS.labels.errorTitle}
+        </p>
+        <p className="text-red-600 text-sm">{error}</p>
+      </div>
+      <button
+        onClick={onRetry}
+        className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors duration-200"
+      >
+        {BRANCHES_CONSTANTS.labels.retry}
+      </button>
+    </div>
+  );
+};

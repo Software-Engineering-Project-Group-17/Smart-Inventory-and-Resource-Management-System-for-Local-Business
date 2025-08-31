@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { getDefaultRedirectPath } from "@/lib/auth";
 import Input from "@/components/admin/Input";
 import Image from "next/image";
 import Link from "next/link";
@@ -12,19 +16,12 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
 
     try {
-      // TODO: Implement Google OAuth integration
-      // This would typically involve:
-      // 1. Initialize Google OAuth client
-      // 2. Open Google sign-in popup
-      // 3. Get user credentials
-      // 4. Send to backend for verification
-      // 5. Handle response
-
       toast({
         title: "Coming Soon",
         description: "Google sign-in will be available soon!",
@@ -58,18 +55,126 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/admin/login", {
+      // Firebase login
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const token = await userCredential.user.getIdToken();
+
+      // Send token to backend
+      const response = await fetch("http://localhost:8084/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email }),
       });
+
+      let userData = null;
+      let userUid = userCredential.user.uid;
+
+      if (response.ok) {
+        // Backend call successful - check if user data exists
+        const data = await response.json();
+        console.log("Backend response data:", data);
+
+        if (data.user && data.user !== null) {
+          // Backend has user data - use it
+          userData = data.user;
+          userUid = data.uid;
+          console.log("Backend login successful with user data:", userData);
+        } else {
+          // Backend response OK but no user data - create fallback profile
+          console.warn(
+            "Backend response OK but user is null, creating fallback profile"
+          );
+          userData = {
+            id: userCredential.user.uid,
+            email: email,
+            username: email.split("@")[0],
+            firstName:
+              userCredential.user.displayName?.split(" ")[0] ||
+              email.split("@")[0],
+            lastName: userCredential.user.displayName?.split(" ")[1] || "",
+            role: "STAFF", // Default role
+            phoneNumber: userCredential.user.phoneNumber || "",
+            address: "",
+            department: "",
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+            profilePictureUrl: userCredential.user.photoURL || "",
+            subscriptionStatus: "active",
+            subscriptionExpiresAt: new Date(
+              Date.now() + 365 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+          };
+          console.log(
+            "Created fallback profile for successful backend response:",
+            userData
+          );
+        }
+      } else {
+        // Backend call failed - create fallback profile
+        console.warn("Backend login failed, creating fallback profile");
+        const errorData = await response.text();
+        console.error("Backend error:", errorData);
+
+        userData = {
+          id: userCredential.user.uid,
+          email: email,
+          username: email.split("@")[0],
+          firstName:
+            userCredential.user.displayName?.split(" ")[0] ||
+            email.split("@")[0],
+          lastName: userCredential.user.displayName?.split(" ")[1] || "",
+          role: "STAFF", // Default role
+          phoneNumber: userCredential.user.phoneNumber || "",
+          address: "",
+          department: "",
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+          profilePictureUrl: userCredential.user.photoURL || "",
+          subscriptionStatus: "active",
+          subscriptionExpiresAt: new Date(
+            Date.now() + 365 * 24 * 60 * 60 * 1000
+          ).toISOString(),
+        };
+        console.log("Created fallback profile:", userData);
+      }
+
+      // Store authentication data
+      console.log("Storing user data:", userData);
+      localStorage.setItem("token", token);
+      localStorage.setItem("userProfile", JSON.stringify(userData));
+      localStorage.setItem("uid", userUid);
+
+      toast({
+        title: "Success",
+        description: `Welcome back, ${userData?.firstName || email}!`,
+        variant: "default",
+      });
+
+      // Redirect based on user role
+      if (userData && userData.role) {
+        const redirectPath = getDefaultRedirectPath(userData.role);
+        router.push(redirectPath);
+      } else {
+        // Fallback if no role is found
+        router.push("/profile");
+      }
     } catch (error) {
       console.error("Login error:", error);
       toast({
         title: "Error",
-        description: "Failed to login. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to login. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -122,14 +227,13 @@ export default function AdminLoginPage() {
               required
             />
 
-            <Link
-              href="/branches"
+            <button
               className="mt-4 sm:mt-6 px-8 sm:px-10 py-2 sm:py-2 bg-[#3674B5] hover:bg-blue-900 text-white rounded-4xl text-center text-base sm:text-lg heebo font-semibold transition-colors w-full sm:w-auto"
               type="submit"
               // disabled={isLoading}
             >
               {isLoading ? "Signing In..." : "Login"}
-            </Link>
+            </button>
 
             {/* Divider */}
             {/* <div className="flex items-center w-full my-3 sm:my-4">
