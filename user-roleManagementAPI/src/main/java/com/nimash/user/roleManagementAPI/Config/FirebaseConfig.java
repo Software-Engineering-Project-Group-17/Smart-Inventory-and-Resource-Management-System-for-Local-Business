@@ -13,15 +13,20 @@ import java.io.IOException;
 public class FirebaseConfig {
     @PostConstruct
     public void initFirebase() throws IOException {
-        FileInputStream serviceAccount =
-                new FileInputStream("src/main/resources/firebase-service-account.json");
+        try {
+            FileInputStream serviceAccount =
+                    new FileInputStream("src/main/resources/firebase-service-account.json");
 
-        FirebaseOptions options = new FirebaseOptions.Builder()
-                .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                .build();
+            FirebaseOptions options = new FirebaseOptions.Builder()
+                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                    .build();
 
-        if (FirebaseApp.getApps().isEmpty()) {
-            FirebaseApp.initializeApp(options);
+            if (FirebaseApp.getApps().isEmpty()) {
+                FirebaseApp.initializeApp(options);
+            }
+        } catch (Exception e) {
+            System.err.println("Firebase initialization failed: " + e.getMessage());
+            // Don't fail the application startup - just log the error
         }
     }
 }

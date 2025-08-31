@@ -46,13 +46,10 @@ public class Role {
     }
     
     public enum Role_Type{
-        OWNER,
-        MANAGER,
-        RESOURCE_MANAGER,
-        INVENTORY_MANAGER,
-        SALES_MANAGER,
-        STAFF,
-        SUPPLIER,
-        CUSTOMER
+        ADMIN,           // System admin (you)
+        BRANCH_MANAGER,  // Manager of a branch
+        STAFF,           // Staff member
+        SUPPLIER,        // External supplier
+        CUSTOMER         // Customer
     }
 }
