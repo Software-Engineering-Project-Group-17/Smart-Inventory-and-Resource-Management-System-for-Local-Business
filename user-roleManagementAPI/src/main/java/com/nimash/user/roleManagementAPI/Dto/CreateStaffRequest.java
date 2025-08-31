@@ -1,7 +1,9 @@
 package com.nimash.user.roleManagementAPI.Dto;
 
-import com.nimash.user.roleManagementAPI.Entity.Staff;
 import lombok.Data;
+import java.math.BigDecimal;
+import java.util.Set;
+import java.util.HashSet;
 
 @Data
 public class CreateStaffRequest {
@@ -12,7 +14,8 @@ public class CreateStaffRequest {
     private String password;
     private String phoneNumber;
     private String address;
-    private Staff.StaffRole staffRole; // Specific role within the branch
+    private Set<String> staffTypes = new HashSet<>(); // Updated to match new schema
+    private BigDecimal salary;
     
     // Explicit getters to work around Lombok issues
     public String getCreatorFirebaseUid() { return creatorFirebaseUid; }
@@ -22,5 +25,6 @@ public class CreateStaffRequest {
     public String getPassword() { return password; }
     public String getPhoneNumber() { return phoneNumber; }
     public String getAddress() { return address; }
-    public Staff.StaffRole getStaffRole() { return staffRole; }
+    public Set<String> getStaffTypes() { return staffTypes; }
+    public BigDecimal getSalary() { return salary; }
 }

@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.HashSet;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/roles")
@@ -237,8 +240,13 @@ public class RoleController {
             managerStaff.setAddress(request.getAddress());
             managerStaff.setTel(request.getPhoneNumber());
             managerStaff.setBranch(updatedBranch);
-            managerStaff.setStaffRole(Staff.StaffRole.STAFF); // Manager is also a staff member
             managerStaff.setManager(null); // Manager doesn't have a manager
+            
+            // Set new fields for updated schema
+            managerStaff.setSalary(new java.math.BigDecimal("0.00")); // Default salary for manager
+            managerStaff.setStaffTypes(Set.of("SALES", "INVENTORY", "RESOURCES")); // Manager has all permissions
+            managerStaff.setHireDate(java.time.LocalDateTime.now());
+            managerStaff.setIsActive(true);
 
             staffRepository.save(managerStaff);
 
@@ -318,8 +326,13 @@ public class RoleController {
             staff.setAddress(request.getAddress());
             staff.setTel(request.getPhoneNumber());
             staff.setBranch(branch);
-            staff.setStaffRole(request.getStaffRole());
             staff.setManager(managerUser.get());
+            
+            // Set new fields for updated schema
+            staff.setSalary(request.getSalary() != null ? request.getSalary() : new BigDecimal("0.00"));
+            staff.setStaffTypes(request.getStaffTypes() != null ? request.getStaffTypes() : new HashSet<>());
+            staff.setHireDate(LocalDateTime.now());
+            staff.setIsActive(true);
 
             staffRepository.save(staff);
 

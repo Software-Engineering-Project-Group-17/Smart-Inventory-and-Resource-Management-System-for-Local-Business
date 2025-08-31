@@ -2,6 +2,10 @@ package com.nimash.user.roleManagementAPI.Entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Set;
+import java.util.HashSet;
 
 @Entity
 @Table(name = "staff")
@@ -40,26 +44,23 @@ public class Staff {
     @JoinColumn(name = "manager_id")
     private User manager; // The branch manager who created this staff
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "staff_role", nullable = false)
-    private StaffRole staffRole;
+    // New fields matching the updated database schema
+    @Column(name = "salary")
+    private BigDecimal salary;
     
-    public enum StaffRole {
-        INVENTORY_MANAGER("inventory_manager"),
-        RESOURCE_MANAGER("resource_manager"), 
-        SALES_MANAGER("sales_manager"),
-        STAFF("staff");
-        
-        private final String value;
-        
-        StaffRole(String value) {
-            this.value = value;
-        }
-        
-        public String getValue() {
-            return value;
-        }
-    }
+    // Temporarily exclude staff_types from persistence until we can properly handle PostgreSQL arrays
+    @Transient  // This tells JPA to not persist this field
+    @Builder.Default
+    private Set<String> staffTypesTemp = new HashSet<>();
+    
+    @Column(name = "hire_date", nullable = false, columnDefinition = "TIMESTAMPTZ DEFAULT now()")
+    private LocalDateTime hireDate;
+    
+    @Column(name = "is_active", nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
+    
+    // Remove the old StaffType enum - no longer needed
     
     // Explicit setters to work around Lombok issues
     public void setUser(User user) { this.user = user; }
@@ -69,11 +70,21 @@ public class Staff {
     public void setAddress(String address) { this.address = address; }
     public void setTel(String tel) { this.tel = tel; }
     public void setBranch(Branch branch) { this.branch = branch; }
-    public void setStaffRole(StaffRole staffRole) { this.staffRole = staffRole; }
     public void setManager(User manager) { this.manager = manager; }
+    public void setSalary(BigDecimal salary) { this.salary = salary; }
+    public void setStaffTypes(Set<String> staffTypes) { 
+        this.staffTypesTemp = staffTypes != null ? staffTypes : new HashSet<>();
+    }
+    public void setHireDate(LocalDateTime hireDate) { this.hireDate = hireDate; }
+    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
     
     // Explicit getters to work around Lombok issues
     public Branch getBranch() { return branch; }
     public User getUser() { return user; }
-    public StaffRole getStaffRole() { return staffRole; }
+    public Set<String> getStaffTypes() { 
+        return staffTypesTemp != null ? staffTypesTemp : new HashSet<>();
+    }
+    public BigDecimal getSalary() { return salary; }
+    public LocalDateTime getHireDate() { return hireDate; }
+    public Boolean getIsActive() { return isActive; }
 }
