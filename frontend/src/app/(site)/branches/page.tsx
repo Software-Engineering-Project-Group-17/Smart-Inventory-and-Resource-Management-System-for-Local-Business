@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   UserPlus,
   RefreshCw,
+  UserCheck,
 } from "lucide-react";
 import ActionButton from "@/components/Owners/ActionButton";
 import RemoveManagerModal from "@/components/Owners/RemoveManagerModal";
@@ -71,6 +72,21 @@ const BranchesPage = () => {
       }
 
       setCurrentUserEmail(userProfile.email);
+
+      // Debug: Check token availability
+      const token =
+        localStorage.getItem("token") || localStorage.getItem("authToken");
+      console.log("📊 BRANCHES DEBUG - Current user email:", userProfile.email);
+      console.log("🔑 BRANCHES DEBUG - Token available:", !!token);
+      console.log("🔑 BRANCHES DEBUG - Token length:", token?.length || 0);
+      console.log(
+        "🆔 BRANCHES DEBUG - UID available:",
+        !!localStorage.getItem("uid")
+      );
+      console.log(
+        "👤 BRANCHES DEBUG - Profile:",
+        JSON.stringify(userProfile, null, 2)
+      );
 
       // Fetch branches for the current user
       const response = await branchAPI.getBranchesByOwner(userProfile.email);
@@ -345,12 +361,17 @@ const BranchesPage = () => {
                         <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-2 justify-center">
                             <ActionButton
-                              icon={UserPlus}
-                              label="Add Manager"
-                              onClick={() => {
-                                setSelectedBranch(branch);
-                                setShowAddManagerModal(true);
-                              }}
+                              icon={UserCheck}
+                              label="Create Manager"
+                              onClick={() =>
+                                router.push(
+                                  `/managers/create?branchId=${
+                                    branch.id
+                                  }&branchName=${encodeURIComponent(
+                                    branch.name
+                                  )}`
+                                )
+                              }
                               variant="primary"
                             />
                             <ActionButton

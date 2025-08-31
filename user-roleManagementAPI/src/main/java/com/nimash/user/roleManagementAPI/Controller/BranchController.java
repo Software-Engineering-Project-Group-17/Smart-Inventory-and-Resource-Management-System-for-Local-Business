@@ -78,7 +78,7 @@ public class BranchController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getAllBranches(@RequestHeader("Authorization") String token) {
+    public ResponseEntity<String> getAllBranches(@RequestHeader("Authorization") String token) {
         try {
             // Verify Firebase token
             String idToken = token.replace("Bearer ", "");
@@ -89,18 +89,56 @@ public class BranchController {
             Optional<User> userOptional = userRepository.findByFirebaseUid(firebaseUid);
             if (userOptional.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("User not found");
+                    .body("{\"error\":\"User not found\"}");
             }
 
             User user = userOptional.get();
             
             // Get branches owned by this user only
             List<Branch> branches = branchRepository.findByOwner(user);
-            return ResponseEntity.ok(branches);
+            
+            // Manually build JSON to avoid Hibernate proxy serialization issues
+            StringBuilder result = new StringBuilder();
+            result.append("{\"branches\":[");
+            
+            for (int i = 0; i < branches.size(); i++) {
+                Branch branch = branches.get(i);
+                if (i > 0) result.append(",");
+                result.append("{")
+                    .append("\"id\":").append(branch.getId()).append(",")
+                    .append("\"name\":\"").append(escapeJson(branch.getName())).append("\",")
+                    .append("\"location\":\"").append(escapeJson(branch.getLocation() != null ? branch.getLocation() : "")).append("\",")
+                    .append("\"contactNumber\":\"").append(escapeJson(branch.getContactNumber() != null ? branch.getContactNumber() : "")).append("\",")
+                    .append("\"description\":\"").append(escapeJson(branch.getDescription() != null ? branch.getDescription() : "")).append("\",")
+                    .append("\"status\":\"").append(branch.getStatus() != null ? branch.getStatus() : "ACTIVE").append("\",")
+                    .append("\"createdAt\":\"").append(branch.getCreatedAt() != null ? branch.getCreatedAt().toString() : "").append("\"");
+                
+                // Add manager info if exists (safely handle lazy loading)
+                if (branch.getManager() != null) {
+                    try {
+                        User manager = branch.getManager();
+                        result.append(",\"manager\":{")
+                            .append("\"id\":").append(manager.getUserId()).append(",")
+                            .append("\"email\":\"").append(escapeJson(manager.getEmail())).append("\",")
+                            .append("\"name\":\"").append(escapeJson(manager.getName())).append("\"")
+                            .append("}");
+                    } catch (Exception e) {
+                        // If lazy loading fails, just indicate manager exists
+                        result.append(",\"manager\":{\"id\":null,\"email\":\"Loading...\",\"name\":\"Loading...\"}");
+                    }
+                } else {
+                    result.append(",\"manager\":null");
+                }
+                
+                result.append("}");
+            }
+            
+            result.append("]}");
+            return ResponseEntity.ok(result.toString());
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Error retrieving branches: " + e.getMessage());
+                .body("{\"error\":\"" + escapeJson(e.getMessage()) + "\"}");
         }
     }
 
@@ -238,20 +276,64 @@ public class BranchController {
 
     // Debug endpoint to get branches by owner email (for testing)
     @GetMapping("/debug/owner/{email}")
-    public ResponseEntity<?> debugGetBranchesByOwner(@PathVariable String email) {
+    public ResponseEntity<String> debugGetBranchesByOwner(@PathVariable String email) {
         try {
             Optional<User> userOptional = userRepository.findByEmail(email);
             if (userOptional.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Owner not found with email: " + email);
+                    .body("{\"error\":\"Owner not found with email: " + email + "\"}");
             }
 
             List<Branch> branches = branchRepository.findByOwner(userOptional.get());
-            return ResponseEntity.ok(branches);
+            
+            // Manually build JSON to avoid Hibernate proxy serialization issues
+            StringBuilder result = new StringBuilder();
+            result.append("{\"branches\":[");
+            
+            for (int i = 0; i < branches.size(); i++) {
+                Branch branch = branches.get(i);
+                if (i > 0) result.append(",");
+                result.append("{")
+                    .append("\"id\":").append(branch.getId()).append(",")
+                    .append("\"name\":\"").append(escapeJson(branch.getName())).append("\",")
+                    .append("\"location\":\"").append(escapeJson(branch.getLocation() != null ? branch.getLocation() : "")).append("\",")
+                    .append("\"contactNumber\":\"").append(escapeJson(branch.getContactNumber() != null ? branch.getContactNumber() : "")).append("\",")
+                    .append("\"description\":\"").append(escapeJson(branch.getDescription() != null ? branch.getDescription() : "")).append("\",")
+                    .append("\"status\":\"").append(branch.getStatus() != null ? branch.getStatus() : "ACTIVE").append("\",")
+                    .append("\"createdAt\":\"").append(branch.getCreatedAt() != null ? branch.getCreatedAt().toString() : "").append("\"");
+                
+                // Add manager info if exists (safely handle lazy loading)
+                if (branch.getManager() != null) {
+                    try {
+                        User manager = branch.getManager();
+                        result.append(",\"manager\":{")
+                            .append("\"id\":").append(manager.getUserId()).append(",")
+                            .append("\"email\":\"").append(escapeJson(manager.getEmail())).append("\",")
+                            .append("\"name\":\"").append(escapeJson(manager.getName())).append("\"")
+                            .append("}");
+                    } catch (Exception e) {
+                        // If lazy loading fails, just indicate manager exists
+                        result.append(",\"manager\":{\"id\":null,\"email\":\"Loading...\",\"name\":\"Loading...\"}");
+                    }
+                } else {
+                    result.append(",\"manager\":null");
+                }
+                
+                result.append("}");
+            }
+            
+            result.append("]}");
+            return ResponseEntity.ok(result.toString());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Error retrieving branches: " + e.getMessage());
+                .body("{\"error\":\"" + escapeJson(e.getMessage()) + "\"}");
         }
+    }
+    
+    // Helper method to escape JSON strings
+    private String escapeJson(String input) {
+        if (input == null) return "";
+        return input.replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
     }
 
     // Test endpoint to create branch without Firebase authentication (for testing only)

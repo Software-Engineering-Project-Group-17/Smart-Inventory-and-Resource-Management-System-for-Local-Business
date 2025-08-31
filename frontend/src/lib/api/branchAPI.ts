@@ -60,10 +60,30 @@ class BranchAPI {
 
   // Get branches by owner email (for current implementation)
   async getBranchesByOwner(ownerEmail: string): Promise<BranchResponse[]> {
-    // Try the authenticated endpoint first, fallback to debug endpoint
+    // Try the authenticated endpoint first
     try {
-      return await this.getBranches();
+      console.log("Trying authenticated branches endpoint...");
+      const response = await fetch(`${API_BASE_URL}/api/branches`, {
+        headers: this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log("Authenticated endpoint failed:", errorText);
+        throw new Error(errorText);
+      }
+
+      const result = await response.json();
+      console.log("Authenticated endpoint success:", result);
+
+      // The backend now returns {branches: [...]} instead of [...]
+      if (result && result.branches && Array.isArray(result.branches)) {
+        return result.branches;
+      } else {
+        throw new Error("Invalid response format from authenticated endpoint");
+      }
     } catch (error) {
+      console.log("Falling back to debug endpoint due to error:", error);
       // Fallback to debug endpoint
       return await this.getDebugBranchesByOwner(ownerEmail);
     }
@@ -108,6 +128,7 @@ class BranchAPI {
 
   // Get branches by owner email (debug endpoint for development)
   async getDebugBranchesByOwner(ownerEmail: string): Promise<BranchResponse[]> {
+    console.log("Using debug endpoint for owner:", ownerEmail);
     const response = await fetch(
       `${API_BASE_URL}/api/branches/debug/owner/${encodeURIComponent(
         ownerEmail
@@ -115,10 +136,20 @@ class BranchAPI {
     );
 
     if (!response.ok) {
-      throw new Error("Failed to fetch branches for owner");
+      const errorText = await response.text();
+      console.error("Debug endpoint failed:", errorText);
+      throw new Error("Failed to fetch branches for owner: " + errorText);
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log("Debug endpoint success:", result);
+
+    // The backend now returns {branches: [...]} instead of [...]
+    if (result && result.branches && Array.isArray(result.branches)) {
+      return result.branches;
+    } else {
+      throw new Error("Invalid response format from debug endpoint");
+    }
   }
 }
 
