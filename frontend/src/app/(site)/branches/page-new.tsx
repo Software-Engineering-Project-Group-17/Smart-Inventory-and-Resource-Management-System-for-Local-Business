@@ -23,7 +23,7 @@ const BranchesPage = () => {
     error,
     currentUserEmail,
     searchTerm,
-    
+
     // Modal states
     showAddManagerModal,
     showRemoveManagerModal,
@@ -32,14 +32,14 @@ const BranchesPage = () => {
     managerEmail,
     selectedManagerEmail,
     isProcessing,
-    
+
     // Actions
     setSearchTerm,
     fetchBranches,
     handleCreateManager,
     handleLogin,
     handleAddBranch,
-    
+
     // Modal actions
     setShowAddManagerModal,
     setShowRemoveManagerModal,

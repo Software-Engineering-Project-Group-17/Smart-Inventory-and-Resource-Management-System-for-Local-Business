@@ -25,7 +25,7 @@ const CreateManagerPage = () => {
     showPassword,
     showConfirmPassword,
     currentUserEmail,
-    
+
     // Actions
     handleInputChange,
     handleSubmit,
