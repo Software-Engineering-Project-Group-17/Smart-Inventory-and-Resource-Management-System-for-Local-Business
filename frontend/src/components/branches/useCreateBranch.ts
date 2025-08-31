@@ -94,8 +94,8 @@ export const useCreateBranch = () => {
     } catch (error) {
       console.error("Error creating branch:", error);
       console.error("Error details:", {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack trace'
+        message: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : "No stack trace",
       });
       setSubmitStatus("error");
     } finally {
