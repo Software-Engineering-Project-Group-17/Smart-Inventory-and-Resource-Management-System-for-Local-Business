@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Users, X } from "lucide-react";
 import { StaffMember } from "./types";
@@ -40,6 +41,7 @@ export const StaffTable: React.FC<StaffTableProps> = ({
   onEditTypeChange,
   onRetry,
 }) => {
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div className="overflow-x-auto">
@@ -68,6 +70,7 @@ export const StaffTable: React.FC<StaffTableProps> = ({
                 Leave Remaining
               </th>
               <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+
                 Actions
               </th>
             </tr>
@@ -89,6 +92,7 @@ export const StaffTable: React.FC<StaffTableProps> = ({
                 onToggleEditTypeDropdown={onToggleEditTypeDropdown}
                 onEditTypeChange={onEditTypeChange}
               />
+
             ))}
           </tbody>
         </table>

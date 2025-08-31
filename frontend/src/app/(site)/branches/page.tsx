@@ -118,7 +118,7 @@ const BranchesPage = () => {
   );
 };
 
+
 // Protect this page for OWNER role (owners manage their branches)
-export default withAuth(BranchesPage, {
-  requiredRoles: ["OWNER"],
-});
+export default BranchesPage;
+

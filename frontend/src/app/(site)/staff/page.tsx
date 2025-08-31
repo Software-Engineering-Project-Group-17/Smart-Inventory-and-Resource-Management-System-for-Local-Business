@@ -23,12 +23,9 @@ const StaffManagementPage = () => {
     setNotification,
   } = useStaffManagement();
 
-  // UI State
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingItem, setEditingItem] = useState<StaffMember | null>(null);
   const [showTypeFilter, setShowTypeFilter] = useState(false);
   const [showAddTypeDropdown, setShowAddTypeDropdown] = useState(false);
   const [showEditTypeDropdown, setShowEditTypeDropdown] = useState(false);
@@ -44,6 +41,7 @@ const StaffManagementPage = () => {
     types: [],
     salary: 0,
   });
+
 
   // Filter staff
   const filteredStaff = staff.filter((member) => {
@@ -142,6 +140,7 @@ const StaffManagementPage = () => {
     if (editingItem) {
       setEditingItem((prev) => (prev ? { ...prev, [field]: value } : null));
     }
+
   };
 
   return (
@@ -204,6 +203,7 @@ const StaffManagementPage = () => {
           onEditTypeChange={handleEditFormTypeChange}
           onRetry={fetchStaff}
         />
+
       </div>
     </div>
   );

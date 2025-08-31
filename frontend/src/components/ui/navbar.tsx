@@ -30,7 +30,16 @@ interface NavItem {
 const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAlertModal, setShowAlertModal] = useState(false);
+
+  const [role, setRole] = useState<"owner" | "manager" | "staff">("manager");
+  const [userType, setUserType] = useState<string[]>([
+    "sales",
+    "inventory",
+    "resources",
+  ]);
+
   const [userProfile, setUserProfile] = useState<any>(null);
+
   const bellRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 

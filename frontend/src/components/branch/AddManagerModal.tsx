@@ -1,38 +1,50 @@
-import React from "react";
-import { Mail, Check } from "lucide-react";
-import Modal from "./Modal";
+import React, { useState } from "react";
+import { Check, Mail } from "lucide-react";
+import Modal from "@/components/inventory/Modal";
+import { Branch } from "@/types/branches";
 
-// Shared Branch type (id is string)
-type Branch = {
-  id: string;
-  name: string;
-};
-
-type AddManagerModalProps = {
+interface AddManagerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  branch: Branch | null;
-  managerEmail: string;
-  setManagerEmail: (email: string) => void;
-  handleAddManager: (branchId: string) => void;
-  isProcessing: boolean;
-};
+  selectedBranch: Branch | null;
+  onAddManager: (branchId: string, email: string) => void;
+}
 
 const AddManagerModal: React.FC<AddManagerModalProps> = ({
   isOpen,
   onClose,
-  branch,
-  managerEmail,
-  setManagerEmail,
-  handleAddManager,
-  isProcessing,
+  selectedBranch,
+  onAddManager,
 }) => {
+  const [managerEmail, setManagerEmail] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleAddManager = async () => {
+    if (!managerEmail || !managerEmail.includes("@") || !selectedBranch) return;
+
+    setIsProcessing(true);
+    // Simulate API call
+    setTimeout(() => {
+      onAddManager(selectedBranch.id, managerEmail);
+      setManagerEmail("");
+      setIsProcessing(false);
+      onClose();
+    }, 1000);
+  };
+
+  const handleClose = () => {
+    setManagerEmail("");
+    onClose();
+  };
+
+  if (!selectedBranch) return null;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Manager">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Add Manager">
       <div className="space-y-4">
         <p className="text-gray-600">
           Add a new manager to{" "}
-          <span className="font-semibold">{branch?.name}</span>
+          <span className="font-semibold">{selectedBranch.name}</span>
         </p>
 
         {/* Email Input */}
@@ -55,7 +67,7 @@ const AddManagerModal: React.FC<AddManagerModalProps> = ({
         {/* Action Buttons */}
         <div className="flex gap-3 justify-end">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg 
                        hover:bg-gray-200 transition-colors"
             disabled={isProcessing}
@@ -64,7 +76,7 @@ const AddManagerModal: React.FC<AddManagerModalProps> = ({
           </button>
 
           <button
-            onClick={() => branch && handleAddManager(branch.id)}
+            onClick={handleAddManager}
             disabled={
               !managerEmail || !managerEmail.includes("@") || isProcessing
             }
