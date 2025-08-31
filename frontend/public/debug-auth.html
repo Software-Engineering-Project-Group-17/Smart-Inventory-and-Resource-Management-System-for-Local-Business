@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Debug Authentication</title>
+  </head>
+  <body>
+    <h1>Authentication Debug</h1>
+    <div id="output"></div>
+    <button onclick="checkAuth()">Check Auth</button>
+    <button onclick="setupAuth()">Setup Test Auth</button>
+    <button onclick="clearAuth()">Clear Auth</button>
+
+    <script>
+      function checkAuth() {
+        const output = document.getElementById("output");
+        const token = localStorage.getItem("token");
+        const userProfile = localStorage.getItem("userProfile");
+        const userInfo = localStorage.getItem("userInfo");
+        const authToken = localStorage.getItem("authToken");
+
+        output.innerHTML = `
+                <h3>Current Auth State:</h3>
+                <p><strong>token:</strong> ${token || "null"}</p>
+                <p><strong>authToken:</strong> ${authToken || "null"}</p>
+                <p><strong>userProfile:</strong> ${userProfile || "null"}</p>
+                <p><strong>userInfo:</strong> ${userInfo || "null"}</p>
+            `;
+      }
+
+      function setupAuth() {
+        // Use a real manager's Firebase UID from the database
+        const realManagerUid = "osWt8MjnyIhg9551zp4y7dlnSsv1"; // m4@mail.com manager
+
+        localStorage.setItem("token", "test-dev-token-123");
+        localStorage.setItem(
+          "userProfile",
+          JSON.stringify({
+            id: "9",
+            username: "m4manager",
+            email: "m4@mail.com",
+            firstName: "uhewf",
+            lastName: "sdcsc",
+            role: "BRANCH_MANAGER",
+            isActive: true,
+            address: "Test Address",
+            department: "Management",
+            phoneNumber: "123-456-7890",
+            profilePictureUrl: "",
+            subscriptionStatus: "active",
+            subscriptionExpiresAt: "2025-12-31",
+            createdAt: "2025-01-01",
+            lastLoginAt: "2025-08-31",
+          })
+        );
+        localStorage.setItem("authToken", "test-dev-token-123");
+        localStorage.setItem(
+          "userInfo",
+          JSON.stringify({
+            uid: realManagerUid,
+            email: "m4@mail.com",
+            role: "BRANCH_MANAGER",
+            firstName: "uhewf",
+            lastName: "sdcsc",
+          })
+        );
+        alert("Real manager auth setup complete!");
+        checkAuth();
+      }
+
+      function clearAuth() {
+        localStorage.removeItem("token");
+        localStorage.removeItem("userProfile");
+        localStorage.removeItem("userInfo");
+        localStorage.removeItem("authToken");
+        alert("Auth cleared!");
+        checkAuth();
+      }
+
+      // Auto-check on page load
+      window.onload = checkAuth;
+    </script>
+  </body>
+</html>
