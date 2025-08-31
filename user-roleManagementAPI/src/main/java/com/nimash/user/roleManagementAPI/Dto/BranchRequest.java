@@ -13,4 +13,19 @@ public class BranchRequest {
     private String contactNumber;
     @NotBlank(message = "Branch description is required")
     private String description; // optional
+        public String getName() {
+            return name;
+        }
+
+        public String getLocation() {
+            return location;
+        }
+
+        public String getContactNumber() {
+            return contactNumber;
+        }
+
+        public String getDescription() {
+            return description;
+        }
 }

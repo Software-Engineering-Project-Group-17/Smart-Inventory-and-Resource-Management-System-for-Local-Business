@@ -1,430 +1,355 @@
-"use client"
-import React, { useState } from 'react';
+"use client";
+
+import React, { useState, useEffect } from "react";
 import {
   User,
   Mail,
   Phone,
   MapPin,
-  DollarSign,
+  Briefcase,
   Calendar,
-  Edit,
+  Edit3,
   Save,
   X,
-  Check,
-  CalendarDays,
-  Clock,
-  UserCheck
-} from 'lucide-react';
-
-interface StaffType {
-  id: string;
-  name: string;
-  color: string;
-}
+} from "lucide-react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const ProfilePage = () => {
-  const [role, setRole] = useState<"owner" | "manager" | "staff">("manager");
-  const [userType, setUserType] = useState<string[]>([
-    "sales",
-    "inventory",
-    "resources",
-  ]);
-
-  const staffTypes: StaffType[] = [
-    { id: 'sales', name: 'Sales', color: '#3674B5' },
-    { id: 'inventory', name: 'Inventory', color: '#FADA7A' },
-    { id: 'resources', name: 'Resources', color: '#10B981' }
-  ];
-
-  // Profile data state
-  const [profile, setProfile] = useState({
-    firstName: 'John',
-    lastName: 'Anderson',
-    email: 'john.anderson@company.com',
-    phone: '+94 77 123 4567',
-    address: '123 Business District, Colombo 03',
-    salary: 120000,
-    remainingLeave: 15
+  const { user, isLoading, isLoggedIn, userRole, userEmail, userName } =
+    useCurrentUser();
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    department: "",
   });
 
-  // Editing states
-  const [isEditing, setIsEditing] = useState(false);
-  const [editProfile, setEditProfile] = useState({...profile});
-  const [showLeaveForm, setShowLeaveForm] = useState(false);
-  const [leaveStartDate, setLeaveStartDate] = useState('');
-  const [leaveEndDate, setLeaveEndDate] = useState('');
+  // Update form data when user data is loaded
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: userName || "",
+        email: userEmail || "",
+        phone: user.phoneNumber || "",
+        address: user.address || "",
+        department: user.department || "",
+      });
+    }
+  }, [user, userName, userEmail]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log("ProfilePage Debug:", {
+      isLoading,
+      isLoggedIn,
+      user: user ? "User object exists" : "No user",
+      userRole,
+      userEmail,
+      userName,
+    });
+  }, [isLoading, isLoggedIn, user, userRole, userEmail, userName]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex items-center justify-center pt-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Not logged in state
+  if (!isLoggedIn || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex items-center justify-center pt-20">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Access Denied
+            </h2>
+            <p className="text-gray-600">Please log in to view your profile.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleEdit = () => {
     setIsEditing(true);
-    setEditProfile({...profile});
   };
 
   const handleSave = () => {
-    setProfile({...editProfile});
+    // Here you would typically save to your backend
+    console.log("Saving profile data:", formData);
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setEditProfile({...profile});
+    // Reset form data to original values
+    setFormData({
+      name: userName || "",
+      email: userEmail || "",
+      phone: user.phoneNumber || "",
+      address: user.address || "",
+      department: user.department || "",
+    });
     setIsEditing(false);
   };
 
-  const handleApplyLeave = () => {
-    if (leaveStartDate && leaveEndDate) {
-      const start = new Date(leaveStartDate);
-      const end = new Date(leaveEndDate);
-      const diffTime = Math.abs(end.getTime() - start.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-      
-      if (diffDays <= profile.remainingLeave) {
-        setProfile(prev => ({
-          ...prev,
-          remainingLeave: prev.remainingLeave - diffDays
-        }));
-        setLeaveStartDate('');
-        setLeaveEndDate('');
-        setShowLeaveForm(false);
-        alert(`Leave application submitted successfully! ${diffDays} days will be deducted from your leave balance.`);
-      } else {
-        alert(`Insufficient leave balance! You only have ${profile.remainingLeave} days remaining.`);
-      }
-    }
-  };
-
-  const getTypeInitials = (typeId: string) => {
-    const initials = {
-      'sales': 'S',
-      'inventory': 'I',
-      'resources': 'R'
-    };
-    return initials[typeId as keyof typeof initials] || typeId.charAt(0).toUpperCase();
-  };
-
-  const getTypeColor = (typeId: string) => {
-    return staffTypes.find(t => t.id === typeId)?.color || '#6B7280';
-  };
-
-  const getTypeName = (typeId: string) => {
-    return staffTypes.find(t => t.id === typeId)?.name || typeId;
-  };
-
-  const getTodayDate = () => {
-    return new Date().toISOString().split('T')[0];
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div 
-              className="p-3 rounded-xl text-white"
-              style={{ backgroundColor: "#3674B5" }}
-            >
-              <User size={24} />
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto py-8 px-4">
+        {/* Profile Header */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="bg-blue-600 rounded-full p-4">
+                <User className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {formData.name}
+                </h1>
+                <p className="text-gray-600">{userRole}</p>
+                <p className="text-sm text-gray-500">{formData.email}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-              <p className="text-gray-600">Manage your personal information and leave requests</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Role Badge */}
-        <div className="mb-6">
-          <span 
-            className="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold text-white capitalize"
-            style={{ backgroundColor: "#3674B5" }}
-          >
-            <UserCheck size={16} className="mr-2" />
-            {role}
-          </span>
-        </div>
-
-        {/* Profile Information Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-          <div className="px-6 py-4 border-b border-gray-200" style={{ backgroundColor: "#3674B5" }}>
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Personal Information</h2>
+            <div className="flex space-x-2">
               {!isEditing ? (
                 <button
                   onClick={handleEdit}
-                  className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-20 text-[#3674B5] rounded-lg hover:bg-opacity-30 transition-colors"
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >
-                  <Edit size={16} />
+                  <Edit3 className="h-4 w-4 mr-2" />
                   Edit Profile
                 </button>
               ) : (
-                <div className="flex gap-2">
+                <>
                   <button
                     onClick={handleSave}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
                   >
-                    <Save size={16} />
+                    <Save className="h-4 w-4 mr-2" />
                     Save
                   </button>
                   <button
                     onClick={handleCancel}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                   >
-                    <X size={16} />
+                    <X className="h-4 w-4 mr-2" />
                     Cancel
                   </button>
-                </div>
+                </>
               )}
             </div>
           </div>
+        </div>
 
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* First Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <User size={16} className="inline mr-2" />
-                  First Name
-                </label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editProfile.firstName}
-                    onChange={(e) => setEditProfile(prev => ({...prev, firstName: e.target.value}))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                  />
-                ) : (
-                  <p className="text-gray-900 font-medium text-lg">{profile.firstName}</p>
-                )}
-              </div>
+        {/* Profile Details */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">
+            Profile Information
+          </h2>
 
-              {/* Last Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <User size={16} className="inline mr-2" />
-                  Last Name
-                </label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editProfile.lastName}
-                    onChange={(e) => setEditProfile(prev => ({...prev, lastName: e.target.value}))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                  />
-                ) : (
-                  <p className="text-gray-900 font-medium text-lg">{profile.lastName}</p>
-                )}
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <h3 className="text-md font-medium text-gray-800 border-b pb-2">
+                Personal Information
+              </h3>
 
-              {/* Email */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Mail size={16} className="inline mr-2" />
-                  Email Address
-                </label>
-                {isEditing ? (
-                  <input
-                    type="email"
-                    value={editProfile.email}
-                    onChange={(e) => setEditProfile(prev => ({...prev, email: e.target.value}))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                  />
-                ) : (
-                  <p className="text-gray-900 font-medium text-lg">{profile.email}</p>
-                )}
-              </div>
-
-              {/* Phone */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Phone size={16} className="inline mr-2" />
-                  Phone Number
-                </label>
-                {isEditing ? (
-                  <input
-                    type="tel"
-                    value={editProfile.phone}
-                    onChange={(e) => setEditProfile(prev => ({...prev, phone: e.target.value}))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                  />
-                ) : (
-                  <p className="text-gray-900 font-medium text-lg whitespace-nowrap">{profile.phone}</p>
-                )}
-              </div>
-
-              {/* Address */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <MapPin size={16} className="inline mr-2" />
-                  Address
-                </label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editProfile.address}
-                    onChange={(e) => setEditProfile(prev => ({...prev, address: e.target.value}))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                  />
-                ) : (
-                  <p className="text-gray-900 font-medium text-lg">{profile.address}</p>
-                )}
-              </div>
-
-              {/* Staff Types - Only for staff role */}
-              {role === "staff" && (
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <UserCheck size={16} className="inline mr-2" />
-                    Assigned Roles
+              <div className="flex items-center space-x-3">
+                <User className="h-5 w-5 text-gray-400" />
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Full Name
                   </label>
-                  <div className="flex gap-2">
-                    {userType.map(typeId => (
-                      <div key={typeId} className="flex items-center gap-2">
-                        <span 
-                          className="w-8 h-8 rounded-full text-sm font-medium text-white flex items-center justify-center"
-                          style={{ backgroundColor: getTypeColor(typeId) }}
-                          title={getTypeName(typeId)}
-                        >
-                          {getTypeInitials(typeId)}
-                        </span>
-                        <span className="text-gray-700 font-medium">{getTypeName(typeId)}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <p className="text-gray-900">{formData.name}</p>
+                  )}
                 </div>
-              )}
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <Mail className="h-5 w-5 text-gray-400" />
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Address
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <p className="text-gray-900">{formData.email}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <Phone className="h-5 w-5 text-gray-400" />
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <p className="text-gray-900">
+                      {formData.phone || "Not provided"}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Work Information */}
+            <div className="space-y-4">
+              <h3 className="text-md font-medium text-gray-800 border-b pb-2">
+                Work Information
+              </h3>
+
+              <div className="flex items-center space-x-3">
+                <Briefcase className="h-5 w-5 text-gray-400" />
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Role
+                  </label>
+                  <p className="text-gray-900">{userRole}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <Briefcase className="h-5 w-5 text-gray-400" />
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Department
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      name="department"
+                      value={formData.department}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <p className="text-gray-900">
+                      {formData.department || "Not specified"}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <Calendar className="h-5 w-5 text-gray-400" />
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Joined Date
+                  </label>
+                  <p className="text-gray-900">
+                    {user.createdAt
+                      ? new Date(user.createdAt).toLocaleDateString()
+                      : "Not available"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <MapPin className="h-5 w-5 text-gray-400" />
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <p className="text-gray-900">
+                      {formData.address || "Not provided"}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Salary and Leave Information */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Salary Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#3674B5" }}>
-                <DollarSign size={24} />
+          {/* Account Information */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <h3 className="text-md font-medium text-gray-800 mb-4">
+              Account Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  User ID
+                </label>
+                <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                  {user.id}
+                </p>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-800">Monthly Salary</h3>
-                <p className="text-sm text-gray-600">Current compensation</p>
-              </div>
-            </div>
-            <p className="text-3xl font-bold text-gray-900">
-              LKR {profile.salary.toLocaleString()}
-            </p>
-          </div>
-
-          {/* Leave Balance Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#10B981" }}>
-                <Calendar size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800">Leave Balance</h3>
-                <p className="text-sm text-gray-600">Remaining days</p>
-              </div>
-            </div>
-            <p className={`text-3xl font-bold ${profile.remainingLeave < 5 ? 'text-red-600' : 'text-gray-900'}`}>
-              {profile.remainingLeave} days
-            </p>
-          </div>
-        </div>
-
-        {/* Leave Application Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200" style={{ backgroundColor: "#FADA7A" }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <CalendarDays size={20} className="text-gray-700" />
-                <h2 className="text-xl font-semibold text-gray-800">Apply for Leave</h2>
-              </div>
-              {!showLeaveForm && (
-                <button
-                  onClick={() => setShowLeaveForm(true)}
-                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors"
-                  style={{ backgroundColor: "#3674B5" }}
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    user.isActive
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
                 >
-                  <Calendar size={16} />
-                  Apply Leave
-                </button>
-              )}
-            </div>
-          </div>
-
-          {showLeaveForm && (
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                  <input
-                    type="date"
-                    value={leaveStartDate}
-                    min={getTodayDate()}
-                    onChange={(e) => setLeaveStartDate(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-                  <input
-                    type="date"
-                    value={leaveEndDate}
-                    min={leaveStartDate || getTodayDate()}
-                    onChange={(e) => setLeaveEndDate(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent"
-                  />
-                </div>
+                  {user.isActive ? "Active" : "Inactive"}
+                </span>
               </div>
-
-              {leaveStartDate && leaveEndDate && (
-                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center gap-2 text-blue-700">
-                    <Clock size={16} />
-                    <span className="font-medium">
-                      Leave Duration: {Math.ceil((new Date(leaveEndDate).getTime() - new Date(leaveStartDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} days
-                    </span>
-                  </div>
-                  <p className="text-sm text-blue-600 mt-1">
-                    Remaining balance after leave: {profile.remainingLeave - (Math.ceil((new Date(leaveEndDate).getTime() - new Date(leaveStartDate).getTime()) / (1000 * 60 * 60 * 24)) + 1)} days
+              {user.lastLoginAt && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Login
+                  </label>
+                  <p className="text-sm text-gray-600">
+                    {new Date(user.lastLoginAt).toLocaleString()}
                   </p>
                 </div>
               )}
-
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={() => {
-                    setShowLeaveForm(false);
-                    setLeaveStartDate('');
-                    setLeaveEndDate('');
-                  }}
-                  className="px-6 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleApplyLeave}
-                  className="px-6 py-2 text-white rounded-lg hover:opacity-90 transition-colors flex items-center gap-2"
-                  style={{ backgroundColor: "#3674B5" }}
-                  disabled={!leaveStartDate || !leaveEndDate}
-                >
-                  <Check size={16} />
-                  Submit Application
-                </button>
-              </div>
             </div>
-          )}
-
-          {!showLeaveForm && (
-            <div className="p-6 text-center text-gray-500">
-              <CalendarDays size={48} className="mx-auto text-gray-300 mb-4" />
-              <p className="text-lg">No pending leave applications</p>
-              <p className="text-sm">Click "Apply Leave" to request time off</p>
-            </div>
-          )}
+          </div>
         </div>
-
-    
-      
       </div>
     </div>
   );
