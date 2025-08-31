@@ -62,13 +62,7 @@ const Navbar: React.FC = () => {
 
     switch (role) {
       case "OWNER":
-      case "ADMIN":
         return [
-          {
-            label: "Admin Dashboard",
-            href: "/admin",
-            icon: <Settings size={20} />,
-          },
           {
             label: "Branches",
             href: "/branches",
