@@ -46,7 +46,7 @@ public class Role {
     }
     
     public enum Role_Type{
-        ADMIN,           // System admin (you)
+        OWNER,           // System owner (you)
         BRANCH_MANAGER,  // Manager of a branch
         STAFF,           // Staff member
         SUPPLIER,        // External supplier
