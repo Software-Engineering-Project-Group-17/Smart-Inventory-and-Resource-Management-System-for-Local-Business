@@ -8,19 +8,9 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="supplier-service" />
-        <module name="user-roleManagementAPI" />
         <module name="order-service" />
         <module name="customer-service" />
         <module name="inventoryAPI" />
-      </profile>
-      <profile name="Annotation profile for notificationAPI" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/unknown/lombok-unknown.jar" />
-        </processorPath>
-        <module name="notificationAPI" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
@@ -30,8 +20,10 @@
       <module name="Customer_service" target="21" />
       <module name="Inventory_service" target="21" />
       <module name="Notification_service" target="21" />
+      <module name="notificationAPI" target="21" />
       <module name="Order_Mangement_service" target="21" />
       <module name="Suplier_service" target="21" />
+      <module name="user-roleManagementAPI" target="21" />
     </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">

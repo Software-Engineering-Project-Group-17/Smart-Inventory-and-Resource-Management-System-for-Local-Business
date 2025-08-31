@@ -1,7 +1,6 @@
 package com.thivinu.inventoryapi.Entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,20 +18,27 @@ public class InventoryItem {
     private Long id;
 
     private String name;
-    private int quantity;
-    private String sku;
-    private double cost_price_per_unit;
 
-    private double selling_price_per_unit;
-    @Column(nullable = false, columnDefinition = "INT DEFAULT 10")
+    private String sku;
+
+    private int quantity;
+
+    private String unit;
+
+    @Column(name = "cost_price_per_unit")
+    private double costPricePerUnit;
+
+    @Column(name = "selling_price_per_unit")
+    private double sellingPricePerUnit;
+
+    @Column(nullable = false)
     private int threshold;
+
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)
     @JsonBackReference
     private Category category;
 
-    @Column(nullable = false, columnDefinition = "INT DEFAULT 10")
-    private int branch_id;
-
-
+    @Column(name = "branch_id", nullable = false)
+    private Integer branchId;   // resolved using user_id via BranchService
 }

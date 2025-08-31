@@ -6,28 +6,22 @@ const resourceRoutes = require('./routes/resourceRoutes');
 const logger = require('./middleware/logger');
 const errorHandler = require('./middleware/errorHandler');
 
-const { checkMaintenanceAlerts } = require('./services/maintenanceService');
-
-
 const app = express();
 app.use(express.json());
-
-// ⏺️ Log incoming requests
 app.use(logger);
 
-// 🔗 Mount routes
 app.use('/api/resources', resourceRoutes);
 
-// 🧯 Centralized error handler (after routes)
 app.use(errorHandler);
 
-// 🚀 Start server
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
+(async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
     console.log('✅ MongoDB connected');
-    app.listen(process.env.PORT, () => console.log(`Server running on port ${process.env.PORT}`));
-  })
-  .catch(err => {
+    const port = process.env.PORT || 3000;
+    app.listen(port, () => console.log(`Server running on port ${port}`));
+  } catch (err) {
     console.error('❌ DB Connection Error:', err);
-    process.exit(1); // Don't hang silently
-  });
+    process.exit(1);
+  }
+})();

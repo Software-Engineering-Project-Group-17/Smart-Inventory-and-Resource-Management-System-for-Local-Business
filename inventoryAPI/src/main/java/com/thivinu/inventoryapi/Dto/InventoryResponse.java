@@ -1,18 +1,18 @@
+// com/thivinu/inventoryapi/Dto/InventoryResponse.java
 package com.thivinu.inventoryapi.Dto;
 
 import lombok.Builder;
-import lombok.Data;
 
 @Builder
-@Data
 public record InventoryResponse(
         Long id,
         String name,
+        String sku,
+        String unit,
         int quantity,
-        double price,
-        String supplier,
+        double costPricePerUnit,
+        double sellingPricePerUnit,
+        int threshold,
         String category,
-        int threshold
-) {
-    // No additional body needed for a record unless you want custom methods
-}
+        Integer branchId
+) {}

@@ -1,25 +1,19 @@
 const mongoose = require('mongoose');
 
-const resourceSchema = new mongoose.Schema({
-  type: { type: String, required: true }, // e.g., vehicle, equipment
-  name: { type: String, required: true },
-  resourceNumber: { type: String, required: false, unique: true },
-  availabilityStatus: {
-    type: String,
-    enum: ['available', 'under maintenance'],
-    default: 'available'
+const resourceSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    resourceNumber: { type: String, required: true, unique: true, trim: true },
+    availabilityStatus: {
+      type: String,
+      enum: ['available', 'under_maintenance', 'use'], // per ERD
+      default: 'available',
+      required: true
+    },
+    createdDate: { type: Date, default: Date.now },
+    branchId: { type: Number, required: true } // foreign_key branch_id
   },
-  usageHistory: [{
-    usedBy: String,
-    startDate: Date,
-    endDate: Date,
-    purpose: String
-  }],
-  maintenanceSchedule: [{
-    scheduledDate: Date,
-    description: String,
-    alertSent: { type: Boolean, default: false }
-  }]
-});
+  { collection: 'resources' }
+);
 
 module.exports = mongoose.model('Resource', resourceSchema);
