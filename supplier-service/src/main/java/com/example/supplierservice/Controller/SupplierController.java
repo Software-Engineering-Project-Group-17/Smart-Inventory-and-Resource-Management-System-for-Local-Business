@@ -10,22 +10,38 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RestController @RequestMapping("/suppliers") @RequiredArgsConstructor
+@RestController
+@RequestMapping("/api/suppliers")
+@RequiredArgsConstructor
 public class SupplierController {
-    private final SupplierService service;
+
+    private final SupplierService supplierService;
 
     @PostMapping
-    public ResponseEntity<SupplierResponse> create(@Valid @RequestBody SupplierRequest r){ return ResponseEntity.ok(service.create(r)); }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<SupplierResponse> update(@PathVariable Long id, @Valid @RequestBody SupplierRequest r){ return ResponseEntity.ok(service.update(id, r)); }
+    public ResponseEntity<SupplierResponse> create(@Valid @RequestBody SupplierRequest req) {
+        return ResponseEntity.ok(supplierService.create(req));
+    }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SupplierResponse> get(@PathVariable Long id){ return ResponseEntity.ok(service.get(id)); }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> del(@PathVariable Long id){ service.delete(id); return ResponseEntity.noContent().build(); }
+    public ResponseEntity<SupplierResponse> get(@PathVariable Long id) {
+        return ResponseEntity.ok(supplierService.get(id));
+    }
 
     @GetMapping
-    public ResponseEntity<List<SupplierResponse>> list(){ return ResponseEntity.ok(service.list()); }
+    public ResponseEntity<List<SupplierResponse>> list(@RequestParam(required = false) Long userId) {
+        return ResponseEntity.ok(
+                userId != null ? supplierService.listByUser(userId) : supplierService.listAll()
+        );
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<SupplierResponse> update(@PathVariable Long id, @Valid @RequestBody SupplierRequest req) {
+        return ResponseEntity.ok(supplierService.update(id, req));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        supplierService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
 }

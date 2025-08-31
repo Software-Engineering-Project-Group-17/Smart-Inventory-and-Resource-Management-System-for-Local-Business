@@ -1,3 +1,16 @@
 package com.example.supplierservice.Dto;
 
-public record SupplierResponse(Long id, String name, String contactEmail, String phone, String address) {}
+import lombok.Builder;
+
+import java.time.LocalDateTime;
+
+@Builder
+public record SupplierResponse(
+        Long id,
+        Long userId,
+        String supplierName,
+        String supplierTel,
+        String address,
+        String supplierEmail,
+        LocalDateTime createdDate
+) {}

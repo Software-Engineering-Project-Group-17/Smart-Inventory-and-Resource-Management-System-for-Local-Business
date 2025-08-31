@@ -3,15 +3,23 @@ package com.example.supplierservice.Entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-@Entity @Table(name="supplier_items")
+import java.math.BigDecimal;
+
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Entity
+@Table(name = "supplier_items")
 public class SupplierItem {
+
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name="supplier_id")
-    private Supplier supplier;
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "supplier_id", nullable = false)
+    private com.example.supplierservice.Entity.Supplier supplier;
 
-    private Long itemId;
+    @Column(name = "item_name", nullable = false)
     private String itemName;
+
+    @Column(name = "item_price", nullable = false, precision = 19, scale = 2)
+    private BigDecimal itemPrice;
 }
