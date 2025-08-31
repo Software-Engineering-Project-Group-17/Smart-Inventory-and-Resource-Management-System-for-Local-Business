@@ -1,0 +1,48 @@
+export const CREATE_BRANCH_CONSTANTS = {
+  colors: {
+    primary: "#3674B5",
+    success: "#10B981",
+    error: "#EF4444",
+    info: "#3B82F6",
+  },
+  messages: {
+    pageTitle: "Create Branch",
+    pageSubtitle: "Add a new branch location to your business",
+    creating: "Creating...",
+    cancel: "Cancel",
+    createBranch: "Create Branch",
+    successTitle: "Branch Created Successfully!",
+    successDesc: "Your new branch has been created and is ready to use.",
+    errorTitle: "Failed to Create Branch",
+    errorDesc: "There was an error creating the branch. Please try again.",
+    redirecting: "Redirecting to branches...",
+  },
+  labels: {
+    branchDetails: "Branch Details",
+    branchName: "Branch Name",
+    location: "Location",
+    contactNumber: "Contact Number",
+    description: "Description",
+    requiredField: "*",
+    optional: "(optional)",
+    tipsTitle: "Tips for creating a branch:",
+  },
+  placeholders: {
+    branchName: "Enter branch name",
+    location: "Enter complete address",
+    contactNumber: "Enter contact number",
+    description: "Describe the branch purpose and services",
+  },
+  validation: {
+    nameRequired: "Branch name is required",
+    locationRequired: "Location is required",
+    contactRequired: "Contact number is required",
+    contactInvalid: "Please enter a valid contact number",
+  },
+  tips: [
+    "Use descriptive names that clearly identify the location",
+    "Include complete address information for accurate location tracking",
+    "Provide a primary contact number for customer inquiries",
+    "Write a clear description of the branch's purpose and services",
+  ],
+} as const;
