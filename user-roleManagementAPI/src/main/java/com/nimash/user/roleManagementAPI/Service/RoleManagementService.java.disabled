@@ -1,0 +1,149 @@
+package com.nimash.user.roleManagementAPI.Service;
+
+import com.nimash.user.roleManagementAPI.Dto.*;
+import com.nimash.user.roleManagementAPI.Entity.*;
+import com.nimash.user.roleManagementAPI.Repository.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class RoleManagementService {
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private StaffRepository staffRepository;
+    
+    @Autowired
+    private OwnerRepository ownerRepository;
+    
+    @Value("${app.admin.secret-key:INVENTORY_SYSTEM_ADMIN_2024}")
+    private String adminSecretKey;
+    
+    @Transactional
+    public AuthResponse createStaff(StaffCreationRequest request) {
+        try {
+            // Check if email already exists
+            if (staffRepository.existsByEmail(request.getEmail()) || 
+                userRepository.existsByEmail(request.getEmail())) {
+                throw new RuntimeException("Email already exists");
+            }
+            
+            // Validate staff role
+            Staff.StaffRole staffRole;
+            try {
+                staffRole = Staff.StaffRole.valueOf(request.getRole().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Invalid staff role: " + request.getRole());
+            }
+            
+            // Create user first
+            User user = User.builder()
+                    .email(request.getEmail())
+                    .name(request.getFirstName() + " " + request.getLastName())
+                    .firebaseUid("PENDING_" + request.getEmail()) // Will be updated when user logs in
+                    .isActive(true)
+                    .build();
+            
+            User savedUser = userRepository.save(user);
+            
+            // Create staff
+            Staff staff = Staff.builder()
+                    .user(savedUser)
+                    .firstName(request.getFirstName())
+                    .lastName(request.getLastName())
+                    .email(request.getEmail())
+                    .address(request.getAddress())
+                    .tel(request.getTel())
+                    .role(staffRole)
+                    .build();
+            
+            staffRepository.save(staff);
+            
+            return new AuthResponse(null, null, "Bearer", 0, null, savedUser.getFirebaseUid());
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create staff: " + e.getMessage());
+        }
+    }
+    
+    @Transactional
+    public AuthResponse createManager(ManagerCreationRequest request) {
+        try {
+            // Check if email already exists
+            if (staffRepository.existsByEmail(request.getEmail()) || 
+                userRepository.existsByEmail(request.getEmail())) {
+                throw new RuntimeException("Email already exists");
+            }
+            
+            // Create user first
+            User user = User.builder()
+                    .email(request.getEmail())
+                    .name(request.getFirstName() + " " + request.getLastName())
+                    .firebaseUid("PENDING_" + request.getEmail()) // Will be updated when user logs in
+                    .isActive(true)
+                    .build();
+            
+            User savedUser = userRepository.save(user);
+            
+            // Create manager (using staff table with manager role)
+            Staff manager = Staff.builder()
+                    .user(savedUser)
+                    .firstName(request.getFirstName())
+                    .lastName(request.getLastName())
+                    .email(request.getEmail())
+                    .address(request.getAddress())
+                    .tel(request.getTel())
+                    .role(Staff.StaffRole.MANAGER) // Manager role
+                    .build();
+            
+            staffRepository.save(manager);
+            
+            return new AuthResponse(null, null, "Bearer", 0, null, savedUser.getFirebaseUid());
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create manager: " + e.getMessage());
+        }
+    }
+    
+    @Transactional
+    public AuthResponse createOwner(OwnerCreationRequest request) {
+        try {
+            // Validate secret key
+            if (!adminSecretKey.equals(request.getSecretKey())) {
+                throw new RuntimeException("Invalid secret key");
+            }
+            
+            // Check if email already exists
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new RuntimeException("Email already exists");
+            }
+            
+            // Create user first
+            User user = User.builder()
+                    .email(request.getEmail())
+                    .name(request.getName())
+                    .firebaseUid("PENDING_" + request.getEmail()) // Will be updated when user logs in
+                    .isActive(true)
+                    .build();
+            
+            User savedUser = userRepository.save(user);
+            
+            // Create owner
+            Owner owner = Owner.builder()
+                    .user(savedUser)
+                    .name(request.getName())
+                    .build();
+            
+            ownerRepository.save(owner);
+            
+            return new AuthResponse(null, null, "Bearer", 0, null, savedUser.getFirebaseUid());
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create owner: " + e.getMessage());
+        }
+    }
+}

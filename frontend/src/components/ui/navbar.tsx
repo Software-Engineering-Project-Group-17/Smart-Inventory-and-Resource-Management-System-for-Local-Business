@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { getUserProfile, getUserRole, clearAuthData } from "@/lib/auth";
+import { useRouter } from "next/navigation";
 
 interface NavItem {
   label: string;
@@ -28,18 +30,36 @@ interface NavItem {
 const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAlertModal, setShowAlertModal] = useState(false);
-  const [role, setRole] = useState<"owner" | "manager" | "staff">("staff");
-  const [userType, setUserType] = useState<string[]>([
-    "sales",
-    "inventory",
-    "resources",
-  ]);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const bellRef = useRef<HTMLButtonElement>(null);
+  const router = useRouter();
+
+  // Get user profile on component mount and when it changes
+  useEffect(() => {
+    const profile = getUserProfile();
+    setUserProfile(profile);
+  }, []);
+
+  // Handle logout functionality
+  const handleLogout = () => {
+    clearAuthData();
+    router.push("/login");
+  };
 
   const getNavItems = (): NavItem[] => {
+    if (!userProfile?.role) return [];
+
+    const role = userProfile.role.toUpperCase();
+
     switch (role) {
-      case "owner":
+      case "OWNER":
+      case "ADMIN":
         return [
+          {
+            label: "Admin Dashboard",
+            href: "/admin",
+            icon: <Settings size={20} />,
+          },
           {
             label: "Branches",
             href: "/branches",
@@ -50,62 +70,185 @@ const Navbar: React.FC = () => {
             href: "/reports",
             icon: <FileBarChart size={20} />,
           },
+          {
+            label: "Staff",
+            href: "/staff",
+            icon: <Users size={20} />,
+          },
         ];
 
-      case "manager":
+      case "MANAGER":
+      case "BRANCH_MANAGER":
         return [
+          {
+            label: "Branches",
+            href: "/branches",
+            icon: <Building2 size={20} />,
+          },
           {
             label: "Inventory",
             href: "/inventory",
             icon: <Package size={20} />,
           },
-          { label: "Staff", href: "/staff", icon: <Users size={20} /> },
+          {
+            label: "Staff",
+            href: "/staff",
+            icon: <Users size={20} />,
+          },
           {
             label: "Reports",
             href: "/reports",
             icon: <FileBarChart size={20} />,
           },
-          { label: "Suppliers", href: "/suppliers", icon: <Truck size={20} /> },
+          {
+            label: "Suppliers",
+            href: "/suppliers",
+            icon: <Truck size={20} />,
+          },
           {
             label: "Resources",
             href: "/resources",
             icon: <Settings size={20} />,
           },
-          { label: "Profile", href: "/profile", icon: <User size={20} /> },
+          {
+            label: "Profile",
+            href: "/profile",
+            icon: <User size={20} />,
+          },
         ];
 
-      case "staff":
-        const staffItems: NavItem[] = [];
-        if (userType.includes("sales")) {
-          staffItems.push({
+      case "SALES_MANAGER":
+        return [
+          {
             label: "Sales",
             href: "/sales",
             icon: <ShoppingCart size={20} />,
-          });
-        }
-        if (userType.includes("inventory")) {
-          staffItems.push({
+          },
+          {
+            label: "Inventory",
+            href: "/inventory",
+            icon: <Package size={20} />,
+          },
+          {
+            label: "Reports",
+            href: "/reports",
+            icon: <FileBarChart size={20} />,
+          },
+          {
+            label: "Profile",
+            href: "/profile",
+            icon: <User size={20} />,
+          },
+        ];
+
+      case "INVENTORY_MANAGER":
+        return [
+          {
             label: "Inventory",
             href: "/inventory",
             icon: <Archive size={20} />,
-          });
-        }
-        if (userType.includes("resources")) {
-          staffItems.push({
+          },
+          {
+            label: "Suppliers",
+            href: "/suppliers",
+            icon: <Truck size={20} />,
+          },
+          {
+            label: "Reports",
+            href: "/reports",
+            icon: <FileBarChart size={20} />,
+          },
+          {
+            label: "Profile",
+            href: "/profile",
+            icon: <User size={20} />,
+          },
+        ];
+
+      case "RESOURCE_MANAGER":
+        return [
+          {
             label: "Resources",
             href: "/resources",
             icon: <Settings size={20} />,
-          });
-        }
-        staffItems.push({
-          label: "Profile",
-          href: "/profile",
-          icon: <User size={20} />,
-        });
-        return staffItems;
+          },
+          {
+            label: "Inventory",
+            href: "/inventory",
+            icon: <Package size={20} />,
+          },
+          {
+            label: "Profile",
+            href: "/profile",
+            icon: <User size={20} />,
+          },
+        ];
+
+      case "STAFF":
+        return [
+          {
+            label: "Inventory",
+            href: "/inventory",
+            icon: <Archive size={20} />,
+          },
+          {
+            label: "Resources",
+            href: "/resources",
+            icon: <Settings size={20} />,
+          },
+          {
+            label: "Profile",
+            href: "/profile",
+            icon: <User size={20} />,
+          },
+        ];
+
+      case "SUPPLIER":
+        return [
+          {
+            label: "Products",
+            href: "/products",
+            icon: <Package size={20} />,
+          },
+          {
+            label: "Orders",
+            href: "/orders",
+            icon: <ShoppingCart size={20} />,
+          },
+          {
+            label: "Profile",
+            href: "/profile",
+            icon: <User size={20} />,
+          },
+        ];
+
+      case "CUSTOMER":
+        return [
+          {
+            label: "Shop",
+            href: "/shop",
+            icon: <ShoppingCart size={20} />,
+          },
+          {
+            label: "Orders",
+            href: "/orders",
+            icon: <Package size={20} />,
+          },
+          {
+            label: "Profile",
+            href: "/profile",
+            icon: <User size={20} />,
+          },
+        ];
 
       default:
-        return [];
+        return [
+          {
+            label: "Profile",
+            href: "/profile",
+            icon: <User size={20} />,
+          },
+        ];
     }
   };
 
@@ -326,8 +469,8 @@ const Navbar: React.FC = () => {
               </div>
 
               {/* Logout Button */}
-              <Link
-                href="/login"
+              <button
+                onClick={handleLogout}
                 className="flex items-center px-4 py-2 text-sm font-medium text-white rounded-md transition-colors duration-200"
                 style={{ backgroundColor: "#3674B5" }}
                 onMouseEnter={(e) => {
@@ -339,7 +482,7 @@ const Navbar: React.FC = () => {
               >
                 <LogOut size={16} />
                 <span className="ml-2">Logout</span>
-              </Link>
+              </button>
             </div>
 
             {/* Mobile menu button */}
@@ -449,6 +592,7 @@ const Navbar: React.FC = () => {
 
             {/* Logout Button Mobile */}
             <button
+              onClick={handleLogout}
               className="flex items-center w-full px-3 py-3 rounded-md text-sm font-medium text-white transition-colors duration-200"
               style={{ backgroundColor: "#3674B5" }}
               onMouseEnter={(e) => {
