@@ -60,4 +60,20 @@ public class Staff {
             return value;
         }
     }
+    
+    // Explicit setters to work around Lombok issues
+    public void setUser(User user) { this.user = user; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    public void setEmail(String email) { this.email = email; }
+    public void setAddress(String address) { this.address = address; }
+    public void setTel(String tel) { this.tel = tel; }
+    public void setBranch(Branch branch) { this.branch = branch; }
+    public void setStaffRole(StaffRole staffRole) { this.staffRole = staffRole; }
+    public void setManager(User manager) { this.manager = manager; }
+    
+    // Explicit getters to work around Lombok issues
+    public Branch getBranch() { return branch; }
+    public User getUser() { return user; }
+    public StaffRole getStaffRole() { return staffRole; }
 }

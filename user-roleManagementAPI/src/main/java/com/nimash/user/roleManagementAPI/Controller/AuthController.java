@@ -2,7 +2,9 @@ package com.nimash.user.roleManagementAPI.Controller;
 
 import com.nimash.user.roleManagementAPI.Dto.*;
 import com.nimash.user.roleManagementAPI.Entity.User;
+import com.nimash.user.roleManagementAPI.Entity.Role;
 import com.nimash.user.roleManagementAPI.Repository.UserRepository;
+import com.nimash.user.roleManagementAPI.Repository.RoleRepository;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseToken;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,7 +20,9 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -26,6 +30,9 @@ public class AuthController {
 
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private RoleRepository roleRepository;
 
     @PostMapping("/register")
     @Operation(summary = "Register a new user", description = "Creates a new user account in both Keycloak and local database")
@@ -207,8 +214,24 @@ public class AuthController {
     @Operation(summary = "Get all roles", description = "Retrieves all available user roles")
     @ApiResponse(responseCode = "200", description = "Roles retrieved successfully")
     public ResponseEntity<String> getAllRoles() {
-        // Return hardcoded roles for new schema
-        return ResponseEntity.ok("[\"OWNER\",\"MANAGER\",\"STAFF\"]");
+        try {
+            // Get all roles from database
+            List<Role> roles = roleRepository.findAll();
+            List<String> roleNames = roles.stream()
+                .map(role -> role.getRole().name())
+                .sorted()
+                .collect(Collectors.toList());
+            
+            // Convert to JSON array string
+            String jsonArray = "[" + roleNames.stream()
+                .map(name -> "\"" + name + "\"")
+                .collect(Collectors.joining(",")) + "]";
+                
+            return ResponseEntity.ok(jsonArray);
+        } catch (Exception e) {
+            // Fallback to enum values if database query fails
+            return ResponseEntity.ok("[\"OWNER\",\"BRANCH_MANAGER\",\"STAFF\",\"SUPPLIER\",\"CUSTOMER\"]");
+        }
     }
 
     @GetMapping("/branches")

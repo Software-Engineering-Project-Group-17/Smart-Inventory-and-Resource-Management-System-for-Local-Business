@@ -3,14 +3,18 @@ package com.nimash.user.roleManagementAPI.Controller;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.UserRecord;
 import com.nimash.user.roleManagementAPI.Dto.CreateOwnerRequest;
+import com.nimash.user.roleManagementAPI.Dto.CreateManagerRequest;
+import com.nimash.user.roleManagementAPI.Dto.CreateStaffRequest;
 import com.nimash.user.roleManagementAPI.Entity.*;
 import com.nimash.user.roleManagementAPI.Repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -26,6 +30,15 @@ public class RoleController {
     @Autowired
     private OwnerRepository ownerRepository;
     
+    @Autowired
+    private BranchRepository branchRepository;
+    
+    @Autowired
+    private StaffRepository staffRepository;
+    
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    
     @Value("${app.admin.secret-key}")
     private String adminSecretKey;
 
@@ -37,6 +50,58 @@ public class RoleController {
     @GetMapping("/simple")
     public String simple() {
         return "RoleController is working";
+    }
+    
+    @GetMapping("/debug/users")
+    public ResponseEntity<String> getAllUsers() {
+        try {
+            List<User> users = userRepository.findAll();
+            StringBuilder result = new StringBuilder();
+            result.append("{\"users\":[");
+            
+            for (int i = 0; i < users.size(); i++) {
+                User user = users.get(i);
+                if (i > 0) result.append(",");
+                result.append("{")
+                    .append("\"id\":").append(user.getUserId()).append(",")
+                    .append("\"email\":\"").append(user.getEmail()).append("\",")
+                    .append("\"name\":\"").append(user.getName()).append("\",")
+                    .append("\"firebaseUid\":\"").append(user.getFirebaseUid()).append("\",")
+                    .append("\"role\":\"").append(user.getRole().getRole().name()).append("\"")
+                    .append("}");
+            }
+            
+            result.append("]}");
+            return ResponseEntity.ok(result.toString());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body("{\"error\":\"" + e.getMessage() + "\"}");
+        }
+    }
+    
+    @GetMapping("/debug/branches")
+    public ResponseEntity<String> getAllBranches() {
+        try {
+            List<Branch> branches = branchRepository.findAll();
+            StringBuilder result = new StringBuilder();
+            result.append("{\"branches\":[");
+            
+            for (int i = 0; i < branches.size(); i++) {
+                Branch branch = branches.get(i);
+                if (i > 0) result.append(",");
+                result.append("{")
+                    .append("\"id\":").append(branch.getId()).append(",")
+                    .append("\"name\":\"").append(branch.getName()).append("\",")
+                    .append("\"location\":\"").append(branch.getLocation() != null ? branch.getLocation() : "").append("\"")
+                    .append("}");
+            }
+            
+            result.append("]}");
+            return ResponseEntity.ok(result.toString());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body("{\"error\":\"" + e.getMessage() + "\"}");
+        }
     }
     
     /**
@@ -98,6 +163,171 @@ public class RoleController {
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                 .body("{\"message\":\"Failed to create owner: " + e.getMessage() + "\",\"status\":\"error\"}");
+        }
+    }
+
+    /**
+     * Owner creates a Branch Manager
+     * Only owners can create branch managers
+     */
+    @PostMapping("/manager")
+    public ResponseEntity<String> createManager(@RequestBody CreateManagerRequest request) {
+        try {
+            // Validate that the creator is an owner
+            Optional<User> ownerUser = userRepository.findByFirebaseUid(request.getCreatorFirebaseUid());
+            if (ownerUser.isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body("{\"message\":\"Creator not found\",\"status\":\"error\"}");
+            }
+            
+            // Check if creator is owner
+            if (!ownerUser.get().getRole().getRole().equals(Role.Role_Type.OWNER)) {
+                return ResponseEntity.badRequest()
+                    .body("{\"message\":\"Only owners can create managers\",\"status\":\"error\"}");
+            }
+
+            // Validate branch exists
+            Optional<Branch> branch = branchRepository.findById(request.getBranchId());
+            if (branch.isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body("{\"message\":\"Branch not found\",\"status\":\"error\"}");
+            }
+
+            // Check if email already exists
+            if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+                return ResponseEntity.badRequest()
+                    .body("{\"message\":\"Email already exists\",\"status\":\"error\"}");
+            }
+
+            // Create Firebase user
+            UserRecord.CreateRequest firebaseRequest = new UserRecord.CreateRequest()
+                .setEmail(request.getEmail())
+                .setPassword(request.getPassword())
+                .setDisplayName(request.getFirstName() + " " + request.getLastName())
+                .setEmailVerified(false);
+
+            UserRecord firebaseUser = FirebaseAuth.getInstance().createUser(firebaseRequest);
+
+            // Get manager role
+            Role managerRole = roleRepository.findByRole(Role.Role_Type.BRANCH_MANAGER)
+                .orElseThrow(() -> new RuntimeException("Manager role not found"));
+
+            // Create User entity using explicit setters
+            User user = new User();
+            user.setFirebaseUid(firebaseUser.getUid());
+            user.setEmail(request.getEmail());
+            user.setName(request.getFirstName() + " " + request.getLastName());
+            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            user.setRole(managerRole);
+            user.setIsActive(true);
+
+            User savedUser = userRepository.save(user);
+
+            // Update branch with manager using explicit setter
+            Branch updatedBranch = branch.get();
+            updatedBranch.setManager(savedUser);
+            branchRepository.save(updatedBranch);
+
+            // Create Staff entry for the manager using explicit setters
+            Staff managerStaff = new Staff();
+            managerStaff.setUser(savedUser);
+            managerStaff.setFirstName(request.getFirstName());
+            managerStaff.setLastName(request.getLastName());
+            managerStaff.setEmail(request.getEmail());
+            managerStaff.setAddress(request.getAddress());
+            managerStaff.setTel(request.getPhoneNumber());
+            managerStaff.setBranch(updatedBranch);
+            managerStaff.setStaffRole(Staff.StaffRole.STAFF); // Manager is also a staff member
+            managerStaff.setManager(null); // Manager doesn't have a manager
+
+            staffRepository.save(managerStaff);
+
+            return ResponseEntity.ok("{\"message\":\"Manager created successfully\",\"status\":\"success\",\"firebaseUid\":\"" + firebaseUser.getUid() + "\"}");
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body("{\"message\":\"Failed to create manager: " + e.getMessage() + "\",\"status\":\"error\"}");
+        }
+    }
+
+    /**
+     * Branch Manager creates Staff
+     * Only branch managers can create staff in their branch
+     */
+    @PostMapping("/staff")
+    public ResponseEntity<String> createStaff(@RequestBody CreateStaffRequest request) {
+        try {
+            // Validate that the creator is a branch manager
+            Optional<User> managerUser = userRepository.findByFirebaseUid(request.getCreatorFirebaseUid());
+            if (managerUser.isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body("{\"message\":\"Creator not found\",\"status\":\"error\"}");
+            }
+            
+            // Check if creator is branch manager
+            if (!managerUser.get().getRole().getRole().equals(Role.Role_Type.BRANCH_MANAGER)) {
+                return ResponseEntity.badRequest()
+                    .body("{\"message\":\"Only branch managers can create staff\",\"status\":\"error\"}");
+            }
+
+            // Find manager's branch
+            Optional<Staff> managerStaff = staffRepository.findByUser(managerUser.get());
+            if (managerStaff.isEmpty() || managerStaff.get().getBranch() == null) {
+                return ResponseEntity.badRequest()
+                    .body("{\"message\":\"Manager branch not found\",\"status\":\"error\"}");
+            }
+
+            Branch branch = managerStaff.get().getBranch();
+
+            // Check if email already exists
+            if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+                return ResponseEntity.badRequest()
+                    .body("{\"message\":\"Email already exists\",\"status\":\"error\"}");
+            }
+
+            // Create Firebase user
+            UserRecord.CreateRequest firebaseRequest = new UserRecord.CreateRequest()
+                .setEmail(request.getEmail())
+                .setPassword(request.getPassword())
+                .setDisplayName(request.getFirstName() + " " + request.getLastName())
+                .setEmailVerified(false);
+
+            UserRecord firebaseUser = FirebaseAuth.getInstance().createUser(firebaseRequest);
+
+            // Get staff role
+            Role staffRole = roleRepository.findByRole(Role.Role_Type.STAFF)
+                .orElseThrow(() -> new RuntimeException("Staff role not found"));
+
+            // Create User entity using explicit setters
+            User user = new User();
+            user.setFirebaseUid(firebaseUser.getUid());
+            user.setEmail(request.getEmail());
+            user.setName(request.getFirstName() + " " + request.getLastName());
+            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            user.setRole(staffRole);
+            user.setIsActive(true);
+
+            User savedUser = userRepository.save(user);
+
+            // Create Staff entry using explicit setters
+            Staff staff = new Staff();
+            staff.setUser(savedUser);
+            staff.setFirstName(request.getFirstName());
+            staff.setLastName(request.getLastName());
+            staff.setEmail(request.getEmail());
+            staff.setAddress(request.getAddress());
+            staff.setTel(request.getPhoneNumber());
+            staff.setBranch(branch);
+            staff.setStaffRole(request.getStaffRole());
+            staff.setManager(managerUser.get());
+
+            staffRepository.save(staff);
+
+            return ResponseEntity.ok("{\"message\":\"Staff created successfully\",\"status\":\"success\",\"firebaseUid\":\"" + firebaseUser.getUid() + "\"}");
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body("{\"message\":\"Failed to create staff: " + e.getMessage() + "\",\"status\":\"error\"}");
         }
     }
 
