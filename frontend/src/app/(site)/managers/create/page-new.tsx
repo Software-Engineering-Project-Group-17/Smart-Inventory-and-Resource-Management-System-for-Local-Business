@@ -21,11 +21,11 @@ const CreateManagerPage = () => {
     submitStatus,
     currentUserEmail,
     passwordVisibility,
-    
+
     // Branch info
     branchId,
     branchName,
-    
+
     // Actions
     handleInputChange,
     handleSubmit,

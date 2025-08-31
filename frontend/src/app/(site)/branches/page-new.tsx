@@ -23,7 +23,7 @@ const BranchesPage = () => {
     currentUserEmail,
     filters,
     modalState,
-    
+
     // Actions
     fetchBranches,
     handleSearch,
@@ -31,7 +31,7 @@ const BranchesPage = () => {
     handleRemoveManager,
     handleDeleteBranch,
     handleLogin,
-    
+
     // Modal actions
     openAddManagerModal,
     openRemoveManagerModal,
@@ -52,12 +52,7 @@ const BranchesPage = () => {
           <SummaryCards branches={allBranches} />
 
           {/* Error State */}
-          {error && (
-            <ErrorNotification
-              error={error}
-              onRetry={fetchBranches}
-            />
-          )}
+          {error && <ErrorNotification error={error} onRetry={fetchBranches} />}
 
           {/* Search and Filters */}
           <BranchFilters
