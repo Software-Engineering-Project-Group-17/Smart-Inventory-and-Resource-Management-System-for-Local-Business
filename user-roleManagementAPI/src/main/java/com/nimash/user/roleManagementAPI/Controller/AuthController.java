@@ -103,13 +103,13 @@ public class AuthController {
                     userName = user.getName() != null ? user.getName() : userEmail.split("@")[0];
                     userId = user.getUserId();
                     isActive = user.getIsActive();
-                    roleName = "ADMIN"; // Assume admin since they have an account
+                    roleName = "OWNER"; // Assume owner since they have an account
                 } catch (Exception ex) {
                     // Use minimal fallback
                     userEmail = "user@example.com";
                     userName = "User";
                     userId = 1L;
-                    roleName = "ADMIN";
+                    roleName = "OWNER";
                 }
             }
             

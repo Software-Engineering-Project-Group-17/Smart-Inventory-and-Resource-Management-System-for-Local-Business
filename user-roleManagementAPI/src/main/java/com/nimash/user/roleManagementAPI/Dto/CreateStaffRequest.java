@@ -13,4 +13,14 @@ public class CreateStaffRequest {
     private String phoneNumber;
     private String address;
     private Staff.StaffRole staffRole; // Specific role within the branch
+    
+    // Explicit getters to work around Lombok issues
+    public String getCreatorFirebaseUid() { return creatorFirebaseUid; }
+    public String getFirstName() { return firstName; }
+    public String getLastName() { return lastName; }
+    public String getEmail() { return email; }
+    public String getPassword() { return password; }
+    public String getPhoneNumber() { return phoneNumber; }
+    public String getAddress() { return address; }
+    public Staff.StaffRole getStaffRole() { return staffRole; }
 }

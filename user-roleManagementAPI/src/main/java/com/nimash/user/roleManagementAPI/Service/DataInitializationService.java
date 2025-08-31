@@ -31,7 +31,7 @@ public class DataInitializationService {
     private void initializeRoles() {
         log.info("Initializing roles...");
         
-        createRoleIfNotExists(Role.Role_Type.ADMIN, "System Administrator - Full access to all features");
+        createRoleIfNotExists(Role.Role_Type.OWNER, "System Owner - Full access to all features");
         createRoleIfNotExists(Role.Role_Type.BRANCH_MANAGER, "Branch Manager - Manages branch operations and staff");
         createRoleIfNotExists(Role.Role_Type.STAFF, "Staff Member - Basic operational access");
         createRoleIfNotExists(Role.Role_Type.SUPPLIER, "Supplier - Manages supply chain operations");
