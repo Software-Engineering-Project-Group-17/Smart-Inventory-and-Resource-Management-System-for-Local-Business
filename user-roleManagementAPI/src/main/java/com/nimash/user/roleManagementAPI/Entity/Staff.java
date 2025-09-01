@@ -2,6 +2,8 @@ package com.nimash.user.roleManagementAPI.Entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -48,10 +50,11 @@ public class Staff {
     @Column(name = "salary")
     private BigDecimal salary;
     
-    // Temporarily exclude staff_types from persistence until we can properly handle PostgreSQL arrays
-    @Transient  // This tells JPA to not persist this field
+    // PostgreSQL array support for staff_types
+    @Column(name = "staff_types", columnDefinition = "text[]")
+    @JdbcTypeCode(SqlTypes.ARRAY)
     @Builder.Default
-    private Set<String> staffTypesTemp = new HashSet<>();
+    private String[] staffTypes = new String[0];
     
     @Column(name = "hire_date", nullable = false, columnDefinition = "TIMESTAMPTZ DEFAULT now()")
     private LocalDateTime hireDate;
@@ -73,7 +76,10 @@ public class Staff {
     public void setManager(User manager) { this.manager = manager; }
     public void setSalary(BigDecimal salary) { this.salary = salary; }
     public void setStaffTypes(Set<String> staffTypes) { 
-        this.staffTypesTemp = staffTypes != null ? staffTypes : new HashSet<>();
+        this.staffTypes = staffTypes != null ? staffTypes.toArray(new String[0]) : new String[0];
+    }
+    public void setStaffTypesArray(String[] staffTypes) {
+        this.staffTypes = staffTypes != null ? staffTypes : new String[0];
     }
     public void setHireDate(LocalDateTime hireDate) { this.hireDate = hireDate; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
@@ -89,7 +95,19 @@ public class Staff {
     public Branch getBranch() { return branch; }
     public User getUser() { return user; }
     public Set<String> getStaffTypes() { 
-        return staffTypesTemp != null ? staffTypesTemp : new HashSet<>();
+        if (staffTypes != null && staffTypes.length > 0) {
+            Set<String> result = new HashSet<>();
+            for (String type : staffTypes) {
+                if (type != null && !type.trim().isEmpty()) {
+                    result.add(type);
+                }
+            }
+            return result;
+        }
+        return new HashSet<>();
+    }
+    public String[] getStaffTypesArray() {
+        return staffTypes != null ? staffTypes : new String[0];
     }
     public BigDecimal getSalary() { return salary; }
     public LocalDateTime getHireDate() { return hireDate; }
