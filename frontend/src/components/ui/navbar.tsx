@@ -75,11 +75,6 @@ const Navbar: React.FC = () => {
       case "BRANCH_MANAGER":
         return [
           {
-            label: "Branches",
-            href: "/branches",
-            icon: <Building2 size={20} />,
-          },
-          {
             label: "Inventory",
             href: "/inventory",
             icon: <Package size={20} />,
