@@ -65,20 +65,15 @@ const Navbar: React.FC = () => {
             icon: <FileBarChart size={20} />,
           },
           {
-            label: "Staff",
-            href: "/staff",
-            icon: <Users size={20} />,
+            label: "Profile",
+            href: "/profile",
+            icon: <User size={20} />,
           },
         ];
 
       case "MANAGER":
       case "BRANCH_MANAGER":
         return [
-          {
-            label: "Branches",
-            href: "/branches",
-            icon: <Building2 size={20} />,
-          },
           {
             label: "Inventory",
             href: "/inventory",
