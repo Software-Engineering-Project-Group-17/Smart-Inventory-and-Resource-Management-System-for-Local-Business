@@ -6,27 +6,101 @@ import {
   ResourceWithAssignment,
 } from "@/lib/database/connection";
 
-// GET /api/resources - Get all resources with their assignments
+// GET /api/resources - Get resources for user's branch
 export async function GET(request: NextRequest) {
   try {
-    // Get branch_id from query params (optional)
-    const { searchParams } = new URL(request.url);
-    const branchId = searchParams.get("branch_id");
+    // Get user information from headers
+    const userId = request.headers.get("x-user-id");
+    const userEmail = request.headers.get("x-user-email");
 
-    let resources: ResourceWithAssignment[];
-
-    if (branchId) {
-      resources = (await sql`
-        SELECT * FROM resource_with_assignment_view 
-        WHERE branch_id = ${parseInt(branchId)}
-        ORDER BY created_at DESC
-      `) as ResourceWithAssignment[];
-    } else {
-      resources = (await sql`
-        SELECT * FROM resource_with_assignment_view 
-        ORDER BY created_at DESC
-      `) as ResourceWithAssignment[];
+    if (!userId && !userEmail) {
+      return NextResponse.json(
+        { success: false, message: "User authentication required" },
+        { status: 401 }
+      );
     }
+
+    // Get user's branch information from database
+    let userInfo = null;
+
+    try {
+      if (userId) {
+        // First try as Firebase UID
+        let result = await sql`
+          SELECT 
+            u.user_id,
+            u.email,
+            u.firebase_uid,
+            s.branch_id,
+            s.id as staff_id
+          FROM "user" u
+          INNER JOIN staff s ON u.user_id = s.user_id
+          WHERE u.firebase_uid = ${userId}
+          LIMIT 1
+        `;
+
+        // If no result, try as user_id (for cases where frontend sends user_id instead of firebase_uid)
+        if (result.length === 0) {
+          result = await sql`
+            SELECT 
+              u.user_id,
+              u.email,
+              u.firebase_uid,
+              s.branch_id,
+              s.id as staff_id
+            FROM "user" u
+            INNER JOIN staff s ON u.user_id = s.user_id
+            WHERE u.user_id = ${parseInt(userId)}
+            LIMIT 1
+          `;
+        }
+
+        userInfo = result[0];
+      } else if (userEmail) {
+        const result = await sql`
+          SELECT 
+            u.user_id,
+            u.email,
+            u.firebase_uid,
+            s.branch_id,
+            s.id as staff_id
+          FROM "user" u
+          INNER JOIN staff s ON u.user_id = s.user_id
+          WHERE u.email = ${userEmail}
+          LIMIT 1
+        `;
+
+        userInfo = result[0];
+      }
+
+      if (!userInfo || !userInfo.branch_id) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "User not found in database or not assigned to a branch. Please contact your administrator.",
+          },
+          { status: 404 }
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch user information:", error);
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Failed to authenticate user",
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+        { status: 500 }
+      );
+    }
+
+    // Fetch resources for the user's specific branch only
+    const resources = (await sql`
+      SELECT * FROM resource_with_assignment_view 
+      WHERE branch_id = ${userInfo.branch_id}
+      ORDER BY created_at DESC
+    `) as ResourceWithAssignment[];
 
     // Transform data for frontend
     const resourcesMap = new Map();
@@ -75,23 +149,118 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, details, resourceType = "GENERAL", branchId } = body;
+    const { name, details, resourceType = "GENERAL" } = body;
 
     // Validate required fields
-    if (!name || !branchId) {
+    if (!name) {
       return NextResponse.json(
-        { success: false, message: "Name and branch ID are required" },
+        { success: false, message: "Resource name is required" },
         { status: 400 }
+      );
+    }
+
+    // Get user information from headers
+    const userId = request.headers.get("x-user-id");
+    const userEmail = request.headers.get("x-user-email");
+    const userRole = request.headers.get("x-user-role"); // Add role to headers
+
+    if (!userId && !userEmail) {
+      return NextResponse.json(
+        { success: false, message: "User authentication required" },
+        { status: 401 }
+      );
+    }
+
+    // Check if user has permission to create resources (STAFF or BRANCH_MANAGER)
+    const allowedRoles = ["STAFF", "BRANCH_MANAGER", "ADMIN"];
+    if (userRole && !allowedRoles.includes(userRole)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Insufficient permissions to create resources",
+        },
+        { status: 403 }
+      );
+    }
+
+    // Get user's branch information from database - user must exist since they're logged in
+    let userInfo = null;
+
+    try {
+      if (userId) {
+        // First try as Firebase UID
+        let result = await sql`
+          SELECT 
+            u.user_id,
+            u.email,
+            u.firebase_uid,
+            s.branch_id,
+            s.id as staff_id
+          FROM "user" u
+          INNER JOIN staff s ON u.user_id = s.user_id
+          WHERE u.firebase_uid = ${userId}
+          LIMIT 1
+        `;
+
+        // If no result, try as user_id (for cases where frontend sends user_id instead of firebase_uid)
+        if (result.length === 0) {
+          result = await sql`
+            SELECT 
+              u.user_id,
+              u.email,
+              u.firebase_uid,
+              s.branch_id,
+              s.id as staff_id
+            FROM "user" u
+            INNER JOIN staff s ON u.user_id = s.user_id
+            WHERE u.user_id = ${parseInt(userId)}
+            LIMIT 1
+          `;
+        }
+
+        userInfo = result[0];
+      } else if (userEmail) {
+        // Query by email using the actual schema structure
+        const result = await sql`
+          SELECT 
+            u.user_id,
+            u.email,
+            u.firebase_uid,
+            s.branch_id,
+            s.id as staff_id
+          FROM "user" u
+          INNER JOIN staff s ON u.user_id = s.user_id
+          WHERE u.email = ${userEmail}
+          LIMIT 1
+        `;
+        userInfo = result[0];
+      }
+
+      if (!userInfo || !userInfo.branch_id) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "User not found in database or not assigned to a branch. Please contact your administrator.",
+          },
+          { status: 404 }
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching user info:", error);
+      return NextResponse.json(
+        { success: false, message: "Failed to authenticate user" },
+        { status: 500 }
       );
     }
 
     // Generate resource number (you can customize this logic)
     const resourceNumber = `RES-${Date.now()}`;
 
-    // Insert new resource
+    // Insert new resource with user's branch and creator info
     const result = await sql`
-      INSERT INTO resource (name, resource_number, description, resource_type, branch_id, availability_status)
-      VALUES (${name}, ${resourceNumber}, ${details}, ${resourceType}, ${branchId}, 'available')
+      INSERT INTO resource (name, resource_number, description, resource_type, branch_id, availability_status, created_by)
+      VALUES (${name}, ${resourceNumber}, ${details}, ${resourceType}, ${userInfo.branch_id}, 'available', ${userInfo.user_id})
       RETURNING *
     `;
 

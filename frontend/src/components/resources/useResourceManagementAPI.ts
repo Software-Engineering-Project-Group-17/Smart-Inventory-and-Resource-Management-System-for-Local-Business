@@ -17,6 +17,21 @@ export const useResourceManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Notification state
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    message: string;
+    type: "success" | "error";
+  }>({ show: false, message: "", type: "success" });
+
+  // Show notification function
+  const showNotification = (message: string, type: "success" | "error") => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => {
+      setNotification({ show: false, message: "", type: "success" });
+    }, 5000); // Hide after 5 seconds
+  };
+
   const [resources, setResources] = useState<Resource[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
 
@@ -150,31 +165,30 @@ export const useResourceManagement = () => {
   // Resource operations with API
   const handleAddResource = async () => {
     if (!addResourceForm.name || !addResourceForm.details) {
-      alert("Please fill in all required fields");
+      showNotification("Please fill in all required fields", "error");
       return;
     }
 
     try {
-      // Default to branch ID 1 for now - you can make this dynamic
+      // Branch ID and creator will be automatically captured from user authentication
       const response = await resourceApi.create({
         name: addResourceForm.name,
         details: addResourceForm.details,
         resourceType: "GENERAL",
-        branchId: 1,
       });
 
       if (response.success) {
-        alert("Resource added successfully!");
+        showNotification("Resource added successfully!", "success");
         resetAddResourceForm();
         setShowAddResourceForm(false);
         // Reload resources
         await loadResources();
       } else {
-        alert(response.message || "Failed to add resource");
+        showNotification(response.message || "Failed to add resource", "error");
       }
     } catch (error) {
       console.error("Error adding resource:", error);
-      alert("Failed to add resource");
+      showNotification("Failed to add resource", "error");
     }
   };
 
@@ -185,7 +199,7 @@ export const useResourceManagement = () => {
       !assignForm.startDate ||
       !assignForm.endDate
     ) {
-      alert("Please fill in all required fields");
+      showNotification("Please fill in all required fields", "error");
       return;
     }
 
@@ -201,17 +215,20 @@ export const useResourceManagement = () => {
       });
 
       if (response.success) {
-        alert("Resource assigned successfully!");
+        showNotification("Resource assigned successfully!", "success");
         resetAssignForm();
         setShowAssignForm(null);
         // Reload resources
         await loadResources();
       } else {
-        alert(response.message || "Failed to assign resource");
+        showNotification(
+          response.message || "Failed to assign resource",
+          "error"
+        );
       }
     } catch (error) {
       console.error("Error assigning resource:", error);
-      alert("Failed to assign resource");
+      showNotification("Failed to assign resource", "error");
     }
   };
 
@@ -224,15 +241,18 @@ export const useResourceManagement = () => {
       const response = await assignmentApi.delete(assignmentId);
 
       if (response.success) {
-        alert("Resource unassigned successfully!");
+        showNotification("Resource unassigned successfully!", "success");
         // Reload resources
         await loadResources();
       } else {
-        alert(response.message || "Failed to unassign resource");
+        showNotification(
+          response.message || "Failed to unassign resource",
+          "error"
+        );
       }
     } catch (error) {
       console.error("Error unassigning resource:", error);
-      alert("Failed to unassign resource");
+      showNotification("Failed to unassign resource", "error");
     }
   };
 
@@ -245,15 +265,18 @@ export const useResourceManagement = () => {
       const response = await resourceApi.delete(resourceId);
 
       if (response.success) {
-        alert("Resource deleted successfully!");
+        showNotification("Resource deleted successfully!", "success");
         // Reload resources
         await loadResources();
       } else {
-        alert(response.message || "Failed to delete resource");
+        showNotification(
+          response.message || "Failed to delete resource",
+          "error"
+        );
       }
     } catch (error) {
       console.error("Error deleting resource:", error);
-      alert("Failed to delete resource");
+      showNotification("Failed to delete resource", "error");
     }
   };
 
@@ -289,6 +312,7 @@ export const useResourceManagement = () => {
     assignments,
     assignForm,
     addResourceForm,
+    notification,
 
     // Computed
     availableResources,
@@ -310,5 +334,6 @@ export const useResourceManagement = () => {
     openAddResourceForm,
     closeAddResourceForm,
     loadResources,
+    showNotification,
   };
 };

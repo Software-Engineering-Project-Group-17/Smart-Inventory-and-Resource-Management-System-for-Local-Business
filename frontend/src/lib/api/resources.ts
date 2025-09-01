@@ -1,4 +1,21 @@
 // API client functions for resource management
+import { getUserProfile } from "@/lib/auth";
+
+// Helper function to get user headers for API requests
+function getUserHeaders(): HeadersInit {
+  const userProfile = getUserProfile();
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+
+  if (userProfile) {
+    headers["x-user-id"] = userProfile.id;
+    headers["x-user-email"] = userProfile.email;
+    headers["x-user-role"] = userProfile.role;
+  }
+
+  return headers;
+}
 
 interface ApiResponse<T = any> {
   success: boolean;
@@ -79,7 +96,9 @@ export const resourceApi = {
     const url = branchId
       ? `/api/resources?branch_id=${branchId}`
       : "/api/resources";
-    return apiCall(url);
+    return apiCall(url, {
+      headers: getUserHeaders(),
+    });
   },
 
   // Create a new resource
@@ -87,10 +106,10 @@ export const resourceApi = {
     name: string;
     details: string;
     resourceType?: string;
-    branchId: number;
   }): Promise<ApiResponse<ResourceData>> {
     return apiCall("/api/resources", {
       method: "POST",
+      headers: getUserHeaders(),
       body: JSON.stringify(resourceData),
     });
   },
@@ -132,6 +151,7 @@ export const assignmentApi = {
   }): Promise<ApiResponse<AssignmentData>> {
     return apiCall("/api/resources/assignments", {
       method: "POST",
+      headers: getUserHeaders(),
       body: JSON.stringify(assignmentData),
     });
   },
