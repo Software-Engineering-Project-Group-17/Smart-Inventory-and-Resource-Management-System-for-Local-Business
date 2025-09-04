@@ -84,8 +84,8 @@ const Menu = () => {
           >
             <ShoppingBag size={20} /> EXPLORE
           </Link>
-                    <Link 
-            href="/orders" 
+          <Link
+            href="/orders"
             className="flex items-center gap-3 hover:text-zeta transition-colors duration-200 active:scale-95"
             onClick={() => setOpen(false)}
           >
