@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
         hostname: "foodies-foods-thivinu.s3.ap-southeast-2.amazonaws.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        pathname: "/**",
+      },
     ],
   },
 };

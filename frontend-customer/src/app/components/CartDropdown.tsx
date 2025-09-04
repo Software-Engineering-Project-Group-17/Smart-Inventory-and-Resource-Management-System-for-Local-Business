@@ -4,11 +4,14 @@ import React, { useState } from "react";
 import { ShoppingCart, X, Plus, Minus } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import Image from "next/image";
+import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 
 const CartDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { items, updateQuantity, removeItem, totalItems, totalPrice } =
     useCart();
+  const { user } = useAuth();
 
   const toggleCart = () => setIsOpen(!isOpen);
 
@@ -107,9 +110,26 @@ const CartDropdown = () => {
                       ${totalPrice.toFixed(2)}
                     </span>
                   </div>
-                  <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-                    Checkout
-                  </button>
+                  {user ? (
+                    <Link href="/checkout">
+                      <button
+                        onClick={toggleCart}
+                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Checkout
+                      </button>
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        toggleCart();
+                        // Trigger login from context
+                      }}
+                      className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      Login to Checkout
+                    </button>
+                  )}
                 </div>
               </>
             )}
