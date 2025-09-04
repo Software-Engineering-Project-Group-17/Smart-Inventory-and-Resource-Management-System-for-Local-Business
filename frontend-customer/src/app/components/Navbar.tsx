@@ -3,6 +3,7 @@ import React from "react";
 import Menu from "./Menu";
 import Image from "next/image";
 import { Home, ShoppingBag, Tag, Phone, User } from "lucide-react";
+import CartDropdown from "./CartDropdown";
 
 const Navbar = () => {
   return (
@@ -92,6 +93,10 @@ const Navbar = () => {
           >
             <User size={20} /> PROFILE
           </Link>
+        </div>
+
+        <div>
+          <CartDropdown />
         </div>
       </div>
     </div>
