@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get("categoryId");
+    const categoryName = searchParams.get("categoryName");
     const limit = searchParams.get("limit");
     const search = searchParams.get("search");
 
@@ -24,16 +25,23 @@ export async function GET(request: NextRequest) {
         c.category_name
       FROM inventory_item ii
       LEFT JOIN category c ON ii.category_id = c.id
-      WHERE ii.quantity >= 0
+      WHERE ii.quantity >= 0 AND ii.branch_id = 3
     `;
 
     const queryParams: any[] = [];
     let paramIndex = 1;
 
-    // Add category filter if provided
+    // Add category filter if provided (by ID)
     if (categoryId && categoryId !== "all") {
       query += ` AND ii.category_id = $${paramIndex}`;
       queryParams.push(parseInt(categoryId));
+      paramIndex++;
+    }
+
+    // Add category filter if provided (by name)
+    if (categoryName && categoryName !== "all") {
+      query += ` AND LOWER(c.category_name) = LOWER($${paramIndex})`;
+      queryParams.push(categoryName);
       paramIndex++;
     }
 

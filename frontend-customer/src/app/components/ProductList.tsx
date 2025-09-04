@@ -14,46 +14,71 @@ interface Product {
 const PRODUCTS_PER_PAGE = 20;
 
 const ProductList = async ({
+  categoryName,
   categoryId,
   limit,
   searchParams,
 }: {
-  categoryId: string;
+  categoryName?: string;
+  categoryId?: string;
   limit?: number;
   searchParams?: any;
 }) => {
   // Fetch products from the API
   let products: Product[] = [];
+  let errorMessage: string | null = null;
 
   try {
     const params = new URLSearchParams();
-    if (categoryId && categoryId !== "all") {
+
+    // Use categoryName if provided, otherwise fall back to categoryId
+    if (categoryName && categoryName !== "") {
+      params.append("categoryName", categoryName);
+      console.log("Filtering by categoryName:", categoryName);
+    } else if (categoryId && categoryId !== "all" && categoryId !== "") {
       params.append("categoryId", categoryId);
+      console.log("Filtering by categoryId:", categoryId);
     }
+
     if (limit) {
       params.append("limit", limit.toString());
     }
 
-    const response = await fetch(
-      `${
-        process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001"
-      }/api/home/products?${params.toString()}`,
-      {
-        cache: "no-store", // Ensure fresh data on each request
-      }
-    );
+    const apiUrl = `${
+      process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001"
+    }/api/home/products?${params.toString()}`;
+
+    console.log("Fetching products from:", apiUrl);
+
+    const response = await fetch(apiUrl, {
+      cache: "no-store", // Ensure fresh data on each request
+    });
 
     if (response.ok) {
       products = await response.json();
     } else {
       console.error("Failed to fetch products:", response.statusText);
+      errorMessage = "Failed to load products. Please try again.";
     }
   } catch (error) {
     console.error("Error fetching products:", error);
+    errorMessage = "Network error. Please check your connection.";
   }
   return (
     <div className="flex gap-x-8 gap-y-16 flex-wrap justify-between">
-      {products.length > 0 ? (
+      {errorMessage ? (
+        <div className="flex items-center justify-center w-full h-80">
+          <div className="text-center">
+            <p className="text-red-500 text-lg mb-2">⚠️ {errorMessage}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="text-blue-600 hover:text-blue-800 underline"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      ) : products.length > 0 ? (
         products.map((product) => (
           <Link
             href={`/product/${product.inventory_id}`}
@@ -110,7 +135,20 @@ const ProductList = async ({
         ))
       ) : (
         <div className="flex items-center justify-center w-full h-80">
-          <p className="text-gray-500 text-lg">No products available</p>
+          <div className="text-center">
+            <p className="text-gray-500 text-lg mb-2">No products found</p>
+            {(categoryId || categoryName) && (
+              <p className="text-gray-400 text-sm">
+                Try browsing other categories or{" "}
+                <a
+                  href="/list"
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  view all products
+                </a>
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>
