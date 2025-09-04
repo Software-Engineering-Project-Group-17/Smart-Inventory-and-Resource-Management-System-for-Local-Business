@@ -1,32 +1,40 @@
-package com.nimash.user.roleManagementAPI.Config;
+package com.nimash.user.roleManagementAPI.Config; // use lowercase 'config' by convention
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 
 import javax.annotation.PostConstruct;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.InputStream;
 
 @Configuration
 public class FirebaseConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(FirebaseConfig.class);
+
     @PostConstruct
-    public void initFirebase() throws IOException {
+    public void initFirebase() {
         try {
-            FileInputStream serviceAccount =
-                    new FileInputStream("src/main/resources/firebase-service-account.json");
+            if (!FirebaseApp.getApps().isEmpty()) {
+                return; // already initialized (useful in dev/reload)
+            }
 
-            FirebaseOptions options = new FirebaseOptions.Builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .build();
+            ClassPathResource res = new ClassPathResource("firebase-service-account.json");
+            try (InputStream in = res.getInputStream()) {
+                FirebaseOptions options = FirebaseOptions.builder()
+                        .setCredentials(GoogleCredentials.fromStream(in))
+                        .build();
 
-            if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp.initializeApp(options);
+                log.info("Firebase initialized from classpath resource {}", res.getPath());
             }
         } catch (Exception e) {
-            System.err.println("Firebase initialization failed: " + e.getMessage());
-            // Don't fail the application startup - just log the error
+            // Don’t fail startup; just log
+            log.warn("Firebase initialization failed: {}", e.getMessage());
         }
     }
 }
