@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Package,
   Clock,
@@ -16,6 +17,8 @@ import {
   Eye,
   RefreshCw,
   AlertCircle,
+  DollarSign,
+  X,
 } from "lucide-react";
 
 interface OrderItem {
@@ -49,10 +52,30 @@ interface OrdersResponse {
 
 const OrdersPage = () => {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedOrder, setExpandedOrder] = useState<number | null>(null);
+  const [processingAction, setProcessingAction] = useState<{
+    orderId: number;
+    action: "pay" | "cancel";
+  } | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check for payment success from URL params
+    const paymentStatus = searchParams.get("payment");
+    const orderId = searchParams.get("order_id");
+
+    if (paymentStatus === "success" && orderId) {
+      setPaymentSuccess(
+        `Payment completed successfully for Order #${orderId}!`
+      );
+      // Clear the URL params
+      window.history.replaceState({}, "", "/orders");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (user) {
@@ -85,6 +108,94 @@ const OrdersPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePayLater = async (orderId: number) => {
+    if (!user) return;
+
+    try {
+      setProcessingAction({ orderId, action: "pay" });
+
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "pay" }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to prepare payment");
+      }
+
+      const data = await response.json();
+
+      // For payment intents, redirect to a payment page or handle inline
+      if (data.client_secret) {
+        // Store the client secret and redirect to a payment page
+        // For now, we'll create a simple payment flow
+        const paymentUrl = `/payment?client_secret=${encodeURIComponent(
+          data.client_secret
+        )}&order_id=${orderId}`;
+        window.location.href = paymentUrl;
+      }
+    } catch (err) {
+      console.error("Payment error:", err);
+      setError(err instanceof Error ? err.message : "Payment failed");
+    } finally {
+      setProcessingAction(null);
+    }
+  };
+
+  const handleCancelOrder = async (orderId: number) => {
+    if (!user) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to cancel this order? This action cannot be undone."
+    );
+    if (!confirmed) return;
+
+    try {
+      setProcessingAction({ orderId, action: "cancel" });
+
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "cancel" }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to cancel order");
+      }
+
+      // Refresh orders list
+      await fetchOrders();
+    } catch (err) {
+      console.error("Cancel error:", err);
+      setError(err instanceof Error ? err.message : "Failed to cancel order");
+    } finally {
+      setProcessingAction(null);
+    }
+  };
+
+  const canPayOrder = (order: Order) => {
+    return (
+      order.order_status === "pending" && order.payment_status === "unpaid"
+    );
+  };
+
+  const canCancelOrder = (order: Order) => {
+    return (
+      order.order_status === "pending" && order.payment_status === "unpaid"
+    );
   };
 
   const getStatusIcon = (status: string) => {
@@ -209,6 +320,46 @@ const OrdersPage = () => {
           </p>
         </div>
 
+        {/* Payment Success Message */}
+        {paymentSuccess && (
+          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+              <div>
+                <p className="text-green-800 font-medium">{paymentSuccess}</p>
+                <p className="text-green-700 text-sm">
+                  Your order is now being processed.
+                </p>
+              </div>
+              <button
+                onClick={() => setPaymentSuccess(null)}
+                className="ml-auto text-green-600 hover:text-green-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-6 h-6 text-red-600" />
+              <div>
+                <p className="text-red-800 font-medium">Error</p>
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+              <button
+                onClick={() => setError(null)}
+                className="ml-auto text-red-600 hover:text-red-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {orders.length === 0 ? (
           <div className="text-center py-16">
             <ShoppingBag className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -250,6 +401,12 @@ const OrdersPage = () => {
                           <span className="ml-1 capitalize">
                             {order.order_status}
                           </span>
+                          {order.order_status === "pending" &&
+                            order.payment_status === "unpaid" && (
+                              <span className="ml-1 text-xs">
+                                - Payment Required
+                              </span>
+                            )}
                         </span>
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-medium border ${getPaymentStatusColor(
@@ -285,16 +442,58 @@ const OrdersPage = () => {
                           {order.items.length !== 1 ? "s" : ""}
                         </p>
                       </div>
-                      <button
-                        onClick={() =>
-                          setExpandedOrder(
-                            expandedOrder === order.id ? null : order.id
-                          )
-                        }
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                      >
-                        <Eye className="w-5 h-5" />
-                      </button>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2">
+                        {canPayOrder(order) && (
+                          <button
+                            onClick={() => handlePayLater(order.id)}
+                            disabled={
+                              processingAction?.orderId === order.id &&
+                              processingAction?.action === "pay"
+                            }
+                            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                          >
+                            {processingAction?.orderId === order.id &&
+                            processingAction?.action === "pay" ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <DollarSign className="w-4 h-4" />
+                            )}
+                            Pay Now
+                          </button>
+                        )}
+
+                        {canCancelOrder(order) && (
+                          <button
+                            onClick={() => handleCancelOrder(order.id)}
+                            disabled={
+                              processingAction?.orderId === order.id &&
+                              processingAction?.action === "cancel"
+                            }
+                            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                          >
+                            {processingAction?.orderId === order.id &&
+                            processingAction?.action === "cancel" ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <X className="w-4 h-4" />
+                            )}
+                            Cancel
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() =>
+                            setExpandedOrder(
+                              expandedOrder === order.id ? null : order.id
+                            )
+                          }
+                          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
