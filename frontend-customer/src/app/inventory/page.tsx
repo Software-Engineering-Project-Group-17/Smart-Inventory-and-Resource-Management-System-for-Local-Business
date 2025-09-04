@@ -19,7 +19,7 @@ export default function InventoryListPage() {
 
   useEffect(() => {
     async function fetchInventory() {
-      const res = await fetch("/api/inventory");
+      const res = await fetch("/api/home/inventory");
       const data = await res.json();
       setItems(data);
       setLoading(false);
