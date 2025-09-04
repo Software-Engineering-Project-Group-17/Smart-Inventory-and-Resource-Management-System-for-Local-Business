@@ -50,6 +50,10 @@
       <version>2.3.0</version>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>io.projectreactor.netty</groupId>
+      <artifactId>reactor-netty-http</artifactId>
+    </dependency>
 
   </dependencies>
 
