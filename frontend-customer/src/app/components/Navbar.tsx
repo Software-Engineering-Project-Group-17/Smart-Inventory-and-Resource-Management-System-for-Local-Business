@@ -1,11 +1,31 @@
+"use client";
+
 import Link from "next/link";
 import React from "react";
 import Menu from "./Menu";
 import Image from "next/image";
-import { Home, ShoppingBag, Tag, Phone, User } from "lucide-react";
+import {
+  Home,
+  ShoppingBag,
+  Tag,
+  Phone,
+  User,
+  LogOut,
+  LogIn,
+} from "lucide-react";
 import CartDropdown from "./CartDropdown";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
+  const { user, customerData, signInWithGoogle, logout, loading } = useAuth();
+
+  const handleAuthAction = async () => {
+    if (user) {
+      await logout();
+    } else {
+      await signInWithGoogle();
+    }
+  };
   return (
     <div className="h-20 px-4 md:px-8 lg:px-16 xl:px-32 2xl:px-64 relative">
       {/* MOBILE */}
@@ -86,16 +106,44 @@ const Navbar = () => {
           </Link>
         </div>
 
-        <div>
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-lg font-semibold text-gray-700 active:scale-90 transition-transform duration-200 hover:text-zeta"
-          >
-            <User size={20} /> PROFILE
-          </Link>
-        </div>
-
-        <div>
+        <div className="flex items-center space-x-4">
+          {!loading && (
+            <>
+              {user ? (
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    {user.photoURL && (
+                      <Image
+                        src={user.photoURL}
+                        alt="Profile"
+                        width={32}
+                        height={32}
+                        className="rounded-full"
+                      />
+                    )}
+                    <span className="text-sm font-medium text-gray-700 hidden sm:block">
+                      {customerData?.customer_name ||
+                        user.displayName ||
+                        "Customer"}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleAuthAction}
+                    className="flex items-center gap-2 text-lg font-semibold text-gray-700 active:scale-90 transition-transform duration-200 hover:text-red-600"
+                  >
+                    <LogOut size={20} /> LOGOUT
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleAuthAction}
+                  className="flex items-center gap-2 text-lg font-semibold text-gray-700 active:scale-90 transition-transform duration-200 hover:text-blue-600"
+                >
+                  <LogIn size={20} /> LOGIN
+                </button>
+              )}
+            </>
+          )}
           <CartDropdown />
         </div>
       </div>
