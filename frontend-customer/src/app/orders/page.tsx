@@ -281,7 +281,8 @@ const OrdersPage = () => {
                           ${order.total_amount.toFixed(2)}
                         </p>
                         <p className="text-sm text-gray-600">
-                          {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                          {order.items.length} item
+                          {order.items.length !== 1 ? "s" : ""}
                         </p>
                       </div>
                       <button
@@ -342,19 +343,24 @@ const OrdersPage = () => {
                         </div>
                       ))}
                     </div>
-                    
+
                     {/* Additional Order Details */}
                     <div className="mt-6 pt-4 border-t border-gray-200">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
-                          <p className="font-medium text-gray-900">Order Details</p>
+                          <p className="font-medium text-gray-900">
+                            Order Details
+                          </p>
                           <p className="text-gray-600">Order ID: #{order.id}</p>
                           <p className="text-gray-600">
-                            Payment ID: {order.stripe_payment_intent_id.slice(0, 20)}...
+                            Payment ID:{" "}
+                            {order.stripe_payment_intent_id.slice(0, 20)}...
                           </p>
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">Timestamps</p>
+                          <p className="font-medium text-gray-900">
+                            Timestamps
+                          </p>
                           <p className="text-gray-600">
                             Created: {formatDate(order.created_at)}
                           </p>
@@ -365,8 +371,12 @@ const OrdersPage = () => {
                       </div>
                       {order.shipping_address && (
                         <div className="mt-4">
-                          <p className="font-medium text-gray-900">Shipping Address</p>
-                          <p className="text-gray-600">{order.shipping_address}</p>
+                          <p className="font-medium text-gray-900">
+                            Shipping Address
+                          </p>
+                          <p className="text-gray-600">
+                            {order.shipping_address}
+                          </p>
                         </div>
                       )}
                     </div>
