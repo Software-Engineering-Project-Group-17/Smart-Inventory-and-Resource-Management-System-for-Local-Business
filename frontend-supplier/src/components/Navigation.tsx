@@ -13,8 +13,20 @@ import {
   LogOut,
   LogIn,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
-const Navbar = () => {
+const Navigation = () => {
+  const { user, supplier, signIn, logout, loading } = useAuth();
+
+  const handleAuthAction = async () => {
+    if (user) {
+      await logout();
+    } else {
+      // For supplier, we'll redirect to login page instead of automatic OAuth
+      window.location.href = "/auth/login";
+    }
+  };
+
   return (
     <div className="h-20 px-4 md:px-8 lg:px-16 xl:px-32 2xl:px-64 relative bg-white shadow-sm">
       {/* MOBILE */}
@@ -38,8 +50,8 @@ const Navbar = () => {
         {/* Brand Name */}
         <div className="flex-1 flex justify-center">
           <Link href="/">
-            <div className="flex items-center gap-2 text-sm font-bold tracking-wider text-gray-800 hover:text-zeta transition-colors duration-200 uppercase">
-              BUILD MATE
+            <div className="flex items-center gap-2 text-sm font-bold tracking-wider text-gray-800 hover:text-blue-600 transition-colors duration-200 uppercase">
+              SUPPLIER PORTAL
             </div>
           </Link>
         </div>
@@ -67,8 +79,8 @@ const Navbar = () => {
             </div>
 
             {/* Text with hover animation */}
-            <div className="flex items-center gap-2 text-lg font-bold tracking-wider uppercase group-hover:text-zeta active:scale-95 transition-all duration-200 text-gray-800">
-              BUILD MATE
+            <div className="flex items-center gap-2 text-lg font-bold tracking-wider uppercase group-hover:text-blue-600 active:scale-95 transition-all duration-200 text-gray-800">
+              SUPPLIER PORTAL
             </div>
           </Link>
         </div>
@@ -77,44 +89,34 @@ const Navbar = () => {
         <div className="w-1/3 flex items-center justify-center gap-8 py-4">
           <Link
             href="/"
-            className="flex items-center gap-2 text-sm font-semibold text-gray-700 active:scale-95 transition-all duration-200 hover:text-zeta hover:bg-gray-50 px-3 py-2 rounded-lg"
+            className="flex items-center gap-2 text-sm font-semibold text-gray-700 active:scale-95 transition-all duration-200 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg"
           >
             <ShoppingBag size={18} /> REQUESTS
           </Link>
           <Link
             href="/orders"
-            className="flex items-center gap-2 text-sm font-semibold text-gray-700 active:scale-95 transition-all duration-200 hover:text-zeta hover:bg-gray-50 px-3 py-2 rounded-lg"
+            className="flex items-center gap-2 text-sm font-semibold text-gray-700 active:scale-95 transition-all duration-200 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg"
           >
             <Tag size={18} /> ORDERS
           </Link>
           <Link
-            href="/"
-            className="flex items-center gap-2 text-sm font-semibold text-gray-700 active:scale-95 transition-all duration-200 hover:text-zeta hover:bg-gray-50 px-3 py-2 rounded-lg"
+            href="/contact"
+            className="flex items-center gap-2 text-sm font-semibold text-gray-700 active:scale-95 transition-all duration-200 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-lg"
           >
             <Phone size={18} /> CONTACT
           </Link>
         </div>
 
-        {/* RIGHT - Auth & Cart
+        {/* RIGHT - Auth */}
         <div className="w-1/3 flex items-center justify-end space-x-4">
           {!loading && (
             <>
-              {user ? (
+              {user && supplier ? (
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg">
-                    {user.photoURL && (
-                      <Image
-                        src={user.photoURL}
-                        alt="Profile"
-                        width={32}
-                        height={32}
-                        className="rounded-full ring-2 ring-white shadow-sm"
-                      />
-                    )}
+                    <User className="w-6 h-6 text-gray-600" />
                     <span className="text-sm font-medium text-gray-700 hidden lg:block max-w-[120px] truncate">
-                      {customerData?.customer_name ||
-                        user.displayName ||
-                        "Customer"}
+                      {supplier.supplier_name}
                     </span>
                   </div>
                   <button
@@ -136,11 +138,10 @@ const Navbar = () => {
               )}
             </>
           )}
-          
-        </div> */}
+        </div>
       </div>
     </div>
   );
 };
 
-export default Navbar;
+export default Navigation;

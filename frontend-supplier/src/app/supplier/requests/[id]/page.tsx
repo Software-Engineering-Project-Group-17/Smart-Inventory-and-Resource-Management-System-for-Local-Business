@@ -22,6 +22,7 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth";
 
 interface RequestDetailData {
   success: boolean;
@@ -128,6 +129,7 @@ const PAYMENT_STATUS_COLORS = {
 export default function RequestDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { user, supplier } = useAuth();
   const [requestData, setRequestData] = useState<RequestDetailData | null>(
     null
   );
@@ -205,6 +207,19 @@ export default function RequestDetailPage() {
     );
   };
 
+  const handleCreateOrder = () => {
+    if (!user || !supplier) {
+      // Redirect to login if not authenticated
+      router.push(
+        "/auth/login?redirect=" + encodeURIComponent(window.location.pathname)
+      );
+    } else {
+      // TODO: Navigate to create order page or open modal
+      console.log("Create order for request:", params.id);
+      alert("Create order functionality will be implemented here!");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
@@ -270,6 +285,13 @@ export default function RequestDetailPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                onClick={handleCreateOrder}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                {user && supplier ? "Create Order" : "Login to Create Order"}
+              </Button>
               <Badge
                 className={
                   STATUS_COLORS[request.status as keyof typeof STATUS_COLORS]
@@ -341,12 +363,7 @@ export default function RequestDetailPage() {
                     </div>
                     <div className="text-sm text-gray-600">Total Quantity</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {formatCurrency(request.statistics.total_estimated_value)}
-                    </div>
-                    <div className="text-sm text-gray-600">Estimated Value</div>
-                  </div>
+
                   <div className="text-center">
                     <div className="text-2xl font-bold text-orange-600">
                       {request.statistics.supplier_orders_count}
@@ -386,12 +403,6 @@ export default function RequestDetailPage() {
                             </p>
                           )}
                         </div>
-                        <div className="text-right">
-                          <div className="font-medium">
-                            {formatCurrency(item.estimated_unit_price)}
-                          </div>
-                          <div className="text-sm text-gray-500">per unit</div>
-                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -411,21 +422,6 @@ export default function RequestDetailPage() {
                             }`}
                           >
                             {item.current_stock} units
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">Current Price</div>
-                          <div className="font-medium">
-                            {formatCurrency(item.current_unit_price)}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">Total Cost</div>
-                          <div className="font-medium text-blue-600">
-                            {formatCurrency(
-                              item.requested_quantity *
-                                item.estimated_unit_price
-                            )}
                           </div>
                         </div>
                       </div>
@@ -573,16 +569,6 @@ export default function RequestDetailPage() {
                     <div className="text-gray-500">Created</div>
                     <div className="font-medium">
                       {formatDate(request.created_at)}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 text-sm">
-                  <DollarSign className="h-4 w-4 text-gray-400" />
-                  <div>
-                    <div className="text-gray-500">Total Estimated Cost</div>
-                    <div className="font-medium text-green-600">
-                      {formatCurrency(request.total_estimated_cost)}
                     </div>
                   </div>
                 </div>

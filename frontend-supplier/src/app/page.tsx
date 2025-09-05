@@ -21,8 +21,12 @@ import {
   Filter,
   Eye,
   AlertCircle,
+  Building2,
+  ShoppingCart,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth";
 import {
   RestockRequestsResponse,
   RestockRequestFilters,
@@ -43,6 +47,7 @@ const STATUS_COLORS = {
 };
 
 export default function Home() {
+  const { user, supplier, loading: authLoading } = useAuth();
   const [requests, setRequests] = useState<RestockRequestsResponse | null>(
     null
   );
@@ -139,7 +144,8 @@ export default function Home() {
     return priority === "urgent" || daysLeft <= 3;
   };
 
-  if (loading) {
+  // Show loading state while checking authentication or loading requests
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto">
@@ -164,10 +170,14 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                Supplier Dashboard
+                {user && supplier
+                  ? `Welcome back, ${supplier.supplier_name}!`
+                  : "Restock Requests"}
               </h1>
               <p className="text-gray-600 mt-1">
-                Manage restock requests from retail branches
+                {user && supplier
+                  ? "Manage restock requests from retail branches"
+                  : "Browse available restock requests. Login to create orders."}
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -203,7 +213,10 @@ export default function Home() {
               <Select
                 value={filters.status || "all"}
                 onValueChange={(value) =>
-                  handleFilterChange("status", value === "all" ? undefined : value)
+                  handleFilterChange(
+                    "status",
+                    value === "all" ? undefined : value
+                  )
                 }
               >
                 <SelectTrigger>
@@ -219,7 +232,10 @@ export default function Home() {
               <Select
                 value={filters.priority || "all"}
                 onValueChange={(value) =>
-                  handleFilterChange("priority", value === "all" ? undefined : value)
+                  handleFilterChange(
+                    "priority",
+                    value === "all" ? undefined : value
+                  )
                 }
               >
                 <SelectTrigger>
@@ -335,14 +351,12 @@ export default function Home() {
                         <span>{request.total_items_requested ?? 0} items</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-gray-400" />
-                        <span>
-                          {formatCurrency(request.total_estimated_cost)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-gray-400" />
-                        <span>{request.required_by_date ? formatDate(request.required_by_date) : 'No date set'}</span>
+                        <span>
+                          {request.required_by_date
+                            ? formatDate(request.required_by_date)
+                            : "No date set"}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 text-gray-400" />
@@ -353,9 +367,10 @@ export default function Home() {
                     {(request.supplier_orders_count ?? 0) > 0 && (
                       <div className="bg-blue-50 p-3 rounded-lg">
                         <p className="text-sm text-blue-700">
-                          {request.supplier_orders_count ?? 0} supplier order(s) •
-                          {request.paid_orders_count ?? 0} paid •
-                          {formatCurrency(request.total_paid_amount ?? 0)} received
+                          {request.supplier_orders_count ?? 0} supplier order(s)
+                          •{request.paid_orders_count ?? 0} paid •
+                          {formatCurrency(request.total_paid_amount ?? 0)}{" "}
+                          received
                         </p>
                       </div>
                     )}
