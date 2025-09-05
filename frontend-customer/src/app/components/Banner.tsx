@@ -4,26 +4,16 @@ import Image from "next/image";
 
 const Banner = () => {
   const images = [
-    "/item.png",
-    "/item-2.png",
-    "/item-3.png",
-    "/item-4.png",
-    "/item-5.png",
-    "/item-6.png",
-    "/item-7.png",
-    "/item-8.png",
-    "/item-9.png",
-    "/item-10.png",
-    "/item-11.png",
-    "/item-12.png",
-    "/item-13.png",
-    "/item-14.png",
-    "/item-15.png",
-    "/item-16.png",
-    "/item-17.png",
-    "/item-18.png",
-    "/item-19.png",
-    "/item-20.png",
+    "/banner/b1.jpg",
+    "/banner/b2.jpg",
+    "/banner/b3.jpg",
+    "/banner/b4.jpg",
+    "/banner/b5.jpg",
+    "/banner/b6.jpg",
+    "/banner/b7.jpg",
+    "/banner/b8.jpg",
+    "/banner/b9.jpg",
+    "/banner/b10.jpg",
   ];
 
   const [currentIndex, setCurrentIndex] = useState(0);
