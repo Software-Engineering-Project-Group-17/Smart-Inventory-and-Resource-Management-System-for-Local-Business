@@ -51,6 +51,7 @@ export default function Home() {
   const [requests, setRequests] = useState<RestockRequestsResponse | null>(
     null
   );
+  const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +61,31 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Fetch branches
+  useEffect(() => {
+    const fetchBranches = async () => {
+      if (!user || !supplier) return;
+
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch("/api/supplier/branches", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setBranches(data.data || []);
+        }
+      } catch (err) {
+        console.error("Error fetching branches:", err);
+      }
+    };
+
+    fetchBranches();
+  }, [user, supplier]);
 
   const fetchRequests = async () => {
     try {
@@ -199,7 +225,7 @@ export default function Home() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
@@ -209,6 +235,28 @@ export default function Home() {
                   className="pl-10"
                 />
               </div>
+
+              <Select
+                value={filters.branch_id?.toString() || "all"}
+                onValueChange={(value) =>
+                  handleFilterChange(
+                    "branch_id",
+                    value === "all" ? undefined : parseInt(value)
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Branches</SelectItem>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                      {branch.name} - {branch.location}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               <Select
                 value={filters.status || "all"}

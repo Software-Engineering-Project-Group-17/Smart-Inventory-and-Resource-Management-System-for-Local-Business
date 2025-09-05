@@ -5,6 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Calendar,
   Clock,
   Package,
@@ -12,39 +19,60 @@ import {
   CheckCircle,
   Truck,
   DollarSign,
+  MapPin,
+  Filter,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 interface Order {
   id: number;
-  order_number: string;
-  supplier_id: number;
   restock_request_id: number;
+  order_status: string;
+  payment_status: string;
   total_amount: number;
-  status:
-    | "pending"
-    | "confirmed"
-    | "processing"
-    | "shipped"
-    | "delivered"
-    | "cancelled";
-  order_date: string;
-  expected_delivery: string;
+  estimated_delivery_date?: string;
+  actual_delivery_date?: string;
+  supplier_notes?: string;
   created_at: string;
-  restock_request: {
-    item_name: string;
-    quantity_requested: number;
-    priority: string;
-    required_by: string;
-  };
+  updated_at: string;
+  request_title: string;
+  request_status: string;
+  request_priority: string;
+  required_by_date: string;
+  branch_id: number;
+  branch_name: string;
+  branch_location: string;
+  branch_contact?: string;
+  items_count: number;
+  total_quantity_offered: number;
+}
+
+interface Branch {
+  id: number;
+  name: string;
+  location: string;
+  contact_number?: string;
+  description?: string;
+  total_requests: number;
+  supplier_orders_count: number;
+  paid_orders_count: number;
 }
 
 interface OrdersResponse {
-  orders: Order[];
-  total_count: number;
-  page: number;
-  limit: number;
-  total_pages: number;
+  success: boolean;
+  data: Order[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+  filters?: {
+    branch_id: number | null;
+    supplier_id: number;
+  };
 }
 
 const STATUS_COLORS = {
@@ -54,6 +82,14 @@ const STATUS_COLORS = {
   shipped: "bg-orange-100 text-orange-800",
   delivered: "bg-green-100 text-green-800",
   cancelled: "bg-red-100 text-red-800",
+  completed: "bg-green-100 text-green-800",
+};
+
+const PAYMENT_STATUS_COLORS = {
+  unpaid: "bg-yellow-100 text-yellow-800",
+  paid: "bg-green-100 text-green-800",
+  cancelled: "bg-red-100 text-red-800",
+  refunded: "bg-gray-100 text-gray-800",
 };
 
 const STATUS_ICONS = {
@@ -63,14 +99,43 @@ const STATUS_ICONS = {
   shipped: Truck,
   delivered: CheckCircle,
   cancelled: AlertCircle,
+  completed: CheckCircle,
 };
 
 export default function OrdersPage() {
   const { user, supplier, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<OrdersResponse | null>(null);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState<string>("all");
 
+  // Fetch branches
+  useEffect(() => {
+    const fetchBranches = async () => {
+      if (!user || !supplier) return;
+
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch("/api/supplier/branches", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setBranches(data.data || []);
+        }
+      } catch (err) {
+        console.error("Error fetching branches:", err);
+      }
+    };
+
+    fetchBranches();
+  }, [user, supplier]);
+
+  // Fetch orders
   useEffect(() => {
     const fetchOrders = async () => {
       if (!user || !supplier) return;
@@ -78,7 +143,14 @@ export default function OrdersPage() {
       try {
         setLoading(true);
         const token = await user.getIdToken();
-        const response = await fetch("/api/supplier/orders", {
+
+        // Build URL with branch filter
+        const url = new URL("/api/supplier/orders", window.location.origin);
+        if (selectedBranch && selectedBranch !== "all") {
+          url.searchParams.set("branch_id", selectedBranch);
+        }
+
+        const response = await fetch(url.toString(), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -103,7 +175,7 @@ export default function OrdersPage() {
     } else if (!authLoading) {
       setLoading(false);
     }
-  }, [user, supplier, authLoading]);
+  }, [user, supplier, authLoading, selectedBranch]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -196,16 +268,45 @@ export default function OrdersPage() {
             </div>
             <div className="flex items-center space-x-4">
               <Badge variant="outline" className="text-lg px-3 py-1">
-                {orders?.total_count || 0} Total Orders
+                {orders?.pagination.total || 0} Total Orders
               </Badge>
             </div>
+          </div>
+
+          {/* Branch Filter */}
+          <div className="mt-4 flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">
+                Filter by Branch:
+              </span>
+            </div>
+            <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+              <SelectTrigger className="w-64">
+                <SelectValue placeholder="Select a branch" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Branches</SelectItem>
+                {branches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id.toString()}>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3 w-3" />
+                      {branch.name} - {branch.location}
+                      <Badge variant="outline" className="ml-2">
+                        {branch.supplier_orders_count}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="max-w-7xl mx-auto p-6">
-        {orders?.orders.length === 0 ? (
+        {orders?.data.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
               <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -213,8 +314,9 @@ export default function OrdersPage() {
                 No Orders Yet
               </h3>
               <p className="text-gray-600 mb-4">
-                You haven't created any orders yet. Start by responding to
-                restock requests.
+                {selectedBranch === "all"
+                  ? "You haven't created any orders yet. Start by responding to restock requests."
+                  : "No orders found for the selected branch. Try selecting a different branch or create new orders."}
               </p>
               <Button onClick={() => (window.location.href = "/")}>
                 View Restock Requests
@@ -223,8 +325,10 @@ export default function OrdersPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {orders?.orders.map((order) => {
-              const StatusIcon = STATUS_ICONS[order.status];
+            {orders?.data.map((order: Order) => {
+              const StatusIcon =
+                STATUS_ICONS[order.order_status as keyof typeof STATUS_ICONS] ||
+                Package;
 
               return (
                 <Card
@@ -234,25 +338,49 @@ export default function OrdersPage() {
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">
-                        Order #{order.order_number}
+                        Order #{order.id}
                       </CardTitle>
-                      <Badge className={STATUS_COLORS[order.status]}>
+                      <Badge
+                        className={
+                          STATUS_COLORS[
+                            order.order_status as keyof typeof STATUS_COLORS
+                          ] || STATUS_COLORS.pending
+                        }
+                      >
                         <StatusIcon className="h-3 w-3 mr-1" />
-                        {order.status.charAt(0).toUpperCase() +
-                          order.status.slice(1)}
+                        {order.order_status.charAt(0).toUpperCase() +
+                          order.order_status.slice(1)}
                       </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <MapPin className="h-3 w-3" />
+                      {order.branch_name} - {order.branch_location}
                     </div>
                   </CardHeader>
 
                   <CardContent className="space-y-4">
                     <div>
                       <h4 className="font-medium text-gray-900 mb-1">
-                        {order.restock_request.item_name}
+                        {order.request_title}
                       </h4>
                       <p className="text-sm text-gray-600">
-                        Quantity: {order.restock_request.quantity_requested}{" "}
-                        units
+                        Items: {order.items_count} | Quantity:{" "}
+                        {order.total_quantity_offered} units
                       </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-xs">
+                          {order.request_priority}
+                        </Badge>
+                        <Badge
+                          className={
+                            PAYMENT_STATUS_COLORS[
+                              order.payment_status as keyof typeof PAYMENT_STATUS_COLORS
+                            ] || PAYMENT_STATUS_COLORS.unpaid
+                          }
+                        >
+                          {order.payment_status}
+                        </Badge>
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between text-sm">
@@ -262,15 +390,24 @@ export default function OrdersPage() {
                       </div>
                       <div className="flex items-center text-gray-600">
                         <Calendar className="h-4 w-4 mr-1" />
-                        <span>{formatDate(order.order_date)}</span>
+                        <span>{formatDate(order.created_at)}</span>
                       </div>
                     </div>
 
-                    {order.expected_delivery && (
+                    {order.estimated_delivery_date && (
                       <div className="flex items-center text-sm text-gray-600">
                         <Truck className="h-4 w-4 mr-1" />
                         <span>
-                          Expected: {formatDate(order.expected_delivery)}
+                          Expected: {formatDate(order.estimated_delivery_date)}
+                        </span>
+                      </div>
+                    )}
+
+                    {order.actual_delivery_date && (
+                      <div className="flex items-center text-sm text-green-600">
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        <span>
+                          Delivered: {formatDate(order.actual_delivery_date)}
                         </span>
                       </div>
                     )}
@@ -281,11 +418,11 @@ export default function OrdersPage() {
                         size="sm"
                         className="w-full"
                         onClick={() => {
-                          // TODO: Navigate to order details page
-                          console.log("View order details:", order.id);
+                          // Navigate to order details or restock request
+                          window.location.href = `/supplier/requests/${order.restock_request_id}`;
                         }}
                       >
-                        View Details
+                        View Request Details
                       </Button>
                     </div>
                   </CardContent>
