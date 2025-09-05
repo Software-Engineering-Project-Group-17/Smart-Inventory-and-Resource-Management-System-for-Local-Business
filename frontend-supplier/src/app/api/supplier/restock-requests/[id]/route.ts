@@ -59,12 +59,15 @@ interface RestockRequestDetail {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const requestId = parseInt(params.id);
+    const { id } = await params;
 
-    if (isNaN(requestId)) {
+    const requestId = id;
+
+    const numericRequestId = Number(requestId);
+    if (isNaN(numericRequestId)) {
       return NextResponse.json(
         { error: "Invalid request ID" },
         { status: 400 }
