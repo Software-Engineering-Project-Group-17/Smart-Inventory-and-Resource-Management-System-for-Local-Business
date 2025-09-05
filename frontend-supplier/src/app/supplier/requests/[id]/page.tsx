@@ -285,13 +285,6 @@ export default function RequestDetailPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                onClick={handleCreateOrder}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                {user && supplier ? "Create Order" : "Login to Create Order"}
-              </Button>
               <Badge
                 className={
                   STATUS_COLORS[request.status as keyof typeof STATUS_COLORS]
