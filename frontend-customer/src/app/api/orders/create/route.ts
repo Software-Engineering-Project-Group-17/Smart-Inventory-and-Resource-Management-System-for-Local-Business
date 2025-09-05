@@ -88,7 +88,9 @@ export async function POST(request: NextRequest) {
         const inventory = inventoryResult.rows[0];
 
         if (inventory.quantity < item.quantity) {
-          throw new Error(`Insufficient stock for ${inventory.inventory_name}`);
+          throw new Error(
+            `Insufficient stock for ${inventory.inventory_name}. Available: ${inventory.quantity}, Requested: ${item.quantity}`
+          );
         }
 
         const itemTotal = inventory.unit_price * item.quantity;
@@ -157,17 +159,9 @@ export async function POST(request: NextRequest) {
           item.unit_price * item.quantity,
         ]);
 
-        // Update inventory quantity
-        const updateInventoryQuery = `
-          UPDATE inventory_item 
-          SET quantity = quantity - $1
-          WHERE inventory_id = $2
-        `;
-
-        await client.query(updateInventoryQuery, [
-          item.quantity,
-          item.inventory_id,
-        ]);
+        // NOTE: We don't update inventory quantity here anymore.
+        // Stock will only be updated when payment is confirmed via webhook.
+        // This allows customers to create orders and pay later without reducing stock prematurely.
       }
 
       await client.query("COMMIT");

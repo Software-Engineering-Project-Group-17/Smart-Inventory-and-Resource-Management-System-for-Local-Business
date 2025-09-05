@@ -90,7 +90,7 @@ const Navbar = () => {
         {/* CENTER - Navigation Links */}
         <div className="w-1/3 flex items-center justify-center gap-8 py-4">
           <Link
-            href="/shop"
+            href="/list"
             className="flex items-center gap-2 text-sm font-semibold text-gray-700 active:scale-95 transition-all duration-200 hover:text-zeta hover:bg-gray-50 px-3 py-2 rounded-lg"
           >
             <ShoppingBag size={18} /> EXPLORE

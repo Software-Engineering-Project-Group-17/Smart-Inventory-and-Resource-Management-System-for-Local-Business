@@ -78,7 +78,7 @@ const Menu = () => {
             <Home size={20} /> HOME
           </Link>
           <Link
-            href="/shop"
+            href="/list"
             className="flex items-center gap-3 hover:text-zeta transition-colors duration-200 active:scale-95"
             onClick={() => setOpen(false)}
           >
