@@ -64,12 +64,9 @@ export default function RequestActionButtons({
           )}
         </div>
 
-        <Link
-          href="/contact"
-          className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center"
-        >
-          Contact Branch
-        </Link>
+        <Button className="w-full" variant="outline">
+          Contact branch for any clarifications
+        </Button>
       </CardContent>
     </Card>
   );
