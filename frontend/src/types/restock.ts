@@ -20,13 +20,11 @@ export interface RestockRequest {
 }
 
 export interface RestockRequestItem {
-  id?: number;
-  restock_request_id?: number;
   inventory_id: number;
   requested_quantity: number;
+  estimated_unit_price?: number; // For estimated costs only
   notes?: string;
-  created_at?: string;
-  // Additional fields for display
+  // Populated data for display
   inventory_name?: string;
   current_stock?: number;
   low_stock_threshold?: number;
