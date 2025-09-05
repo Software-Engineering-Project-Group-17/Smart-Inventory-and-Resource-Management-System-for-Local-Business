@@ -10,6 +10,7 @@ import {
   XCircle,
   CreditCard,
   AlertTriangle,
+  Ban,
 } from "lucide-react";
 import {
   SupplierOrder,
@@ -21,11 +22,15 @@ import {
 interface SupplierOrderCardProps {
   order: SupplierOrder;
   onSelectForPayment: (order: SupplierOrder) => void;
+  onCancelOrder?: (order: SupplierOrder) => void;
+  isCancelling?: boolean;
 }
 
 export const SupplierOrderCard: React.FC<SupplierOrderCardProps> = ({
   order,
   onSelectForPayment,
+  onCancelOrder,
+  isCancelling = false,
 }) => {
   const getPaymentStatusIcon = (status: string) => {
     switch (status) {
@@ -65,6 +70,10 @@ export const SupplierOrderCard: React.FC<SupplierOrderCardProps> = ({
 
   const canPay =
     order.payment_status === "unpaid" && order.order_status !== "cancelled";
+  const canCancel =
+    order.payment_status === "unpaid" &&
+    order.order_status !== "cancelled" &&
+    order.order_status !== "completed";
   const totalItems = order.items.length;
   const totalQuantity = order.items.reduce(
     (sum, item) => sum + item.offered_quantity,
@@ -138,15 +147,28 @@ export const SupplierOrderCard: React.FC<SupplierOrderCardProps> = ({
             </div>
             <div className="text-sm text-gray-500 mb-3">Total Amount</div>
 
-            {canPay && (
-              <button
-                onClick={() => onSelectForPayment(order)}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
-              >
-                <CreditCard className="h-4 w-4 mr-2" />
-                Pay Now
-              </button>
-            )}
+            <div className="space-y-2">
+              {canPay && (
+                <button
+                  onClick={() => onSelectForPayment(order)}
+                  className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Pay Now
+                </button>
+              )}
+
+              {canCancel && onCancelOrder && (
+                <button
+                  onClick={() => onCancelOrder(order)}
+                  disabled={isCancelling}
+                  className="w-full inline-flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  <Ban className="h-4 w-4 mr-2" />
+                  {isCancelling ? "Cancelling..." : "Cancel Order"}
+                </button>
+              )}
+            </div>
 
             {order.payment_status === "paid" && order.paid_at && (
               <div className="text-xs text-green-600">
