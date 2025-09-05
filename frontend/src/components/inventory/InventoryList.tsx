@@ -103,10 +103,10 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${item.unitPrice.toFixed(2)}
+                    ${Number(item.unitPrice).toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${totalValue.toFixed(2)}
+                    ${Number(totalValue).toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {isLowStock ? (
