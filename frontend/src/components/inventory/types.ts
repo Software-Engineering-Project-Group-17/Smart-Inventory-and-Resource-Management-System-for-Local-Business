@@ -13,6 +13,7 @@ export interface InventoryItem {
 export interface Category {
   id: number;
   name: string;
+  imageUrl?: string | null; // <- image support
 }
 
 export interface Unit {
@@ -36,5 +37,3 @@ export interface InventoryFilters {
   selectedCategory: string;
   viewMode: "list" | "grid";
 }
-
-export type InventoryAction = "add" | "edit" | "view" | "delete";

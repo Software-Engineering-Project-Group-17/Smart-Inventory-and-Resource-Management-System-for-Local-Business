@@ -1,30 +1,32 @@
 package com.thivinu.inventoryapi.Entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.List;
 
 @Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "categories")
-@RequiredArgsConstructor
-@AllArgsConstructor
-@NoArgsConstructor
-@Setter
 public class Category {
-    // Getters & Setters
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NonNull
+    // Persisted as 'name' in DB; DTO handles "category_name" on the wire
     @Column(nullable = false, unique = true)
     private String name;
 
+    // Optional image URL for category cover/icon
+    @Column(name = "image_url", length = 1024)
+    private String imageUrl;
+
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
     @JsonBackReference
-    private List<InventoryItem> items;
+    private List<InventoryItem> items; // assumes you already have InventoryItem with a 'category' field
 }

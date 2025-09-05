@@ -8,17 +8,21 @@ import org.springframework.stereotype.Component;
 @Component
 public class CategoryMapper {
 
-    // Convert CategoryRequest (DTO) → Category (Entity)
-    public Category toCategory(CategoryRequest request) {
+    public Category toEntity(CategoryRequest request) {
         if (request == null) return null;
         Category category = new Category();
         category.setName(request.getName());
+        category.setImageUrl(request.getImageUrl());
+        // 'id' is generated; ignore request.id for create
         return category;
     }
 
-    //Convert Category (Entity) → CategoryResponse (DTO)
-    public CategoryResponse fromCategory(Category category) {
+    public CategoryResponse toResponse(Category category) {
         if (category == null) return null;
-        return new CategoryResponse(category.getId(), category.getName());
+        return new CategoryResponse(
+                category.getId(),
+                category.getName(),
+                category.getImageUrl()
+        );
     }
 }

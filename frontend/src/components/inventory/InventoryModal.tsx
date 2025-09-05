@@ -11,6 +11,7 @@ interface InventoryModalProps {
   units: Unit[];
   onClose: () => void;
   onSave: (data: InventoryFormData) => void;
+  categoriesLoading?: boolean;
 }
 
 export const InventoryModal: React.FC<InventoryModalProps> = ({
@@ -21,6 +22,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
   units,
   onClose,
   onSave,
+  categoriesLoading = false,
 }) => {
   const [formData, setFormData] = useState<InventoryFormData>({
     name: "",
@@ -131,16 +133,22 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                disabled={isReadOnly}
+                disabled={isReadOnly || categoriesLoading}
                 required
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg ..."
               >
-                <option value="">Select Category</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.name}>
-                    {cat.name}
-                  </option>
-                ))}
+                {categoriesLoading ? (
+                  <option value="">Loading categories...</option>
+                ) : (
+                  <>
+                    <option value="">Select Category</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.name}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </>
+                )}
               </select>
             </div>
 

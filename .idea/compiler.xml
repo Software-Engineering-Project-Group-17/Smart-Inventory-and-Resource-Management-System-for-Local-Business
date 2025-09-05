@@ -7,11 +7,9 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="supplier-service" />
         <module name="user-roleManagementAPI" />
-        <module name="order-service" />
-        <module name="customer-service" />
         <module name="inventoryAPI" />
+        <module name="order-service" />
       </profile>
       <profile name="Annotation profile for notificationAPI" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -27,11 +25,13 @@
       <module name="Analytics-and-Reporting_service" target="21" />
       <module name="API_Gateway_service" target="21" />
       <module name="Auth_User_service" target="21" />
+      <module name="customer-service" target="17" />
       <module name="Customer_service" target="21" />
       <module name="Inventory_service" target="21" />
       <module name="Notification_service" target="21" />
       <module name="Order_Mangement_service" target="21" />
       <module name="Suplier_service" target="21" />
+      <module name="supplier-service" target="17" />
     </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">

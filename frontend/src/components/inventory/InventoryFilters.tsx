@@ -9,6 +9,7 @@ interface InventoryFiltersProps {
   onSearch: (term: string) => void;
   onCategoryFilter: (category: string) => void;
   onToggleView: () => void;
+  categoriesLoading?: boolean;
 }
 
 export const InventoryFiltersComponent: React.FC<InventoryFiltersProps> = ({
@@ -17,6 +18,7 @@ export const InventoryFiltersComponent: React.FC<InventoryFiltersProps> = ({
   onSearch,
   onCategoryFilter,
   onToggleView,
+  categoriesLoading = false,
 }) => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
@@ -45,16 +47,21 @@ export const InventoryFiltersComponent: React.FC<InventoryFiltersProps> = ({
           <select
             value={filters.selectedCategory}
             onChange={(e) => onCategoryFilter(e.target.value)}
-            className="pl-10 pr-8 py-3 border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent transition-all duration-200 focus:outline-none appearance-none bg-white"
+            disabled={categoriesLoading}
+            className="pl-10 pr-8 py-3 border border-gray-200 rounded-lg ..."
           >
-            <option value="">
-              {INVENTORY_CONSTANTS.messages.allCategories}
-            </option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.name}>
-                {category.name}
-              </option>
-            ))}
+            {categoriesLoading ? (
+              <option value="">Loading categories...</option>
+            ) : (
+              <>
+                <option value="">{INVENTORY_CONSTANTS.messages.allCategories}</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.name}>
+                    {category.name}
+                  </option>
+                ))}
+              </>
+            )}
           </select>
         </div>
 

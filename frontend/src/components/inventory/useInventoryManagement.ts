@@ -7,8 +7,8 @@ import {
   InventoryFormData,
 } from "./types";
 import { INVENTORY_CONSTANTS } from "./constants";
-
-// Sample data - in real app this would come from API
+import { fetchCategories } from "./api";
+// Sample data - replace with API-backed inventory when ready
 const SAMPLE_INVENTORY: InventoryItem[] = [
   {
     id: 1,
@@ -47,9 +47,11 @@ const SAMPLE_INVENTORY: InventoryItem[] = [
 
 export const useInventoryManagement = () => {
   const [inventory, setInventory] = useState<InventoryItem[]>(SAMPLE_INVENTORY);
-  const [categories] = useState<Category[]>([
-    ...INVENTORY_CONSTANTS.defaults.categories,
-  ]);
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
   const [units] = useState<Unit[]>([...INVENTORY_CONSTANTS.defaults.units]);
 
   const [filters, setFilters] = useState<InventoryFilters>({
@@ -58,31 +60,42 @@ export const useInventoryManagement = () => {
     viewMode: "list",
   });
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
-  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        setCategoriesLoading(true);
+        setCategoriesError(null);
+        const cats = await fetchCategories();
+        setCategories(cats);
+      } catch (err: any) {
+        setCategoriesError(err?.message ?? "Failed to load categories");
+        // Optional graceful fallback:
+        // setCategories([...INVENTORY_CONSTANTS.defaults.categories]);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    })();
+  }, []);
 
   // Filter inventory based on search and category
   const filteredInventory = inventory.filter((item) => {
+    const q = filters.searchTerm.toLowerCase();
     const matchesSearch =
-      item.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-      item.sku.toLowerCase().includes(filters.searchTerm.toLowerCase());
+      item.name.toLowerCase().includes(q) || item.sku.toLowerCase().includes(q);
     const matchesCategory =
       !filters.selectedCategory || item.category === filters.selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  // Handle search
+  // Handlers
   const handleSearch = (searchTerm: string) => {
     setFilters((prev) => ({ ...prev, searchTerm }));
   };
 
-  // Handle category filter
   const handleCategoryFilter = (category: string) => {
     setFilters((prev) => ({ ...prev, selectedCategory: category }));
   };
 
-  // Handle view mode toggle
   const toggleViewMode = () => {
     setFilters((prev) => ({
       ...prev,
@@ -90,7 +103,11 @@ export const useInventoryManagement = () => {
     }));
   };
 
-  // Modal actions
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+
   const openAddModal = () => {
     setModalMode("add");
     setEditingItem(null);
@@ -114,10 +131,10 @@ export const useInventoryManagement = () => {
     setEditingItem(null);
   };
 
-  // CRUD operations
+  // CRUD (client-side for now)
   const addItem = (itemData: InventoryFormData) => {
     const newItem: InventoryItem = {
-      id: Date.now(), // Simple ID generation
+      id: Date.now(),
       ...itemData,
     };
     setInventory((prev) => [...prev, newItem]);
@@ -126,7 +143,6 @@ export const useInventoryManagement = () => {
 
   const updateItem = (itemData: InventoryFormData) => {
     if (!editingItem) return;
-
     setInventory((prev) =>
       prev.map((item) =>
         item.id === editingItem.id ? { ...item, ...itemData } : item
@@ -162,5 +178,9 @@ export const useInventoryManagement = () => {
     addItem,
     updateItem,
     deleteItem,
+
+    // Loading/Error
+    categoriesLoading,
+    categoriesError,
   };
 };
