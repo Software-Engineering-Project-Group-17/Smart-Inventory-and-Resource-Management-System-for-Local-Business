@@ -228,7 +228,7 @@ export default function CreateOrderModal({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="deliveryDate">Estimated Delivery Date</Label>
                   <Input
                     id="deliveryDate"
@@ -250,7 +250,7 @@ export default function CreateOrderModal({
                 </div>
               </div>
 
-              <div>
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="notes">Supplier Notes (Optional)</Label>
                 <Textarea
                   id="notes"
@@ -279,7 +279,7 @@ export default function CreateOrderModal({
                       key={orderItem.restock_request_item_id}
                       className="border rounded-lg p-4"
                     >
-                      <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start justify-between mb-5">
                         <div className="flex-1">
                           <h4 className="font-medium">
                             {originalItem.inventory_name}
@@ -298,7 +298,7 @@ export default function CreateOrderModal({
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div>
+                        <div className="flex flex-col gap-2">
                           <Label>Your Item Name</Label>
                           <Input
                             value={orderItem.supplier_item_name}
@@ -313,7 +313,7 @@ export default function CreateOrderModal({
                           />
                         </div>
 
-                        <div>
+                        <div className="flex flex-col gap-2">
                           <Label>Offered Quantity *</Label>
                           <Input
                             type="number"
@@ -332,7 +332,7 @@ export default function CreateOrderModal({
                           />
                         </div>
 
-                        <div>
+                        <div className="flex flex-col gap-2">
                           <Label>Unit Price ($) *</Label>
                           <Input
                             type="number"
@@ -352,7 +352,7 @@ export default function CreateOrderModal({
                           />
                         </div>
 
-                        <div>
+                        <div className="flex flex-col gap-2">
                           <Label>Availability</Label>
                           <Select
                             value={orderItem.availability_status}
@@ -386,7 +386,7 @@ export default function CreateOrderModal({
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        <div>
+                        <div className="flex flex-col gap-2">
                           <Label>Lead Time (Days)</Label>
                           <Input
                             type="number"
@@ -403,7 +403,7 @@ export default function CreateOrderModal({
                             }
                           />
                         </div>
-                        <div>
+                        <div className="flex flex-col gap-2">
                           <Label>Description/Notes</Label>
                           <Input
                             value={orderItem.supplier_item_description || ""}

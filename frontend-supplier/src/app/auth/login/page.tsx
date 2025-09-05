@@ -140,24 +140,6 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="remember-me" />
-                  <Label htmlFor="remember-me" className="text-sm font-normal">
-                    Remember me
-                  </Label>
-                </div>
-
-                <div className="text-sm">
-                  <a
-                    href="#"
-                    className="font-medium text-blue-600 hover:text-blue-500"
-                  >
-                    Forgot your password?
-                  </a>
-                </div>
-              </div>
-
               <Button type="submit" className="w-full h-12" disabled={loading}>
                 {loading ? (
                   <>
@@ -186,18 +168,6 @@ export default function LoginPage() {
             </form>
           </CardContent>
         </Card>
-
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>
-            Need help? Contact{" "}
-            <a
-              href="mailto:support@company.com"
-              className="text-blue-600 hover:text-blue-800"
-            >
-              support@company.com
-            </a>
-          </p>
-        </div>
       </div>
     </div>
   );

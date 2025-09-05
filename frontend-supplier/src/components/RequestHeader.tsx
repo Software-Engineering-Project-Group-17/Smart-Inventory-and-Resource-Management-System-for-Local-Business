@@ -41,13 +41,20 @@ export default function RequestHeader({
     <div className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-            <p className="text-gray-600 mt-1">Restock Request #{id}</p>
+          <div className="flex items-start flex-col gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onBack}
+              className="md:hidden"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+              <p className="text-gray-600 mt-1">Restock Request #{id}</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Badge
