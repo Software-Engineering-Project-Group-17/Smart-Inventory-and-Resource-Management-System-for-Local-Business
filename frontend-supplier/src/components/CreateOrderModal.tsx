@@ -104,10 +104,11 @@ export default function CreateOrderModal({
   };
 
   const calculateTotalAmount = () => {
-    return orderItems.reduce(
-      (sum, item) => sum + item.offered_quantity * item.unit_price,
-      0
-    );
+    return orderItems.reduce((sum, item) => {
+      const quantity = isNaN(item.offered_quantity) ? 0 : item.offered_quantity;
+      const price = isNaN(item.unit_price) ? 0 : item.unit_price;
+      return sum + quantity * price;
+    }, 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -322,7 +323,9 @@ export default function CreateOrderModal({
                               updateOrderItem(
                                 index,
                                 "offered_quantity",
-                                parseInt(e.target.value)
+                                e.target.value === ""
+                                  ? 0
+                                  : parseInt(e.target.value) || 0
                               )
                             }
                             required
@@ -340,7 +343,9 @@ export default function CreateOrderModal({
                               updateOrderItem(
                                 index,
                                 "unit_price",
-                                parseFloat(e.target.value)
+                                e.target.value === ""
+                                  ? 0
+                                  : parseFloat(e.target.value) || 0
                               )
                             }
                             required
@@ -391,7 +396,9 @@ export default function CreateOrderModal({
                               updateOrderItem(
                                 index,
                                 "lead_time_days",
-                                parseInt(e.target.value)
+                                e.target.value === ""
+                                  ? 0
+                                  : parseInt(e.target.value) || 0
                               )
                             }
                           />
@@ -415,13 +422,14 @@ export default function CreateOrderModal({
                       <Separator className="mt-4" />
                       <div className="flex justify-between items-center mt-2">
                         <span className="text-sm text-gray-600">
-                          {orderItem.offered_quantity} ×{" "}
-                          {formatCurrency(orderItem.unit_price)}
+                          {orderItem.offered_quantity || 0} ×{" "}
+                          {formatCurrency(orderItem.unit_price || 0)}
                         </span>
                         <span className="font-semibold">
                           ={" "}
                           {formatCurrency(
-                            orderItem.offered_quantity * orderItem.unit_price
+                            (orderItem.offered_quantity || 0) *
+                              (orderItem.unit_price || 0)
                           )}
                         </span>
                       </div>
