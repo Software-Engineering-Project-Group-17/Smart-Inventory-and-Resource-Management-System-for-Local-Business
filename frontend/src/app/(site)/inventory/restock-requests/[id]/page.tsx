@@ -33,6 +33,7 @@ const RestockRequestDetailsPage = () => {
     null
   );
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState<number | null>(null);
 
   const loadRequestDetails = async () => {
     try {
@@ -98,6 +99,48 @@ const RestockRequestDetailsPage = () => {
   const handleSelectOrder = (order: SupplierOrder) => {
     setSelectedOrder(order);
     setIsPaymentModalOpen(true);
+  };
+
+  const handleCancelOrder = async (order: SupplierOrder) => {
+    if (
+      !confirm(
+        `Are you sure you want to cancel the order from ${order.supplier_name}?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setIsCancelling(order.id);
+      const userProfile = getUserProfile();
+
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+
+      if (userProfile) {
+        headers["x-user-id"] = userProfile.id;
+        headers["x-user-email"] = userProfile.email;
+      }
+
+      const response = await fetch(`/api/supplier-orders/${order.id}/cancel`, {
+        method: "PATCH",
+        headers,
+      });
+
+      if (response.ok) {
+        // Refresh the data to show updated status
+        loadRequestDetails();
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to cancel order: ${errorData.error || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error("Error cancelling order:", err);
+      alert("Failed to cancel order. Please try again.");
+    } finally {
+      setIsCancelling(null);
+    }
   };
 
   if (isLoading) {
@@ -284,6 +327,8 @@ const RestockRequestDetailsPage = () => {
                     key={order.id}
                     order={order}
                     onSelectForPayment={handleSelectOrder}
+                    onCancelOrder={handleCancelOrder}
+                    isCancelling={isCancelling === order.id}
                   />
                 ))}
               </div>

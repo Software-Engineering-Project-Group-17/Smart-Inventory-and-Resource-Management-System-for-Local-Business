@@ -22,6 +22,7 @@ const RestockRequestsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState<number | null>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -115,6 +116,53 @@ const RestockRequestsPage = () => {
     setSearchTerm("");
   };
 
+  const handleCancelRequest = async (request: RestockRequest) => {
+    if (
+      !confirm(
+        `Are you sure you want to cancel the request "${request.title}"? This will also cancel any unpaid supplier orders.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setIsCancelling(request.id);
+      const userProfile = getUserProfile();
+
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+
+      if (userProfile) {
+        headers["x-user-id"] = userProfile.id;
+        headers["x-user-email"] = userProfile.email;
+      }
+
+      const response = await fetch(
+        `/api/restock-requests/${request.id}/cancel`,
+        {
+          method: "PATCH",
+          headers,
+        }
+      );
+
+      if (response.ok) {
+        // Refresh the data to show updated status
+        loadRequests();
+      } else {
+        const errorData = await response.json();
+        alert(
+          `Failed to cancel request: ${errorData.error || "Unknown error"}`
+        );
+      }
+    } catch (err) {
+      console.error("Error cancelling request:", err);
+      alert("Failed to cancel request. Please try again.");
+    } finally {
+      setIsCancelling(null);
+    }
+  };
+
   if (error) {
     return <ErrorState error={error} onRetry={loadRequests} />;
   }
@@ -144,6 +192,8 @@ const RestockRequestsPage = () => {
             requests={requests}
             isLoading={isLoading}
             onCreateRequest={handleCreateRequest}
+            onCancelRequest={handleCancelRequest}
+            isCancelling={isCancelling}
           />
         </div>
       </div>

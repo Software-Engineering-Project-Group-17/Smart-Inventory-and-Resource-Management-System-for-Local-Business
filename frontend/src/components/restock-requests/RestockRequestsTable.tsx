@@ -9,7 +9,7 @@ import {
   Clock,
   XCircle,
   Eye,
-  Edit,
+  Ban,
 } from "lucide-react";
 import {
   RestockRequest,
@@ -21,12 +21,16 @@ interface RestockRequestsTableProps {
   requests: RestockRequest[];
   isLoading: boolean;
   onCreateRequest: () => void;
+  onCancelRequest?: (request: RestockRequest) => void;
+  isCancelling?: number | null;
 }
 
 const RestockRequestsTable: React.FC<RestockRequestsTableProps> = ({
   requests,
   isLoading,
   onCreateRequest,
+  onCancelRequest,
+  isCancelling,
 }) => {
   const router = useRouter();
   const getStatusIcon = (status: string) => {
@@ -54,6 +58,10 @@ const RestockRequestsTable: React.FC<RestockRequestsTableProps> = ({
       RESTOCK_PRIORITIES[priority as keyof typeof RESTOCK_PRIORITIES]?.color ||
       "gray"
     );
+  };
+
+  const canCancelRequest = (request: RestockRequest) => {
+    return request.status !== "cancelled" && request.status !== "completed";
   };
 
   if (isLoading) {
@@ -199,9 +207,20 @@ const RestockRequestsTable: React.FC<RestockRequestsTableProps> = ({
                     >
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button className="text-gray-600 hover:text-gray-900">
-                      <Edit className="h-4 w-4" />
-                    </button>
+                    {canCancelRequest(request) && onCancelRequest && (
+                      <button
+                        onClick={() => onCancelRequest(request)}
+                        disabled={isCancelling === request.id}
+                        className="text-red-600 hover:text-red-900 disabled:text-red-400 disabled:cursor-not-allowed"
+                        title={
+                          isCancelling === request.id
+                            ? "Cancelling..."
+                            : "Cancel Request"
+                        }
+                      >
+                        <Ban className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
