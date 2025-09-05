@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart } from "lucide-react";
+import Link from "next/link";
 
 interface RequestActionButtonsProps {
   onCreateOrder: () => void;
@@ -62,12 +63,13 @@ export default function RequestActionButtons({
             <p className="text-xs text-gray-500 text-center px-2">{subText}</p>
           )}
         </div>
-        <Button variant="outline" className="w-full">
-          Download Request
-        </Button>
-        <Button variant="outline" className="w-full">
+
+        <Link
+          href="/contact"
+          className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center"
+        >
           Contact Branch
-        </Button>
+        </Link>
       </CardContent>
     </Card>
   );

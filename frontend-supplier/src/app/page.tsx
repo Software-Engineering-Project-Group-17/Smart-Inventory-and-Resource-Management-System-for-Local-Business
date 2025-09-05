@@ -237,24 +237,15 @@ export default function Home() {
               </div>
 
               <Select
-                value={filters.branch_id?.toString() || "all"}
-                onValueChange={(value) =>
-                  handleFilterChange(
-                    "branch_id",
-                    value === "all" ? undefined : parseInt(value)
-                  )
-                }
+                value={sortOrder}
+                onValueChange={(value: "asc" | "desc") => setSortOrder(value)}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by branch" />
+                <SelectTrigger className="w-32">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Branches</SelectItem>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id.toString()}>
-                      {branch.name} - {branch.location}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="desc">Newest First</SelectItem>
+                  <SelectItem value="asc">Oldest First</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -316,6 +307,28 @@ export default function Home() {
             </div>
 
             <div className="flex justify-between items-center">
+              <Select
+                value={filters.branch_id?.toString() || "all"}
+                onValueChange={(value) =>
+                  handleFilterChange(
+                    "branch_id",
+                    value === "all" ? undefined : parseInt(value)
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Branches</SelectItem>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                      {branch.name} - {branch.location}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Button
                 variant="outline"
                 onClick={clearFilters}
@@ -323,18 +336,6 @@ export default function Home() {
               >
                 Clear All Filters
               </Button>
-              <Select
-                value={sortOrder}
-                onValueChange={(value: "asc" | "desc") => setSortOrder(value)}
-              >
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="desc">Newest First</SelectItem>
-                  <SelectItem value="asc">Oldest First</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </CardContent>
         </Card>
@@ -411,6 +412,14 @@ export default function Home() {
                         <span>{formatDate(request.created_at)}</span>
                       </div>
                     </div>
+
+                    {(request.supplier_orders_count ?? 0) == 0 && (
+                      <div className="bg-amber-50 p-3 rounded-lg">
+                        <p className="text-sm text-amber-700">
+                          No Supplier Orders created yet.
+                        </p>
+                      </div>
+                    )}
 
                     {(request.supplier_orders_count ?? 0) > 0 && (
                       <div className="bg-blue-50 p-3 rounded-lg">
