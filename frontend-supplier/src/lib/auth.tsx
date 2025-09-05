@@ -52,25 +52,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           60 * 60 * 24 * 7
         }`; // 7 days
 
-        // Fetch supplier data from our API
-        try {
-          const response = await fetch("/api/auth/me", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
+        // Fetch supplier data from our API with retry mechanism
+        let retryCount = 0;
+        const maxRetries = 3;
+        const retryDelay = 1000; // 1 second
 
-          if (response.ok) {
-            const data = await response.json();
-            setSupplier(data.supplier);
-          } else {
-            console.error("Failed to fetch supplier data");
+        const fetchSupplierData = async (): Promise<void> => {
+          try {
+            const response = await fetch("/api/auth/me", {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              setSupplier(data.supplier);
+            } else if (response.status === 404 && retryCount < maxRetries) {
+              // User not found, might be a timing issue - retry after delay
+              console.log(`Supplier data not found, retrying in ${retryDelay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+              retryCount++;
+              setTimeout(fetchSupplierData, retryDelay);
+              return;
+            } else {
+              console.error("Failed to fetch supplier data");
+              setSupplier(null);
+            }
+          } catch (error) {
+            if (retryCount < maxRetries) {
+              console.log(`Error fetching supplier data, retrying... (attempt ${retryCount + 1}/${maxRetries})`);
+              retryCount++;
+              setTimeout(fetchSupplierData, retryDelay);
+              return;
+            }
+            console.error("Error fetching supplier data:", error);
             setSupplier(null);
           }
-        } catch (error) {
-          console.error("Error fetching supplier data:", error);
-          setSupplier(null);
-        }
+        };
+
+        await fetchSupplierData();
       } else {
         // Remove auth token cookie
         document.cookie =
