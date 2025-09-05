@@ -13,7 +13,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get the authorization header
@@ -31,7 +31,9 @@ export async function PATCH(
     const decodedToken = await admin.auth().verifyIdToken(token);
     const firebaseUid = decodedToken.uid;
 
-    const orderId = parseInt(params.id);
+    const { id } = await params;
+
+    const orderId = parseInt(id);
     const { action } = await request.json();
 
     if (!action || !["cancel", "pay"].includes(action)) {

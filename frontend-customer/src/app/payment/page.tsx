@@ -104,7 +104,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({
         <button
           type="submit"
           disabled={!stripe || isProcessing}
-          className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full bg-zeta text-white py-3 px-4 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isProcessing ? (
             <>
@@ -170,13 +170,13 @@ const PaymentPage = () => {
         <div className="mb-8">
           <Link
             href="/orders"
-            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors mb-4"
+            className="inline-flex items-center gap-2 text-zeta hover:text-zeta transition-colors mb-4"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Orders
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <CreditCard className="w-8 h-8 text-blue-600" />
+            <CreditCard className="w-8 h-8 text-zeta" />
             Complete Payment
           </h1>
           <p className="text-gray-600 mt-2">
