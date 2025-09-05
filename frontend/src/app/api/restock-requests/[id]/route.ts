@@ -5,12 +5,14 @@ const sql = neon(process.env.DATABASE_URL!);
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const requestId = parseInt(params.id);
+    const { id } = await params;
 
-    if (isNaN(requestId)) {
+    const requestId = id;
+
+    if (isNaN(Number(requestId))) {
       return NextResponse.json(
         { error: "Invalid request ID" },
         { status: 400 }
