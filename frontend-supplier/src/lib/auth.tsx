@@ -70,7 +70,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setSupplier(data.supplier);
             } else if (response.status === 404 && retryCount < maxRetries) {
               // User not found, might be a timing issue - retry after delay
-              console.log(`Supplier data not found, retrying in ${retryDelay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+              console.log(
+                `Supplier data not found, retrying in ${retryDelay}ms... (attempt ${
+                  retryCount + 1
+                }/${maxRetries})`
+              );
               retryCount++;
               setTimeout(fetchSupplierData, retryDelay);
               return;
@@ -80,7 +84,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           } catch (error) {
             if (retryCount < maxRetries) {
-              console.log(`Error fetching supplier data, retrying... (attempt ${retryCount + 1}/${maxRetries})`);
+              console.log(
+                `Error fetching supplier data, retrying... (attempt ${
+                  retryCount + 1
+                }/${maxRetries})`
+              );
               retryCount++;
               setTimeout(fetchSupplierData, retryDelay);
               return;
