@@ -151,7 +151,7 @@ export const SupplierOrderCard: React.FC<SupplierOrderCardProps> = ({
               {canPay && (
                 <button
                   onClick={() => onSelectForPayment(order)}
-                  className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                  className="w-full inline-flex items-center justify-center px-4 py-2 bg-[#3674B5] text-white rounded-md hover:bg-blue-900 text-sm font-medium"
                 >
                   <CreditCard className="h-4 w-4 mr-2" />
                   Pay Now
