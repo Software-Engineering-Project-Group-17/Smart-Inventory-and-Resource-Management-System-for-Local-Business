@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { neon } from '@neondatabase/serverless';
-import { NotificationService } from '@/lib/notification-service';
+import { NextRequest, NextResponse } from "next/server";
+import { neon } from "@neondatabase/serverless";
+import { NotificationService } from "@/lib/notification-service";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
 
     if (!branchId && !checkAll) {
       return NextResponse.json(
-        { error: 'Branch ID is required or set checkAll to true' },
+        { error: "Branch ID is required or set checkAll to true" },
         { status: 400 }
       );
     }
@@ -25,25 +25,28 @@ export async function POST(request: NextRequest) {
       `;
 
       for (const branch of branches) {
-        const notifications = await NotificationService.checkAllLowStock(branch.branch_id);
+        const notifications = await NotificationService.checkAllLowStock(
+          branch.branch_id
+        );
         createdNotifications.push(...notifications);
       }
     } else {
       // Check specific branch
-      const notifications = await NotificationService.checkAllLowStock(branchId);
+      const notifications = await NotificationService.checkAllLowStock(
+        branchId
+      );
       createdNotifications.push(...notifications);
     }
 
     return NextResponse.json({
       success: true,
       message: `Created ${createdNotifications.length} low stock notifications`,
-      notifications: createdNotifications
+      notifications: createdNotifications,
     });
-
   } catch (error) {
-    console.error('Error checking low stock:', error);
+    console.error("Error checking low stock:", error);
     return NextResponse.json(
-      { error: 'Failed to check low stock' },
+      { error: "Failed to check low stock" },
       { status: 500 }
     );
   }
@@ -52,11 +55,11 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const branchId = searchParams.get('branchId');
+    const branchId = searchParams.get("branchId");
 
     if (!branchId) {
       return NextResponse.json(
-        { error: 'Branch ID is required' },
+        { error: "Branch ID is required" },
         { status: 400 }
       );
     }
@@ -91,13 +94,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       lowStockItems,
-      count: lowStockItems.length
+      count: lowStockItems.length,
     });
-
   } catch (error) {
-    console.error('Error getting low stock items:', error);
+    console.error("Error getting low stock items:", error);
     return NextResponse.json(
-      { error: 'Failed to get low stock items' },
+      { error: "Failed to get low stock items" },
       { status: 500 }
     );
   }
