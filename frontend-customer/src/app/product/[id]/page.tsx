@@ -134,7 +134,7 @@ const ProductPage = () => {
           </h1>
           <button
             onClick={() => router.back()}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+            className="bg-[#3674B5] text-white px-6 py-2 rounded-lg hover:bg-blue-900"
           >
             Go Back
           </button>
@@ -303,7 +303,7 @@ const ProductPage = () => {
                 disabled={!product.is_in_stock}
                 className={`w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white ${
                   product.is_in_stock
-                    ? "bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500"
+                    ? "bg-[#3674B5] hover:bg-blue-900 focus:ring-2 focus:ring-[#3674B5]"
                     : "bg-gray-400 cursor-not-allowed"
                 }`}
               >
