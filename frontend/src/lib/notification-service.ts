@@ -1,4 +1,4 @@
-import { neon } from '@neondatabase/serverless';
+import { neon } from "@neondatabase/serverless";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -6,13 +6,16 @@ interface NotificationData {
   branchId: string | number;
   title: string;
   message: string;
-  notificationType: 'low_stock' | 'restock_completion' | 'stock_update' | 'system';
+  notificationType:
+    | "low_stock"
+    | "restock_completion"
+    | "stock_update"
+    | "system";
   inventoryId?: string | number;
   metadata?: Record<string, any>;
 }
 
 export class NotificationService {
-  
   /**
    * Create a new notification
    */
@@ -43,18 +46,20 @@ export class NotificationService {
         )
         RETURNING id, created_at
       `;
-      
+
       return result[0];
     } catch (error) {
-      console.error('Error creating notification:', error);
-      throw new Error('Failed to create notification');
+      console.error("Error creating notification:", error);
+      throw new Error("Failed to create notification");
     }
   }
 
   /**
    * Check and create low stock notifications for an inventory item
    */
-  static async checkAndCreateLowStockNotification(inventoryId: string | number) {
+  static async checkAndCreateLowStockNotification(
+    inventoryId: string | number
+  ) {
     try {
       // Get inventory item details
       const inventoryItem = await sql`
@@ -75,7 +80,7 @@ export class NotificationService {
       }
 
       const item = inventoryItem[0];
-      
+
       // Check if stock is at or below threshold
       if (item.quantity <= item.low_stock_threshold) {
         // Check if we already have a recent low stock notification for this item
@@ -92,27 +97,27 @@ export class NotificationService {
         if (existingNotification.length === 0) {
           const title = `Low Stock Alert: ${item.inventory_name}`;
           const message = `${item.inventory_name} is running low. Current stock: ${item.quantity}, Threshold: ${item.low_stock_threshold}`;
-          
+
           return await this.createNotification({
             branchId: item.branch_id,
             title,
             message,
-            notificationType: 'low_stock',
+            notificationType: "low_stock",
             inventoryId: item.inventory_id,
             metadata: {
               currentQuantity: item.quantity,
               threshold: item.low_stock_threshold,
               categoryName: item.category_name,
-              severity: item.quantity === 0 ? 'critical' : 'warning'
-            }
+              severity: item.quantity === 0 ? "critical" : "warning",
+            },
           });
         }
       }
 
       return null;
     } catch (error) {
-      console.error('Error checking low stock:', error);
-      throw new Error('Failed to check low stock notification');
+      console.error("Error checking low stock:", error);
+      throw new Error("Failed to check low stock notification");
     }
   }
 
@@ -120,8 +125,8 @@ export class NotificationService {
    * Create restock completion notification
    */
   static async createRestockCompletionNotification(
-    inventoryId: string | number, 
-    previousQuantity: number, 
+    inventoryId: string | number,
+    previousQuantity: number,
     newQuantity: number
   ) {
     try {
@@ -143,27 +148,26 @@ export class NotificationService {
 
       const item = inventoryItem[0];
       const quantityIncrease = newQuantity - previousQuantity;
-      
+
       const title = `Stock Replenished: ${item.inventory_name}`;
       const message = `${item.inventory_name} has been restocked. Stock increased by ${quantityIncrease} units (${previousQuantity} → ${newQuantity})`;
-      
+
       return await this.createNotification({
         branchId: item.branch_id,
         title,
         message,
-        notificationType: 'restock_completion',
+        notificationType: "restock_completion",
         inventoryId: item.inventory_id,
         metadata: {
           previousQuantity,
           newQuantity,
           quantityIncrease,
-          categoryName: item.category_name
-        }
+          categoryName: item.category_name,
+        },
       });
-      
     } catch (error) {
-      console.error('Error creating restock completion notification:', error);
-      throw new Error('Failed to create restock completion notification');
+      console.error("Error creating restock completion notification:", error);
+      throw new Error("Failed to create restock completion notification");
     }
   }
 
@@ -188,7 +192,7 @@ export class NotificationService {
       `;
 
       const notifications = [];
-      
+
       for (const item of lowStockItems) {
         // Check if we already have a recent notification for this item
         const existingNotification = await sql`
@@ -203,29 +207,29 @@ export class NotificationService {
         if (existingNotification.length === 0) {
           const title = `Low Stock Alert: ${item.inventory_name}`;
           const message = `${item.inventory_name} is running low. Current stock: ${item.quantity}, Threshold: ${item.low_stock_threshold}`;
-          
+
           const notification = await this.createNotification({
             branchId: item.branch_id,
             title,
             message,
-            notificationType: 'low_stock',
+            notificationType: "low_stock",
             inventoryId: item.inventory_id,
             metadata: {
               currentQuantity: item.quantity,
               threshold: item.low_stock_threshold,
               categoryName: item.category_name,
-              severity: item.quantity === 0 ? 'critical' : 'warning'
-            }
+              severity: item.quantity === 0 ? "critical" : "warning",
+            },
           });
-          
+
           notifications.push(notification);
         }
       }
 
       return notifications;
     } catch (error) {
-      console.error('Error checking all low stock:', error);
-      throw new Error('Failed to check all low stock notifications');
+      console.error("Error checking all low stock:", error);
+      throw new Error("Failed to check all low stock notifications");
     }
   }
 
@@ -240,7 +244,7 @@ export class NotificationService {
         AND created_at < now() - INTERVAL '30 days'
       `;
     } catch (error) {
-      console.error('Error cleaning up old notifications:', error);
+      console.error("Error cleaning up old notifications:", error);
     }
   }
 }

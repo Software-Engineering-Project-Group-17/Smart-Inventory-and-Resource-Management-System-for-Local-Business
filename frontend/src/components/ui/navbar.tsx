@@ -51,8 +51,8 @@ const Navbar: React.FC = () => {
     markAllAsRead,
     getNotificationColor,
     formatTimeAgo,
-    fetchNotifications
-  } = useNotifications(userProfile?.email || '');
+    fetchNotifications,
+  } = useNotifications(userProfile?.email || "");
 
   // Handle logout functionality
   const handleLogout = () => {
@@ -290,7 +290,10 @@ const Navbar: React.FC = () => {
     const top = rect.bottom + 8; // 8px gap below the bell icon
     const right = window.innerWidth - rect.right; // Position from right edge
 
-    const handleNotificationClick = (notificationId: number, isRead: boolean) => {
+    const handleNotificationClick = (
+      notificationId: number,
+      isRead: boolean
+    ) => {
       if (!isRead) {
         markAsRead([notificationId]);
       }
@@ -348,15 +351,24 @@ const Navbar: React.FC = () => {
               ) : (
                 <div className="space-y-2">
                   {notifications.slice(0, 10).map((notification) => {
-                    const colors = getNotificationColor(notification.notification_type);
+                    const colors = getNotificationColor(
+                      notification.notification_type
+                    );
                     return (
                       <div
                         key={notification.id}
-                        onClick={() => handleNotificationClick(notification.id, notification.is_read)}
+                        onClick={() =>
+                          handleNotificationClick(
+                            notification.id,
+                            notification.is_read
+                          )
+                        }
                         className={`p-3 rounded-lg border-l-4 hover:opacity-80 transition-colors cursor-pointer ${
-                          notification.is_read ? 'opacity-60' : ''
+                          notification.is_read ? "opacity-60" : ""
                         } ${colors.bg}`}
-                        style={{ borderLeftColor: colors.border.replace('border-', '') }}
+                        style={{
+                          borderLeftColor: colors.border.replace("border-", ""),
+                        }}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -437,7 +449,9 @@ const Navbar: React.FC = () => {
             ) : (
               <div className="space-y-3">
                 {notifications.slice(0, 10).map((notification) => {
-                  const colors = getNotificationColor(notification.notification_type);
+                  const colors = getNotificationColor(
+                    notification.notification_type
+                  );
                   return (
                     <div
                       key={notification.id}
@@ -447,9 +461,11 @@ const Navbar: React.FC = () => {
                         }
                       }}
                       className={`p-3 rounded-lg border-l-4 hover:opacity-80 transition-colors cursor-pointer ${
-                        notification.is_read ? 'opacity-60' : ''
+                        notification.is_read ? "opacity-60" : ""
                       } ${colors.bg}`}
-                      style={{ borderLeftColor: colors.border.replace('border-', '') }}
+                      style={{
+                        borderLeftColor: colors.border.replace("border-", ""),
+                      }}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
