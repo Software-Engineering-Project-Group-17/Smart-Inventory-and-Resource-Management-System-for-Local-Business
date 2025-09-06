@@ -27,9 +27,9 @@ export default function OwnerCreationPage() {
   const canCreateOwner = secretKey === ADMIN_SECRET_KEY;
 
   // Show role access notification on page load
-  useEffect(() => {
-    showRoleAccessNotification("System Admin - Owner Creation");
-  }, []);
+  // useEffect(() => {
+  //   showRoleAccessNotification("System Admin - Owner Creation");
+  // }, []);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
