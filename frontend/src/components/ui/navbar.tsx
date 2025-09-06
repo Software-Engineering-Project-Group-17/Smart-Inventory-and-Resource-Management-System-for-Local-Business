@@ -21,6 +21,7 @@ import Image from "next/image";
 import { getUserProfile, getUserRole, clearAuthData } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { toastUtils } from "@/lib/toast-utils";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface NavItem {
   label: string;
@@ -40,6 +41,18 @@ const Navbar: React.FC = () => {
     const profile = getUserProfile();
     setUserProfile(profile);
   }, []);
+
+  // Use the notifications hook
+  const {
+    notifications,
+    unreadCount,
+    isLoading: notificationsLoading,
+    markAsRead,
+    markAllAsRead,
+    getNotificationColor,
+    formatTimeAgo,
+    fetchNotifications
+  } = useNotifications(userProfile?.email || '');
 
   // Handle logout functionality
   const handleLogout = () => {
@@ -244,7 +257,6 @@ const Navbar: React.FC = () => {
   };
 
   const navItems = getNavItems();
-  const alertCount = 3; // Example alert count
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -278,6 +290,16 @@ const Navbar: React.FC = () => {
     const top = rect.bottom + 8; // 8px gap below the bell icon
     const right = window.innerWidth - rect.right; // Position from right edge
 
+    const handleNotificationClick = (notificationId: number, isRead: boolean) => {
+      if (!isRead) {
+        markAsRead([notificationId]);
+      }
+    };
+
+    const handleMarkAllRead = () => {
+      markAllAsRead();
+    };
+
     return (
       <div
         id="alert-dropdown"
@@ -294,45 +316,77 @@ const Navbar: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-800">
               Notifications
             </h3>
-            <button
-              onClick={() => setShowAlertModal(false)}
-              className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
-            >
-              <X size={16} />
-            </button>
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
+                >
+                  Mark all read
+                </button>
+              )}
+              <button
+                onClick={() => setShowAlertModal(false)}
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
           <div className="max-h-80 overflow-y-auto">
             <div className="p-2">
-              <div className="space-y-2">
-                <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500 hover:bg-blue-100 transition-colors cursor-pointer">
-                  <p className="text-sm text-gray-700">
-                    New inventory update available
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">2 minutes ago</p>
+              {notificationsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-gray-600">Loading...</span>
                 </div>
-                <div
-                  className="p-3 rounded-lg border-l-4 hover:bg-yellow-50 transition-colors cursor-pointer"
-                  style={{
-                    backgroundColor: "#FADA7A20",
-                    borderLeftColor: "#FADA7A",
-                  }}
-                >
-                  <p className="text-sm text-gray-700">
-                    Weekly report is ready for review
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">1 hour ago</p>
+              ) : notifications.length === 0 ? (
+                <div className="text-center py-8">
+                  <Bell size={32} className="mx-auto text-gray-300 mb-2" />
+                  <p className="text-gray-500 text-sm">No notifications</p>
                 </div>
-                <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-500 hover:bg-green-100 transition-colors cursor-pointer">
-                  <p className="text-sm text-gray-700">
-                    New supplier added successfully
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">3 hours ago</p>
+              ) : (
+                <div className="space-y-2">
+                  {notifications.slice(0, 10).map((notification) => {
+                    const colors = getNotificationColor(notification.notification_type);
+                    return (
+                      <div
+                        key={notification.id}
+                        onClick={() => handleNotificationClick(notification.id, notification.is_read)}
+                        className={`p-3 rounded-lg border-l-4 hover:opacity-80 transition-colors cursor-pointer ${
+                          notification.is_read ? 'opacity-60' : ''
+                        } ${colors.bg}`}
+                        style={{ borderLeftColor: colors.border.replace('border-', '') }}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className={`text-sm font-medium ${colors.text}`}>
+                              {notification.title}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-1">
+                              {notification.message}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {formatTimeAgo(notification.created_at)}
+                            </p>
+                          </div>
+                          {!notification.is_read && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full ml-2 mt-1"></div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
+              )}
             </div>
           </div>
           <div className="p-3 border-t border-gray-100">
             <button
+              onClick={() => {
+                setShowAlertModal(false);
+                // Could navigate to a full notifications page here
+              }}
               className="w-full text-center text-sm font-medium hover:text-white hover:bg-opacity-90 transition-colors duration-200 py-2 rounded-md"
               style={{ color: "#3674B5", backgroundColor: "#3674B510" }}
             >
@@ -352,40 +406,72 @@ const Navbar: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-800">
               Notifications
             </h3>
-            <button
-              onClick={() => setShowAlertModal(false)}
-              className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
-            >
-              <X size={20} />
-            </button>
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
+                >
+                  Mark all read
+                </button>
+              )}
+              <button
+                onClick={() => setShowAlertModal(false)}
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
           <div className="max-h-64 overflow-y-auto p-4">
-            <div className="space-y-3">
-              <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                <p className="text-sm text-gray-700">
-                  New inventory update available
-                </p>
-                <p className="text-xs text-gray-500 mt-1">2 minutes ago</p>
+            {notificationsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <span className="ml-2 text-gray-600">Loading...</span>
               </div>
-              <div
-                className="p-3 rounded-lg border-l-4"
-                style={{
-                  backgroundColor: "#FADA7A20",
-                  borderLeftColor: "#FADA7A",
-                }}
-              >
-                <p className="text-sm text-gray-700">
-                  Weekly report is ready for review
-                </p>
-                <p className="text-xs text-gray-500 mt-1">1 hour ago</p>
+            ) : notifications.length === 0 ? (
+              <div className="text-center py-8">
+                <Bell size={32} className="mx-auto text-gray-300 mb-2" />
+                <p className="text-gray-500 text-sm">No notifications</p>
               </div>
-              <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
-                <p className="text-sm text-gray-700">
-                  New supplier added successfully
-                </p>
-                <p className="text-xs text-gray-500 mt-1">3 hours ago</p>
+            ) : (
+              <div className="space-y-3">
+                {notifications.slice(0, 10).map((notification) => {
+                  const colors = getNotificationColor(notification.notification_type);
+                  return (
+                    <div
+                      key={notification.id}
+                      onClick={() => {
+                        if (!notification.is_read) {
+                          markAsRead([notification.id]);
+                        }
+                      }}
+                      className={`p-3 rounded-lg border-l-4 hover:opacity-80 transition-colors cursor-pointer ${
+                        notification.is_read ? 'opacity-60' : ''
+                      } ${colors.bg}`}
+                      style={{ borderLeftColor: colors.border.replace('border-', '') }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className={`text-sm font-medium ${colors.text}`}>
+                            {notification.title}
+                          </p>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {formatTimeAgo(notification.created_at)}
+                          </p>
+                        </div>
+                        {!notification.is_read && (
+                          <div className="w-2 h-2 bg-blue-500 rounded-full ml-2 mt-1"></div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -451,9 +537,9 @@ const Navbar: React.FC = () => {
                   }}
                 >
                   <Bell size={20} />
-                  {alertCount > 0 && (
+                  {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {alertCount}
+                      {unreadCount}
                     </span>
                   )}
                 </button>
@@ -574,9 +660,9 @@ const Navbar: React.FC = () => {
             >
               <Bell size={20} />
               <span className="ml-3">Notifications</span>
-              {alertCount > 0 && (
+              {unreadCount > 0 && (
                 <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {alertCount}
+                  {unreadCount}
                 </span>
               )}
             </button>
