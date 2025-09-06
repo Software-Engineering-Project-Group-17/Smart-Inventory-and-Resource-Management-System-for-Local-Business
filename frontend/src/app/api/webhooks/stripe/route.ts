@@ -73,6 +73,25 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
 
   console.log(`Processing successful payment for order ${supplier_order_id}`);
 
+  // First check if this payment has already been processed
+  const [existingOrder] = await sql`
+    SELECT payment_status, id 
+    FROM supplier_order 
+    WHERE id = ${supplier_order_id}
+  `;
+
+  if (!existingOrder) {
+    console.error(`Supplier order ${supplier_order_id} not found`);
+    return;
+  }
+
+  if (existingOrder.payment_status === "paid") {
+    console.log(
+      `Payment for order ${supplier_order_id} already processed, skipping`
+    );
+    return;
+  }
+
   // Start transaction
   try {
     // Update supplier order payment status
@@ -122,7 +141,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     for (const item of orderItems) {
       if (item.inventory_id) {
         const newQuantity =
-          Number(item.current_quantity) + Number(item.quantity);
+          Number(item.current_quantity) + Number(item.offered_quantity);
 
         await sql`
           UPDATE inventory_item 
@@ -132,7 +151,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
         `;
 
         console.log(
-          `Updated inventory ${item.inventory_id}: ${item.current_quantity} -> ${newQuantity}`
+          `Updated inventory ${item.inventory_id}: ${item.current_quantity} -> ${newQuantity} (added ${item.offered_quantity})`
         );
       }
     }

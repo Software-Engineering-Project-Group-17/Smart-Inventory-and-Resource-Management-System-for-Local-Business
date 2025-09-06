@@ -43,24 +43,9 @@ export async function POST(request: NextRequest) {
           WHERE id = ${supplierOrder.id}
         `;
 
-        // Get supplier order items to update inventory
-        const orderItems = await sql`
-          SELECT 
-            soi.inventory_id,
-            soi.offered_quantity
-          FROM supplier_order_item soi
-          WHERE soi.supplier_order_id = ${supplierOrder.id}
-        `;
-
-        // Update inventory quantities
-        for (const item of orderItems) {
-          await sql`
-            UPDATE inventory_item 
-            SET 
-              quantity = quantity + ${item.offered_quantity}
-            WHERE inventory_id = ${item.inventory_id}
-          `;
-        }
+        // Note: Inventory update is handled by the Stripe webhook
+        // to prevent duplicate updates. The webhook is more reliable
+        // as it's called directly by Stripe.
 
         // Check if all supplier orders for this restock request are paid
         const unpaidOrders = await sql`
