@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import RelatedProducts from "@/app/components/RelatedProducts";
+import { toast } from "sonner";
 
 interface ProductDetails {
   inventory_id: number;
@@ -88,7 +89,8 @@ const ProductPage = () => {
     );
 
     // Show success message
-    alert(`Added ${quantity} ${product.inventory_name} to cart!`);
+
+    toast(`Added ${quantity} ${product.inventory_name} to cart!`);
   };
 
   const handleWishlistToggle = () => {
