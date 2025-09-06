@@ -25,7 +25,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ onCreateRequest }) => {
         </div>
         <button
           onClick={onCreateRequest}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-4 py-2 bg-[#3674B5] text-white rounded-md hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Request
