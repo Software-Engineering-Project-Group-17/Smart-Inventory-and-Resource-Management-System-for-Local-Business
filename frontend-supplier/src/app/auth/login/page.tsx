@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Checkbox } from "@/components/ui/checkbox";
+import { toastUtils } from "@/lib/toast-utils";
 import {
   Eye,
   EyeOff,
@@ -43,30 +43,53 @@ export default function LoginPage() {
     e.preventDefault();
 
     if (!formData.email || !formData.password) {
-      setError("Please fill in all fields");
+      toastUtils.warning("Missing information", "Please fill in all fields");
       return;
     }
 
     setLoading(true);
     setError("");
 
-    try {
-      await signIn(formData.email, formData.password);
-      router.push("/");
-    } catch (err: any) {
-      console.error("Login error:", err);
+    // Create a promise for the login process
+    const loginPromise = signIn(formData.email, formData.password);
 
-      if (err.code === "auth/user-not-found") {
-        setError("No account found with this email address");
-      } else if (err.code === "auth/wrong-password") {
-        setError("Incorrect password");
-      } else if (err.code === "auth/invalid-email") {
-        setError("Invalid email address");
-      } else if (err.code === "auth/too-many-requests") {
-        setError("Too many failed attempts. Please try again later");
-      } else {
-        setError("Login failed. Please check your credentials and try again.");
-      }
+    // Use promise toast for automatic loading/success/error handling
+    toastUtils.promise(loginPromise, {
+      loading: "Signing you in...",
+      success: () => {
+        // Success actions
+        router.push("/");
+        return "Welcome back! Login successful.";
+      },
+      error: (err: unknown) => {
+        console.error("Login error:", err);
+
+        let errorMessage =
+          "Login failed. Please check your credentials and try again.";
+
+        if (err && typeof err === "object" && "code" in err) {
+          const authError = err as { code: string };
+          if (authError.code === "auth/user-not-found") {
+            errorMessage = "No account found with this email address";
+          } else if (authError.code === "auth/wrong-password") {
+            errorMessage = "Incorrect password";
+          } else if (authError.code === "auth/invalid-email") {
+            errorMessage = "Invalid email address";
+          } else if (authError.code === "auth/too-many-requests") {
+            errorMessage = "Too many failed attempts. Please try again later";
+          }
+        }
+
+        setError(errorMessage);
+        return errorMessage;
+      },
+    });
+
+    // Handle cleanup
+    try {
+      await loginPromise;
+    } catch {
+      // Error is already handled by toast
     } finally {
       setLoading(false);
     }
@@ -156,7 +179,7 @@ export default function LoginPage() {
 
               <div className="text-center">
                 <p className="text-sm text-gray-600">
-                  Don't have an account?{" "}
+                  Don&apos;t have an account?{" "}
                   <Link
                     href="/auth/register"
                     className="text-blue-600 hover:text-blue-800 font-medium"
