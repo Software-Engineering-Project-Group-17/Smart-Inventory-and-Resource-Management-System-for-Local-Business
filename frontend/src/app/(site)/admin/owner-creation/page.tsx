@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Input } from "@/components/ui/input";
+import { toastUtils } from "@/lib/toast-utils";
+import { showRoleAccessNotification } from "@/lib/auth";
 
 export default function OwnerCreationPage() {
   const { user, isLoading } = useCurrentUser();
@@ -24,11 +26,21 @@ export default function OwnerCreationPage() {
   const ADMIN_SECRET_KEY = "INVENTORY_SYSTEM_ADMIN_2024"; // Change this in production
   const canCreateOwner = secretKey === ADMIN_SECRET_KEY;
 
+  // Show role access notification on page load
+  useEffect(() => {
+    showRoleAccessNotification("System Admin - Owner Creation");
+  }, []);
+
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const showMessage = (type: "success" | "error", text: string) => {
+    if (type === "success") {
+      toastUtils.success("Success", text);
+    } else {
+      toastUtils.error("Error", text);
+    }
     setMessage({ type, text });
     setTimeout(() => setMessage(null), 5000);
   };

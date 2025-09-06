@@ -19,6 +19,7 @@ import { RestockRequest } from "@/types/restock";
 import { SupplierOrder } from "@/types/supplier-order";
 import { SupplierOrderCard } from "@/components/restock-requests/SupplierOrderCard";
 import { PaymentModal } from "@/components/restock-requests/PaymentModal";
+import { toastUtils } from "@/lib/toast-utils";
 
 const RestockRequestDetailsPage = () => {
   const params = useParams();
@@ -133,11 +134,17 @@ const RestockRequestDetailsPage = () => {
         loadRequestDetails();
       } else {
         const errorData = await response.json();
-        alert(`Failed to cancel order: ${errorData.error || "Unknown error"}`);
+        toastUtils.error(
+          "Cancel Failed",
+          `Failed to cancel order: ${errorData.error || "Unknown error"}`
+        );
       }
     } catch (err) {
       console.error("Error cancelling order:", err);
-      alert("Failed to cancel order. Please try again.");
+      toastUtils.error(
+        "Cancel Failed",
+        "Failed to cancel order. Please try again."
+      );
     } finally {
       setIsCancelling(null);
     }

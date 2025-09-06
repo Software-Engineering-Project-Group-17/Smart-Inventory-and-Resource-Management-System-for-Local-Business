@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { toastUtils } from "@/lib/toast-utils";
 import Image from "next/image";
 
 export default function RegisterPage() {
@@ -20,28 +21,11 @@ export default function RegisterPage() {
     setIsGoogleLoading(true);
 
     try {
-      // TODO: Implement Google OAuth integration
-      // This would typically involve:
-      // 1. Initialize Google OAuth client
-      // 2. Open Google sign-in popup
-      // 3. Get user credentials
-      // 4. Send to backend for verification
-      // 5. Handle response
-
-      toast({
-        title: "Coming Soon",
-        description: "Google sign-in will be available soon!",
-        variant: "default",
-      });
-
+      toastUtils.info("Coming Soon", "Google sign-in will be available soon!");
       console.log("Google sign-in initiated");
     } catch (error) {
       console.error("Google sign-in error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to sign in with Google. Please try again.",
-        variant: "destructive",
-      });
+      toastUtils.error("Google Sign-in Failed", "Failed to sign in with Google. Please try again.");
     } finally {
       setIsGoogleLoading(false);
     }
@@ -56,11 +40,7 @@ export default function RegisterPage() {
     setError("");
     setSuccess("");
     if (!form.email || !form.password) {
-      toast({
-        title: "Error",
-        description: "All fields are required.",
-        variant: "destructive",
-      });
+      toastUtils.validationError("Missing Information", "All fields are required.");
       return;
     }
     setIsLoading(true);
@@ -75,9 +55,13 @@ export default function RegisterPage() {
         const data = await res.json();
         throw new Error(data.message || "Registration failed");
       }
+      
+      toastUtils.registrationSuccess("User");
       setSuccess("Registration successful! You can now log in.");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Registration failed";
+      toastUtils.registrationError("unknown", errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

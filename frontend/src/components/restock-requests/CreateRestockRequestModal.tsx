@@ -8,6 +8,7 @@ import {
   RESTOCK_PRIORITIES,
 } from "@/types/restock";
 import { InventoryItem } from "@/lib/api/inventory";
+import { toastUtils } from "@/lib/toast-utils";
 
 interface CreateRestockRequestModalProps {
   isOpen: boolean;
@@ -76,7 +77,10 @@ const CreateRestockRequestModal: React.FC<CreateRestockRequestModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.items.length === 0) {
-      alert("Please add at least one item to the restock request");
+      toastUtils.validationError(
+        "No Items Added",
+        "Please add at least one item to the restock request"
+      );
       return;
     }
 
@@ -102,7 +106,9 @@ const CreateRestockRequestModal: React.FC<CreateRestockRequestModalProps> = ({
 
       if (response.ok) {
         const result = await response.json();
-        alert(`Restock request created successfully! ID: ${result.request.id}`);
+        toastUtils.formSuccess(
+          `Restock request created successfully! ID: ${result.request.id}`
+        );
         onSuccess();
         onClose();
         // Reset form
@@ -116,11 +122,14 @@ const CreateRestockRequestModal: React.FC<CreateRestockRequestModalProps> = ({
         });
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to create restock request");
+        toastUtils.error(
+          "Creation Failed",
+          error.error || "Failed to create restock request"
+        );
       }
     } catch (error) {
       console.error("Error creating restock request:", error);
-      alert("Failed to create restock request");
+      toastUtils.error("Request Failed", "Failed to create restock request");
     } finally {
       setIsSubmitting(false);
     }

@@ -12,6 +12,8 @@ import {
   PageHeader,
   ErrorState,
 } from "@/components/restock-requests";
+import { toastUtils } from "@/lib/toast-utils";
+import { showRoleAccessNotification } from "@/lib/auth";
 
 // Main Restock Requests Page
 const RestockRequestsPage = () => {
@@ -102,6 +104,7 @@ const RestockRequestsPage = () => {
   };
 
   useEffect(() => {
+    showRoleAccessNotification("Restock Requests");
     loadRequests();
     loadInventory();
   }, [statusFilter, priorityFilter, searchTerm]);
@@ -151,13 +154,17 @@ const RestockRequestsPage = () => {
         loadRequests();
       } else {
         const errorData = await response.json();
-        alert(
+        toastUtils.error(
+          "Cancel Failed",
           `Failed to cancel request: ${errorData.error || "Unknown error"}`
         );
       }
     } catch (err) {
       console.error("Error cancelling request:", err);
-      alert("Failed to cancel request. Please try again.");
+      toastUtils.error(
+        "Cancel Failed",
+        "Failed to cancel request. Please try again."
+      );
     } finally {
       setIsCancelling(null);
     }

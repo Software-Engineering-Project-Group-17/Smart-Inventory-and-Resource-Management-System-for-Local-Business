@@ -20,6 +20,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getUserProfile, getUserRole, clearAuthData } from "@/lib/auth";
 import { useRouter } from "next/navigation";
+import { toastUtils } from "@/lib/toast-utils";
 
 interface NavItem {
   label: string;
@@ -43,6 +44,7 @@ const Navbar: React.FC = () => {
   // Handle logout functionality
   const handleLogout = () => {
     clearAuthData();
+    toastUtils.logoutSuccess();
     router.push("/login");
   };
 
