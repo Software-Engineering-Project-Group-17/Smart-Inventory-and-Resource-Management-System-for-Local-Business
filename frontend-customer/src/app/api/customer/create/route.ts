@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
       // First, create or get user record
       const userQuery = `
-        INSERT INTO "user" (firebase_uid, email, name, role_id, is_active, account_status)
+        INSERT INTO app_user (firebase_uid, email, name, role_id, is_active, account_status)
         VALUES ($1, $2, $3, (SELECT id FROM roles WHERE role = 'CUSTOMER'), true, 'active')
         ON CONFLICT (firebase_uid) 
         DO UPDATE SET 

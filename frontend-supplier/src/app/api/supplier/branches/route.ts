@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const supplierQuery = `
       SELECT s.id
       FROM supplier s
-      JOIN "user" u ON s.user_id = u.user_id
+      JOIN app_user u ON s.user_id = u.user_id
       WHERE u.firebase_uid = $1
     `;
     const supplierResult = await query(supplierQuery, [firebaseUid]);

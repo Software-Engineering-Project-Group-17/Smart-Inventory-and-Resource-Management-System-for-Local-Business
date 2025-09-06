@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
           s.supplier_tel,
           s.address,
           s.created_at as supplier_created_at
-         FROM "user" u
+         FROM app_user u
          LEFT JOIN roles r ON u.role_id = r.id
          LEFT JOIN supplier s ON u.user_id = s.user_id
          WHERE u.firebase_uid = $1 AND u.is_active = true`,

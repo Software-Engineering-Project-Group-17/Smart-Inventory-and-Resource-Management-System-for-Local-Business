@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       // First try as Firebase UID
       userResult = await sql`
         SELECT u.user_id, u.email, u.firebase_uid, s.id as staff_id, s.branch_id, b.name as branch_name, b.location as branch_location
-        FROM "user" u
+        FROM app_user u
         JOIN staff s ON u.user_id = s.user_id
         JOIN branches b ON s.branch_id = b.id
         WHERE u.firebase_uid = ${userId}
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
         if (!isNaN(Number(userId))) {
           userResult = await sql`
             SELECT u.user_id, u.email, u.firebase_uid, s.id as staff_id, s.branch_id, b.name as branch_name, b.location as branch_location
-            FROM "user" u
+            FROM app_user u
             JOIN staff s ON u.user_id = s.user_id
             JOIN branches b ON s.branch_id = b.id
             WHERE u.user_id = ${parseInt(userId)}
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     if (userResult.length === 0 && userEmail) {
       userResult = await sql`
         SELECT u.user_id, u.email, u.firebase_uid, s.id as staff_id, s.branch_id, b.name as branch_name, b.location as branch_location
-        FROM "user" u
+        FROM app_user u
         JOIN staff s ON u.user_id = s.user_id
         JOIN branches b ON s.branch_id = b.id
         WHERE u.email = ${userEmail}

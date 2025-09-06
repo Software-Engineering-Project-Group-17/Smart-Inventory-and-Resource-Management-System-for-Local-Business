@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       const customerQuery = `
         SELECT c.id, c.customer_name, c.customer_email
         FROM customer c
-        INNER JOIN "user" u ON c.user_id = u.user_id
+        INNER JOIN app_user u ON c.user_id = u.user_id
         WHERE u.firebase_uid = $1
       `;
       const customerResult = await client.query(customerQuery, [firebaseUid]);

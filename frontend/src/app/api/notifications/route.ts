@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const staffResult = await sql`
       SELECT branch_id 
       FROM staff s
-      JOIN "user" u ON s.user_id = u.user_id
+      JOIN app_user u ON s.user_id = u.user_id
       WHERE u.email = ${userEmail}
       LIMIT 1
     `;
@@ -92,7 +92,7 @@ export async function PUT(request: NextRequest) {
     const staffResult = await sql`
       SELECT branch_id 
       FROM staff s
-      JOIN "user" u ON s.user_id = u.user_id
+      JOIN app_user u ON s.user_id = u.user_id
       WHERE u.email = ${userEmail}
       LIMIT 1
     `;

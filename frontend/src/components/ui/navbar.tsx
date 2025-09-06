@@ -88,11 +88,11 @@ const Navbar: React.FC = () => {
             href: "/reports",
             icon: <FileBarChart size={20} />,
           },
-          {
-            label: "Suppliers",
-            href: "/suppliers",
-            icon: <Truck size={20} />,
-          },
+          // {
+          //   label: "Suppliers",
+          //   href: "/suppliers",
+          //   icon: <Truck size={20} />,
+          // },
           {
             label: "Resources",
             href: "/resources",
@@ -136,11 +136,11 @@ const Navbar: React.FC = () => {
             href: "/inventory",
             icon: <Archive size={20} />,
           },
-          {
-            label: "Suppliers",
-            href: "/suppliers",
-            icon: <Truck size={20} />,
-          },
+          // {
+          //   label: "Suppliers",
+          //   href: "/suppliers",
+          //   icon: <Truck size={20} />,
+          // },
           {
             label: "Reports",
             href: "/reports",

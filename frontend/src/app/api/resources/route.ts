@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
             u.firebase_uid,
             s.branch_id,
             s.id as staff_id
-          FROM "user" u
+          FROM app_user u
           INNER JOIN staff s ON u.user_id = s.user_id
           WHERE u.firebase_uid = ${userId}
           LIMIT 1
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
               u.firebase_uid,
               s.branch_id,
               s.id as staff_id
-            FROM "user" u
+            FROM app_user u
             INNER JOIN staff s ON u.user_id = s.user_id
             WHERE u.user_id = ${parseInt(userId)}
             LIMIT 1
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
             u.firebase_uid,
             s.branch_id,
             s.id as staff_id
-          FROM "user" u
+          FROM app_user u
           INNER JOIN staff s ON u.user_id = s.user_id
           WHERE u.email = ${userEmail}
           LIMIT 1
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
             u.firebase_uid,
             s.branch_id,
             s.id as staff_id
-          FROM "user" u
+          FROM app_user u
           INNER JOIN staff s ON u.user_id = s.user_id
           WHERE u.firebase_uid = ${userId}
           LIMIT 1
@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
               u.firebase_uid,
               s.branch_id,
               s.id as staff_id
-            FROM "user" u
+            FROM app_user u
             INNER JOIN staff s ON u.user_id = s.user_id
             WHERE u.user_id = ${parseInt(userId)}
             LIMIT 1
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
             u.firebase_uid,
             s.branch_id,
             s.id as staff_id
-          FROM "user" u
+          FROM app_user u
           INNER JOIN staff s ON u.user_id = s.user_id
           WHERE u.email = ${userEmail}
           LIMIT 1

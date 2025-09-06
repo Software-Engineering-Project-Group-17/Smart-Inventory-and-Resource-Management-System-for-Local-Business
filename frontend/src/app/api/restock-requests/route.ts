@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
           s.id as staff_id,
           b.name as branch_name,
           b.location as branch_location
-        FROM "user" u
+        FROM app_user u
         INNER JOIN staff s ON u.user_id = s.user_id
         INNER JOIN branches b ON s.branch_id = b.id
         WHERE u.firebase_uid = ${userId}
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
             s.id as staff_id,
             b.name as branch_name,
             b.location as branch_location
-          FROM "user" u
+          FROM app_user u
           INNER JOIN staff s ON u.user_id = s.user_id
           INNER JOIN branches b ON s.branch_id = b.id
           WHERE u.user_id = ${parseInt(userId)}
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
           rr.branch_id, rr.created_by, u.name as created_by_name, b.name as branch_name,
           COUNT(rri.id) as item_count, COALESCE(SUM(rri.requested_quantity), 0) as total_quantity_requested
         FROM restock_request rr
-        LEFT JOIN "user" u ON rr.created_by = u.user_id
+        LEFT JOIN app_user u ON rr.created_by = u.user_id
         LEFT JOIN branches b ON rr.branch_id = b.id
         LEFT JOIN restock_request_item rri ON rr.id = rri.restock_request_id
         WHERE rr.branch_id = ${branchId} AND rr.status = ${status} AND rr.priority = ${priority} 
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
           rr.branch_id, rr.created_by, u.name as created_by_name, b.name as branch_name,
           COUNT(rri.id) as item_count, COALESCE(SUM(rri.requested_quantity), 0) as total_quantity_requested
         FROM restock_request rr
-        LEFT JOIN "user" u ON rr.created_by = u.user_id
+        LEFT JOIN app_user u ON rr.created_by = u.user_id
         LEFT JOIN branches b ON rr.branch_id = b.id
         LEFT JOIN restock_request_item rri ON rr.id = rri.restock_request_id
         WHERE rr.branch_id = ${branchId} AND rr.status = ${status} AND rr.priority = ${priority}
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
           rr.branch_id, rr.created_by, u.name as created_by_name, b.name as branch_name,
           COUNT(rri.id) as item_count, COALESCE(SUM(rri.requested_quantity), 0) as total_quantity_requested
         FROM restock_request rr
-        LEFT JOIN "user" u ON rr.created_by = u.user_id
+        LEFT JOIN app_user u ON rr.created_by = u.user_id
         LEFT JOIN branches b ON rr.branch_id = b.id
         LEFT JOIN restock_request_item rri ON rr.id = rri.restock_request_id
         WHERE rr.branch_id = ${branchId} AND rr.status = ${status} 
@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
           rr.branch_id, rr.created_by, u.name as created_by_name, b.name as branch_name,
           COUNT(rri.id) as item_count, COALESCE(SUM(rri.requested_quantity), 0) as total_quantity_requested
         FROM restock_request rr
-        LEFT JOIN "user" u ON rr.created_by = u.user_id
+        LEFT JOIN app_user u ON rr.created_by = u.user_id
         LEFT JOIN branches b ON rr.branch_id = b.id
         LEFT JOIN restock_request_item rri ON rr.id = rri.restock_request_id
         WHERE rr.branch_id = ${branchId} AND rr.priority = ${priority} 
@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
           rr.branch_id, rr.created_by, u.name as created_by_name, b.name as branch_name,
           COUNT(rri.id) as item_count, COALESCE(SUM(rri.requested_quantity), 0) as total_quantity_requested
         FROM restock_request rr
-        LEFT JOIN "user" u ON rr.created_by = u.user_id
+        LEFT JOIN app_user u ON rr.created_by = u.user_id
         LEFT JOIN branches b ON rr.branch_id = b.id
         LEFT JOIN restock_request_item rri ON rr.id = rri.restock_request_id
         WHERE rr.branch_id = ${branchId} AND rr.status = ${status}
@@ -209,7 +209,7 @@ export async function GET(request: NextRequest) {
           rr.branch_id, rr.created_by, u.name as created_by_name, b.name as branch_name,
           COUNT(rri.id) as item_count, COALESCE(SUM(rri.requested_quantity), 0) as total_quantity_requested
         FROM restock_request rr
-        LEFT JOIN "user" u ON rr.created_by = u.user_id
+        LEFT JOIN app_user u ON rr.created_by = u.user_id
         LEFT JOIN branches b ON rr.branch_id = b.id
         LEFT JOIN restock_request_item rri ON rr.id = rri.restock_request_id
         WHERE rr.branch_id = ${branchId} AND rr.priority = ${priority}
@@ -232,7 +232,7 @@ export async function GET(request: NextRequest) {
           rr.branch_id, rr.created_by, u.name as created_by_name, b.name as branch_name,
           COUNT(rri.id) as item_count, COALESCE(SUM(rri.requested_quantity), 0) as total_quantity_requested
         FROM restock_request rr
-        LEFT JOIN "user" u ON rr.created_by = u.user_id
+        LEFT JOIN app_user u ON rr.created_by = u.user_id
         LEFT JOIN branches b ON rr.branch_id = b.id
         LEFT JOIN restock_request_item rri ON rr.id = rri.restock_request_id
         WHERE rr.branch_id = ${branchId} AND (rr.title ILIKE ${`%${search}%`} OR rr.description ILIKE ${`%${search}%`})
@@ -255,7 +255,7 @@ export async function GET(request: NextRequest) {
           rr.branch_id, rr.created_by, u.name as created_by_name, b.name as branch_name,
           COUNT(rri.id) as item_count, COALESCE(SUM(rri.requested_quantity), 0) as total_quantity_requested
         FROM restock_request rr
-        LEFT JOIN "user" u ON rr.created_by = u.user_id
+        LEFT JOIN app_user u ON rr.created_by = u.user_id
         LEFT JOIN branches b ON rr.branch_id = b.id
         LEFT JOIN restock_request_item rri ON rr.id = rri.restock_request_id
         WHERE rr.branch_id = ${branchId}
@@ -338,7 +338,7 @@ export async function POST(request: NextRequest) {
           u.firebase_uid,
           s.branch_id,
           s.id as staff_id
-        FROM "user" u
+        FROM app_user u
         INNER JOIN staff s ON u.user_id = s.user_id
         WHERE u.firebase_uid = ${userId}
         LIMIT 1
@@ -353,7 +353,7 @@ export async function POST(request: NextRequest) {
             u.firebase_uid,
             s.branch_id,
             s.id as staff_id
-          FROM "user" u
+          FROM app_user u
           INNER JOIN staff s ON u.user_id = s.user_id
           WHERE u.user_id = ${parseInt(userId)}
           LIMIT 1
