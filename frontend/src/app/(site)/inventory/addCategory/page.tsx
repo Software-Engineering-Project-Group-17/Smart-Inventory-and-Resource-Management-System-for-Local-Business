@@ -184,13 +184,12 @@ export default function AddCategoryPage() {
   };
 
   const deleteCategory = async (categoryId: number, categoryName: string) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete the category "${categoryName}"?`
-      )
-    ) {
-      return;
-    }
+    // Store the category data for potential undo
+    const categoryToDelete = categories.find((cat) => cat.id === categoryId);
+
+    // Optimistically remove from UI
+    const originalCategories = [...categories];
+    setCategories((prev) => prev.filter((cat) => cat.id !== categoryId));
 
     try {
       const response = await fetch(`/api/categories?id=${categoryId}`, {
@@ -200,12 +199,53 @@ export default function AddCategoryPage() {
       const result = await response.json();
 
       if (response.ok) {
-        toastUtils.success(
-          "Category Deleted",
-          `"${categoryName}" has been deleted successfully`
+        // Show success toast with undo option
+        toastUtils.actionWithUndo(
+          `Category "${categoryName}" deleted`,
+          "Undo",
+          async () => {
+            // Undo action: restore the category
+            try {
+              if (categoryToDelete) {
+                const restoreFormData = new FormData();
+                restoreFormData.append(
+                  "categoryName",
+                  categoryToDelete.category_name
+                );
+
+                // If the category had an image, we'll need to handle this differently
+                // For now, we'll recreate without the image as we can't restore S3 files
+                const restoreResponse = await fetch("/api/categories", {
+                  method: "POST",
+                  body: restoreFormData,
+                });
+
+                if (restoreResponse.ok) {
+                  await loadCategories();
+                  toastUtils.success(
+                    "Category Restored",
+                    `"${categoryName}" has been restored`
+                  );
+                } else {
+                  // If restore fails, reload to show current state
+                  await loadCategories();
+                  toastUtils.error(
+                    "Restore Failed",
+                    "Unable to restore category. Please recreate manually."
+                  );
+                }
+              }
+            } catch (error) {
+              console.error("Error restoring category:", error);
+              await loadCategories();
+              toastUtils.networkError();
+            }
+          }
         );
-        await loadCategories(); // Reload categories
       } else {
+        // Restore original state if delete failed
+        setCategories(originalCategories);
+
         if (response.status === 409) {
           toastUtils.warning("Cannot Delete", result.error);
         } else {
@@ -217,6 +257,8 @@ export default function AddCategoryPage() {
       }
     } catch (error) {
       console.error("Error deleting category:", error);
+      // Restore original state on error
+      setCategories(originalCategories);
       toastUtils.networkError();
     }
   };
@@ -394,10 +436,6 @@ export default function AddCategoryPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900 truncate">
                         {category.category_name}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Created{" "}
-                        {new Date(category.created_at).toLocaleDateString()}
                       </p>
                     </div>
 
