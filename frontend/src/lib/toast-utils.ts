@@ -6,7 +6,7 @@ export const toastUtils = {
     const roleDisplayName = role.charAt(0).toUpperCase() + role.slice(1);
     const message = userName ? `Welcome back, ${userName}!` : `Welcome back!`;
     const description = `Successfully logged in as ${roleDisplayName}. Redirecting to your dashboard...`;
-    
+
     toast.success(message, {
       description,
       duration: 4000,
@@ -16,7 +16,8 @@ export const toastUtils = {
   // Authentication Errors
   loginError: (errorCode: string, customMessage?: string) => {
     let message = "Login Failed";
-    let description = customMessage || "Please check your credentials and try again.";
+    let description =
+      customMessage || "Please check your credentials and try again.";
 
     switch (errorCode) {
       case "auth/user-not-found":
@@ -32,10 +33,12 @@ export const toastUtils = {
         description = "Too many failed attempts. Please try again later";
         break;
       case "auth/user-disabled":
-        description = "This account has been disabled. Contact support for assistance";
+        description =
+          "This account has been disabled. Contact support for assistance";
         break;
       case "auth/invalid-credential":
-        description = "Invalid login credentials. Please check your email and password";
+        description =
+          "Invalid login credentials. Please check your email and password";
         break;
     }
 
@@ -57,7 +60,8 @@ export const toastUtils = {
   // Registration Errors
   registrationError: (errorCode: string, customMessage?: string) => {
     let message = "Registration Failed";
-    let description = customMessage || "Unable to create account. Please try again.";
+    let description =
+      customMessage || "Unable to create account. Please try again.";
 
     switch (errorCode) {
       case "auth/email-already-in-use":
@@ -87,10 +91,11 @@ export const toastUtils = {
 
   // Data Operations
   dataLoaded: (dataType: string, count?: number) => {
-    const description = count !== undefined 
-      ? `Loaded ${count} ${dataType.toLowerCase()}${count !== 1 ? 's' : ''}`
-      : `${dataType} data loaded successfully`;
-    
+    const description =
+      count !== undefined
+        ? `Loaded ${count} ${dataType.toLowerCase()}${count !== 1 ? "s" : ""}`
+        : `${dataType} data loaded successfully`;
+
     toast.success("Data Loaded", {
       description,
       duration: 2000,
@@ -107,10 +112,10 @@ export const toastUtils = {
   // Form Submissions
   formSuccess: (action: string, itemName?: string) => {
     const message = `${action} Successful`;
-    const description = itemName 
+    const description = itemName
       ? `${itemName} has been ${action.toLowerCase()} successfully`
       : `Operation completed successfully`;
-    
+
     toast.success(message, {
       description,
       duration: 4000,
@@ -143,7 +148,8 @@ export const toastUtils = {
   // Network Errors
   networkError: () => {
     toast.error("Connection Error", {
-      description: "Unable to connect to the server. Please check your internet connection.",
+      description:
+        "Unable to connect to the server. Please check your internet connection.",
       duration: 6000,
     });
   },
@@ -182,10 +188,10 @@ export const toastUtils = {
 
   // Inventory Specific
   inventoryUpdate: (action: string, itemName: string, quantity?: number) => {
-    const description = quantity 
+    const description = quantity
       ? `${itemName}: ${quantity} units ${action.toLowerCase()}`
       : `${itemName} ${action.toLowerCase()} successfully`;
-    
+
     toast.success(`Inventory ${action}`, {
       description,
       duration: 3000,
@@ -195,7 +201,9 @@ export const toastUtils = {
   // Restock Requests
   restockRequestSubmitted: (itemCount: number) => {
     toast.success("Restock Request Submitted", {
-      description: `Request for ${itemCount} item${itemCount > 1 ? 's' : ''} has been sent to suppliers`,
+      description: `Request for ${itemCount} item${
+        itemCount > 1 ? "s" : ""
+      } has been sent to suppliers`,
       duration: 4000,
     });
   },
@@ -220,13 +228,29 @@ export const toastUtils = {
   // System Messages
   systemMaintenance: () => {
     toast.warning("System Maintenance", {
-      description: "Some features may be temporarily unavailable during maintenance",
+      description:
+        "Some features may be temporarily unavailable during maintenance",
       duration: 8000,
     });
   },
 
+  // Action with undo functionality
+  actionWithUndo: (
+    message: string,
+    undoLabel: string = "Undo",
+    onUndo: () => void
+  ) => {
+    toast.success(message, {
+      action: {
+        label: undoLabel,
+        onClick: onUndo,
+      },
+      duration: 5000,
+    });
+  },
+
   // Promise toast for automatic loading/success/error handling
-  promise: <T,>(
+  promise: <T>(
     promise: Promise<T>,
     messages: {
       loading: string;
