@@ -1,16 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { neon } from '@neondatabase/serverless';
+import { NextRequest, NextResponse } from "next/server";
+import { neon } from "@neondatabase/serverless";
 
 const sql = neon(process.env.DATABASE_URL!);
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const userEmail = searchParams.get('userEmail');
+    const userEmail = searchParams.get("userEmail");
 
     if (!userEmail) {
       return NextResponse.json(
-        { error: 'User email is required' },
+        { error: "User email is required" },
         { status: 400 }
       );
     }
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     if (staffResult.length === 0) {
       return NextResponse.json(
-        { error: 'Staff member not found' },
+        { error: "Staff member not found" },
         { status: 404 }
       );
     }
@@ -65,13 +65,12 @@ export async function GET(request: NextRequest) {
       success: true,
       notifications,
       unreadCount: parseInt(unreadCount[0].count),
-      branchId
+      branchId,
     });
-
   } catch (error) {
-    console.error('Error fetching notifications:', error);
+    console.error("Error fetching notifications:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch notifications' },
+      { error: "Failed to fetch notifications" },
       { status: 500 }
     );
   }
@@ -84,7 +83,7 @@ export async function PUT(request: NextRequest) {
 
     if (!notificationIds || !Array.isArray(notificationIds) || !userEmail) {
       return NextResponse.json(
-        { error: 'Notification IDs array and user email are required' },
+        { error: "Notification IDs array and user email are required" },
         { status: 400 }
       );
     }
@@ -100,7 +99,7 @@ export async function PUT(request: NextRequest) {
 
     if (staffResult.length === 0) {
       return NextResponse.json(
-        { error: 'Staff member not found' },
+        { error: "Staff member not found" },
         { status: 404 }
       );
     }
@@ -117,13 +116,12 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Notifications marked as read'
+      message: "Notifications marked as read",
     });
-
   } catch (error) {
-    console.error('Error updating notifications:', error);
+    console.error("Error updating notifications:", error);
     return NextResponse.json(
-      { error: 'Failed to update notifications' },
+      { error: "Failed to update notifications" },
       { status: 500 }
     );
   }
@@ -132,18 +130,21 @@ export async function PUT(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      branchId, 
-      title, 
-      message, 
-      notificationType, 
-      inventoryId, 
-      metadata 
+    const {
+      branchId,
+      title,
+      message,
+      notificationType,
+      inventoryId,
+      metadata,
     } = body;
 
     if (!branchId || !title || !message || !notificationType) {
       return NextResponse.json(
-        { error: 'Branch ID, title, message, and notification type are required' },
+        {
+          error:
+            "Branch ID, title, message, and notification type are required",
+        },
         { status: 400 }
       );
     }
@@ -178,13 +179,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       notification: result[0],
-      message: 'Notification created successfully'
+      message: "Notification created successfully",
     });
-
   } catch (error) {
-    console.error('Error creating notification:', error);
+    console.error("Error creating notification:", error);
     return NextResponse.json(
-      { error: 'Failed to create notification' },
+      { error: "Failed to create notification" },
       { status: 500 }
     );
   }

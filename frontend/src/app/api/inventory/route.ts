@@ -254,10 +254,15 @@ export async function POST(request: NextRequest) {
 
     // Check for low stock notification on newly created item
     try {
-      await NotificationService.checkAndCreateLowStockNotification(newItem.inventory_id);
+      await NotificationService.checkAndCreateLowStockNotification(
+        newItem.inventory_id
+      );
     } catch (notificationError) {
       // Don't fail the creation if notifications fail
-      console.error("Error creating low stock notification:", notificationError);
+      console.error(
+        "Error creating low stock notification:",
+        notificationError
+      );
     }
 
     // Get category name for response
@@ -481,7 +486,7 @@ export async function PUT(request: NextRequest) {
       FROM inventory_item 
       WHERE inventory_id = ${inventoryId}
     `;
-    
+
     const previousQuantity = currentItem[0]?.quantity || 0;
     const wasRestocked = quantity > previousQuantity;
 
@@ -507,10 +512,10 @@ export async function PUT(request: NextRequest) {
       await NotificationService.checkAndCreateLowStockNotification(inventoryId);
 
       // Create restock completion notification if quantity increased significantly
-      if (wasRestocked && (quantity - previousQuantity) >= 5) {
+      if (wasRestocked && quantity - previousQuantity >= 5) {
         await NotificationService.createRestockCompletionNotification(
-          inventoryId, 
-          previousQuantity, 
+          inventoryId,
+          previousQuantity,
           quantity
         );
       }
