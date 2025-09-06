@@ -286,7 +286,9 @@ const Navbar: React.FC = () => {
             {/* Right side actions */}
             <div className="hidden md:flex items-center space-x-4">
               {/* Notification Component */}
-              <NotificationComponent userEmail={userProfile?.email || ""} />
+              {userProfile?.role.toUpperCase() !== "OWNER" && (
+                <NotificationComponent userEmail={userProfile?.email || ""} />
+              )}
 
               {/* Logout Button */}
               <button
@@ -349,11 +351,7 @@ const Navbar: React.FC = () => {
       >
         <div className="p-4">
           <div className="flex justify-between items-center mb-6">
-            <img
-              src="/api/placeholder/100/32"
-              alt="Company Logo"
-              className="h-6 w-auto"
-            />
+            <img src="/logo.png" alt="Company Logo" className="h-12 w-auto" />
             <button
               onClick={toggleMobileMenu}
               className="p-2 rounded-md text-gray-600"
@@ -386,10 +384,12 @@ const Navbar: React.FC = () => {
           </nav>
           <div className="mt-6 pt-6 border-t border-gray-200">
             {/* Notification Component for Mobile */}
-            <NotificationComponent
-              userEmail={userProfile?.email || ""}
-              onMobileMenuClose={() => setIsMobileMenuOpen(false)}
-            />
+            {userProfile?.role.toUpperCase() !== "OWNER" && (
+              <NotificationComponent
+                userEmail={userProfile?.email || ""}
+                onMobileMenuClose={() => setIsMobileMenuOpen(false)}
+              />
+            )}
 
             {/* Logout Button Mobile */}
             <button
