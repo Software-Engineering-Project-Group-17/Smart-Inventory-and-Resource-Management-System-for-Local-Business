@@ -73,7 +73,7 @@ const InventoryPage = () => {
               </div>
               <div className="flex flow-raw gap-2">
                 <Link
-                  href="/"
+                  href="/inventory/addCategory"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#3674B5] hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                 >
                   <RefreshCw
