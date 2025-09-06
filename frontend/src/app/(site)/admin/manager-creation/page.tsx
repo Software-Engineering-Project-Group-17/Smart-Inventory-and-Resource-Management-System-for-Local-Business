@@ -1,16 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Input } from "@/components/ui/input";
+import { toastUtils } from "@/lib/toast-utils";
+import { showRoleAccessNotification } from "@/lib/auth";
 
 export default function ManagerCreationPage() {
   const { user, isLoading } = useCurrentUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
+
+  // Show role access notification on page load
+  useEffect(() => {
+    showRoleAccessNotification("Manager Creation");
+  }, []);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -29,11 +32,6 @@ export default function ManagerCreationPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const showMessage = (type: "success" | "error", text: string) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage(null), 5000);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -46,13 +44,19 @@ export default function ManagerCreationPage() {
         !formData.email ||
         !formData.password
       ) {
-        showMessage("error", "Please fill in all required fields.");
+        toastUtils.validationError(
+          "Missing Information",
+          "Please fill in all required fields."
+        );
         return;
       }
 
       // Validate password strength
       if (formData.password.length < 6) {
-        showMessage("error", "Password must be at least 6 characters long.");
+        toastUtils.validationError(
+          "Invalid Password",
+          "Password must be at least 6 characters long."
+        );
         return;
       }
 
@@ -76,7 +80,7 @@ export default function ManagerCreationPage() {
       });
 
       if (response.ok) {
-        showMessage("success", "Manager created successfully!");
+        toastUtils.formSuccess("Manager created successfully!");
 
         // Reset form
         setFormData({
@@ -91,11 +95,17 @@ export default function ManagerCreationPage() {
       } else {
         const errorData = await response.text();
         console.error("Failed to create manager:", errorData);
-        showMessage("error", "Failed to create manager. Please try again.");
+        toastUtils.error(
+          "Creation Failed",
+          "Failed to create manager. Please try again."
+        );
       }
     } catch (error) {
       console.error("Error creating manager:", error);
-      showMessage("error", "An unexpected error occurred. Please try again.");
+      toastUtils.error(
+        "Unexpected Error",
+        "An unexpected error occurred. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -139,19 +149,6 @@ export default function ManagerCreationPage() {
             <p className="text-sm text-gray-600 mb-6">
               Create a new manager account. Only owners can access this page.
             </p>
-
-            {message && (
-              <div
-                className={`mb-4 p-4 rounded-md ${
-                  message.type === "success"
-                    ? "bg-green-50 border border-green-200 text-green-800"
-                    : "bg-red-50 border border-red-200 text-red-800"
-                }`}
-              >
-                {message.text}
-              </div>
-            )}
-
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

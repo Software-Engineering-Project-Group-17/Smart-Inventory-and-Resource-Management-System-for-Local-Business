@@ -6,6 +6,7 @@ import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { getDefaultRedirectPath } from "@/lib/auth";
+import { toastUtils } from "@/lib/toast-utils";
 import Input from "@/components/admin/Input";
 import Image from "next/image";
 import Link from "next/link";
@@ -22,20 +23,11 @@ export default function AdminLoginPage() {
     setIsGoogleLoading(true);
 
     try {
-      toast({
-        title: "Coming Soon",
-        description: "Google sign-in will be available soon!",
-        variant: "default",
-      });
-
+      toastUtils.info("Coming Soon", "Google sign-in will be available soon!");
       console.log("Google sign-in initiated");
     } catch (error) {
       console.error("Google sign-in error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to sign in with Google. Please try again.",
-        variant: "destructive",
-      });
+      toastUtils.error("Google Sign-in Failed", "Failed to sign in with Google. Please try again.");
     } finally {
       setIsGoogleLoading(false);
     }
@@ -45,11 +37,7 @@ export default function AdminLoginPage() {
     e.preventDefault();
 
     if (!email || !password) {
-      toast({
-        title: "Error",
-        description: "All fields are required.",
-        variant: "destructive",
-      });
+      toastUtils.validationError("Missing Information", "All fields are required.");
       return;
     }
     setIsLoading(true);
@@ -153,11 +141,10 @@ export default function AdminLoginPage() {
       localStorage.setItem("userProfile", JSON.stringify(userData));
       localStorage.setItem("uid", userUid);
 
-      toast({
-        title: "Success",
-        description: `Welcome back, ${userData?.firstName || email}!`,
-        variant: "default",
-      });
+      // Show success toast with role information
+      const userName = userData?.firstName || email.split("@")[0];
+      const userRole = userData?.role || "User";
+      toastUtils.loginSuccess(userRole, userName);
 
       // Redirect based on user role
       if (userData && userData.role) {
@@ -169,14 +156,18 @@ export default function AdminLoginPage() {
       }
     } catch (error) {
       console.error("Login error:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to login. Please try again.",
-        variant: "destructive",
-      });
+      
+      // Handle different types of authentication errors
+      if (error instanceof Error) {
+        if (error.message.includes("auth/")) {
+          const errorCode = error.message.split("(")[1]?.split(")")[0] || "unknown";
+          toastUtils.loginError(errorCode);
+        } else {
+          toastUtils.error("Login Failed", error.message);
+        }
+      } else {
+        toastUtils.error("Login Failed", "An unexpected error occurred. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }

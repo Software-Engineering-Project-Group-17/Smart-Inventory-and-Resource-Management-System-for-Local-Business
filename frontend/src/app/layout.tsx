@@ -47,6 +47,7 @@ export default function RootLayout({
         className={` ${playwriteAuQld.variable} ${robotoMono.variable} ${heebo.variable} antialiased`}
       >
         {children}
+        <Toaster position="top-right" />
       </body>
     </html>
   );

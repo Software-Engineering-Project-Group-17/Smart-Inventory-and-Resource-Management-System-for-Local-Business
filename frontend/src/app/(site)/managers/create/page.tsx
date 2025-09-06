@@ -12,6 +12,8 @@ import { CreateManagerActions } from "@/components/managers/ManagerActions";
 import { ManagerInformation } from "@/components/managers/ManagerInformation";
 import { useCreateManager } from "@/components/managers/useCreateManager";
 import { MANAGER_CONSTANTS } from "@/components/managers/managerConstants";
+import { useEffect } from "react";
+import { showRoleAccessNotification } from "@/lib/auth";
 
 const CreateManagerPage = () => {
   const {
@@ -25,7 +27,7 @@ const CreateManagerPage = () => {
     showPassword,
     showConfirmPassword,
     currentUserEmail,
-    
+
     // Actions
     handleInputChange,
     handleSubmit,
@@ -34,6 +36,11 @@ const CreateManagerPage = () => {
     togglePassword,
     toggleConfirmPassword,
   } = useCreateManager();
+
+  // Show role access notification on page load
+  useEffect(() => {
+    showRoleAccessNotification("Manager Creation");
+  }, []);
 
   // Loading/Error state for invalid parameters
   if (!branchId || !branchName) {

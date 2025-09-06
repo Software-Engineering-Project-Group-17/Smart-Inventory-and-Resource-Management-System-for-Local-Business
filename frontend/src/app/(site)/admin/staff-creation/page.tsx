@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Input } from "@/components/ui/input";
+import { toastUtils } from "@/lib/toast-utils";
+import { showRoleAccessNotification } from "@/lib/auth";
+import { useEffect } from "react";
 
 const staffRoles = [
   { value: "branch", label: "Branch Staff" },
@@ -15,10 +18,11 @@ const staffRoles = [
 export default function StaffCreationPage() {
   const { user, isLoading } = useCurrentUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
+
+  // Show role access notification on page load
+  useEffect(() => {
+    showRoleAccessNotification("Staff Creation");
+  }, []);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -38,11 +42,6 @@ export default function StaffCreationPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const showMessage = (type: "success" | "error", text: string) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage(null), 5000);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -56,13 +55,19 @@ export default function StaffCreationPage() {
         !formData.password ||
         !formData.role
       ) {
-        showMessage("error", "Please fill in all required fields.");
+        toastUtils.validationError(
+          "Missing Information",
+          "Please fill in all required fields."
+        );
         return;
       }
 
       // Validate password strength
       if (formData.password.length < 6) {
-        showMessage("error", "Password must be at least 6 characters long.");
+        toastUtils.validationError(
+          "Invalid Password",
+          "Password must be at least 6 characters long."
+        );
         return;
       }
 
@@ -86,7 +91,7 @@ export default function StaffCreationPage() {
       });
 
       if (response.ok) {
-        showMessage("success", "Staff member created successfully!");
+        toastUtils.formSuccess("Staff member created successfully!");
 
         // Reset form
         setFormData({
@@ -102,14 +107,17 @@ export default function StaffCreationPage() {
       } else {
         const errorData = await response.text();
         console.error("Failed to create staff:", errorData);
-        showMessage(
-          "error",
+        toastUtils.error(
+          "Creation Failed",
           "Failed to create staff member. Please try again."
         );
       }
     } catch (error) {
       console.error("Error creating staff:", error);
-      showMessage("error", "An unexpected error occurred. Please try again.");
+      toastUtils.error(
+        "Unexpected Error",
+        "An unexpected error occurred. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -154,18 +162,6 @@ export default function StaffCreationPage() {
               Create a new staff member account. Only managers and owners can
               access this page.
             </p>
-
-            {message && (
-              <div
-                className={`mb-4 p-4 rounded-md ${
-                  message.type === "success"
-                    ? "bg-green-50 border border-green-200 text-green-800"
-                    : "bg-red-50 border border-red-200 text-red-800"
-                }`}
-              >
-                {message.text}
-              </div>
-            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

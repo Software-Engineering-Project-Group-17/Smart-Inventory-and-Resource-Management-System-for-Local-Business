@@ -1,6 +1,7 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import { Check, X } from "lucide-react";
+import { showRoleAccessNotification } from "@/lib/auth";
 import { ResourceHeader } from "@/components/resources/ResourceHeader";
 import { ResourceSummaryCards } from "@/components/resources/ResourceSummaryCards";
 import { ResourceTabs } from "@/components/resources/ResourceTabs";
@@ -44,6 +45,11 @@ const ResourceTrackingPage = () => {
     openAddResourceForm,
     closeAddResourceForm,
   } = useResourceManagement();
+
+  // Show role access notification on page load
+  useEffect(() => {
+    showRoleAccessNotification("Resource Management");
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
