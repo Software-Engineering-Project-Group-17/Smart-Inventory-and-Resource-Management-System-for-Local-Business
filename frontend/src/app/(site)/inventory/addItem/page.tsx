@@ -470,7 +470,7 @@ export default function AddItemPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                className="px-6 py-2 bg-[#3674B5] text-white rounded-lg hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
               >
                 {isSubmitting ? (
                   <>
@@ -490,7 +490,7 @@ export default function AddItemPage() {
           <h3 className="text-sm font-medium text-blue-800 mb-2">
             Tips for adding inventory items:
           </h3>
-          <ul className="text-sm text-blue-700 space-y-1">
+          <ul className="text-sm text-[#3674B5] space-y-1">
             <li>• Use clear, descriptive names for easy identification</li>
             <li>• Set appropriate low stock thresholds to avoid stockouts</li>
             <li>• Upload high-quality images to help with item recognition</li>

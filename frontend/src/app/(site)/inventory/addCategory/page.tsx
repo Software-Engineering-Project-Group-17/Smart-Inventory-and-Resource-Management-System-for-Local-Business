@@ -312,7 +312,7 @@ export default function AddCategoryPage() {
                     handleInputChange("categoryName", e.target.value)
                   }
                   placeholder="Enter category name (e.g., Electronics, Clothing)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                   disabled={isSubmitting}
                   required
                 />
@@ -340,7 +340,7 @@ export default function AddCategoryPage() {
                     >
                       <Upload size={32} className="text-gray-400" />
                       <div className="text-sm text-gray-600">
-                        <span className="font-medium text-blue-600 hover:text-blue-500">
+                        <span className="font-medium text-[#3674B5] hover:text-blue-900">
                           Click to upload
                         </span>{" "}
                         or drag and drop
@@ -373,7 +373,7 @@ export default function AddCategoryPage() {
               <button
                 type="submit"
                 disabled={isSubmitting || !formData.categoryName.trim()}
-                className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                className="w-full flex items-center justify-center gap-2 bg-[#3674B5] hover:bg-blue-900 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-md transition-colors"
               >
                 {isSubmitting ? (
                   <>
