@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toastUtils } from "@/lib/toast-utils";
 import {
   Eye,
   EyeOff,
@@ -58,17 +59,23 @@ export default function RegisterPage() {
       !formData.supplier_name ||
       !formData.supplier_email
     ) {
-      setError("Please fill in all required fields");
+      toastUtils.warning(
+        "Missing information",
+        "Please fill in all required fields"
+      );
       return false;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      toastUtils.error("Password mismatch", "Passwords do not match");
       return false;
     }
 
     if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters long");
+      toastUtils.warning(
+        "Weak password",
+        "Password must be at least 6 characters long"
+      );
       return false;
     }
 
@@ -77,7 +84,7 @@ export default function RegisterPage() {
       !emailRegex.test(formData.email) ||
       !emailRegex.test(formData.supplier_email)
     ) {
-      setError("Please enter valid email addresses");
+      toastUtils.error("Invalid email", "Please enter valid email addresses");
       return false;
     }
 
@@ -94,30 +101,50 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
 
+    // Create a promise for the registration process
+    const registrationPromise = signUp(formData.email, formData.password, {
+      supplier_name: formData.supplier_name,
+      supplier_email: formData.supplier_email,
+      supplier_tel: formData.supplier_tel,
+      address: formData.address,
+    });
+
+    // Use promise toast for automatic loading/success/error handling
+    toastUtils.promise(registrationPromise, {
+      loading: "Creating your supplier account...",
+      success: () => {
+        // Success actions
+        setSuccess(true);
+        setTimeout(() => {
+          router.push("/");
+        }, 2000);
+        return "Account created successfully! Welcome to the supplier portal.";
+      },
+      error: (err: any) => {
+        console.error("Registration error:", err);
+
+        let errorMessage = "Failed to create account. Please try again.";
+
+        if (err.code === "auth/email-already-in-use") {
+          errorMessage = "An account with this email already exists";
+        } else if (err.code === "auth/weak-password") {
+          errorMessage = "Password is too weak";
+        } else if (err.code === "auth/invalid-email") {
+          errorMessage = "Invalid email address";
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+
+        setError(errorMessage);
+        return errorMessage;
+      },
+    });
+
+    // Handle cleanup
     try {
-      await signUp(formData.email, formData.password, {
-        supplier_name: formData.supplier_name,
-        supplier_email: formData.supplier_email,
-        supplier_tel: formData.supplier_tel,
-        address: formData.address,
-      });
-
-      setSuccess(true);
-      setTimeout(() => {
-        router.push("/");
-      }, 2000);
-    } catch (err: any) {
-      console.error("Registration error:", err);
-
-      if (err.code === "auth/email-already-in-use") {
-        setError("An account with this email already exists");
-      } else if (err.code === "auth/weak-password") {
-        setError("Password is too weak");
-      } else if (err.code === "auth/invalid-email") {
-        setError("Invalid email address");
-      } else {
-        setError(err.message || "Failed to create account. Please try again.");
-      }
+      await registrationPromise;
+    } catch {
+      // Error is already handled by toast
     } finally {
       setLoading(false);
     }

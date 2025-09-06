@@ -24,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { toastUtils } from "@/lib/toast-utils";
 
 interface RequestItem {
   id: number;
@@ -115,7 +116,10 @@ export default function CreateOrderModal({
     e.preventDefault();
 
     if (!user) {
-      setError("You must be logged in to create an order");
+      toastUtils.error(
+        "Authentication required",
+        "You must be logged in to create an order"
+      );
       return;
     }
 
@@ -125,7 +129,8 @@ export default function CreateOrderModal({
     );
 
     if (invalidItems.length > 0) {
-      setError(
+      toastUtils.warning(
+        "Invalid items detected",
         "All items must have positive quantities and non-negative prices"
       );
       return;
@@ -134,7 +139,8 @@ export default function CreateOrderModal({
     setLoading(true);
     setError(null);
 
-    try {
+    // Create a promise for the order creation
+    const orderPromise = (async () => {
       const token = await user.getIdToken();
 
       const response = await fetch("/api/supplier/orders", {
@@ -157,27 +163,48 @@ export default function CreateOrderModal({
         throw new Error(data.error || "Failed to create order");
       }
 
-      // Success
-      onOrderCreated();
-      onClose();
+      return data;
+    })();
 
-      // Reset form
-      setEstimatedDeliveryDate("");
-      setSupplierNotes("");
-      setOrderItems(
-        items.map((item) => ({
-          restock_request_item_id: item.id,
-          inventory_id: item.inventory_id,
-          supplier_item_name: item.inventory_name,
-          offered_quantity: item.requested_quantity,
-          unit_price: item.estimated_unit_price,
-          supplier_item_description: "",
-          availability_status: "available",
-          lead_time_days: 0,
-        }))
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create order");
+    // Use promise toast for automatic loading/success/error handling
+    toastUtils.promise(orderPromise, {
+      loading: "Creating your order...",
+      success: (data) => {
+        // Success actions
+        onOrderCreated();
+        onClose();
+
+        // Reset form
+        setEstimatedDeliveryDate("");
+        setSupplierNotes("");
+        setOrderItems(
+          items.map((item) => ({
+            restock_request_item_id: item.id,
+            inventory_id: item.inventory_id,
+            supplier_item_name: item.inventory_name,
+            offered_quantity: item.requested_quantity,
+            unit_price: item.estimated_unit_price,
+            supplier_item_description: "",
+            availability_status: "available",
+            lead_time_days: 0,
+          }))
+        );
+
+        return `Order #${data.order_id || data.id} created successfully!`;
+      },
+      error: (error) => {
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to create order";
+        setError(errorMessage);
+        return "Failed to create order. Please check your details and try again.";
+      },
+    });
+
+    // Handle cleanup separately
+    try {
+      await orderPromise;
+    } catch {
+      // Error is already handled by toast
     } finally {
       setLoading(false);
     }
