@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         c.loyalty_points,
         c.created_at
       FROM customer c
-      INNER JOIN "user" u ON c.user_id = u.user_id
+      INNER JOIN app_user u ON c.user_id = u.user_id
       WHERE u.firebase_uid = $1
     `;
 

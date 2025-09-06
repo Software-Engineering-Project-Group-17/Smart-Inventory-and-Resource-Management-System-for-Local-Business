@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
           b.name as branch_name,
           b.location as branch_location,
           r.role as role_name
-        FROM "user" u
+        FROM app_user u
         LEFT JOIN staff s ON u.user_id = s.user_id
         LEFT JOIN branches b ON s.branch_id = b.id
         LEFT JOIN roles r ON u.role_id = r.id
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
           b.name as branch_name,
           b.location as branch_location,
           r.role as role_name
-        FROM "user" u
+        FROM app_user u
         LEFT JOIN staff s ON u.user_id = s.user_id
         LEFT JOIN branches b ON s.branch_id = b.id
         LEFT JOIN roles r ON u.role_id = r.id

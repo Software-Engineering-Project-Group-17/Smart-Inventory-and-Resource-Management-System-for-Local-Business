@@ -105,7 +105,7 @@ export async function GET(
           
         FROM restock_request rr
         LEFT JOIN branches b ON rr.branch_id = b.id
-        LEFT JOIN "user" u ON rr.created_by = u.user_id
+        LEFT JOIN app_user u ON rr.created_by = u.user_id
         WHERE rr.id = $1
       `;
 

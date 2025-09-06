@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS restock_request (
     notes TEXT,
     
     CONSTRAINT restock_request_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
-    CONSTRAINT restock_request_created_by_fkey FOREIGN KEY (created_by) REFERENCES "user"(user_id) ON DELETE CASCADE,
+    CONSTRAINT restock_request_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(user_id) ON DELETE CASCADE,
     CONSTRAINT restock_request_total_estimated_cost_check CHECK (total_estimated_cost >= 0::numeric)
 );
 
@@ -234,7 +234,7 @@ SELECT
     
 FROM restock_request rr
 LEFT JOIN branches b ON rr.branch_id = b.id
-LEFT JOIN "user" u ON rr.created_by = u.user_id
+LEFT JOIN app_user u ON rr.created_by = u.user_id
 LEFT JOIN restock_request_item rri ON rr.id = rri.restock_request_id
 LEFT JOIN supplier_order so ON rr.id = so.restock_request_id
 GROUP BY rr.id, rr.title, rr.status, rr.priority, rr.created_at, rr.required_by_date, rr.total_estimated_cost, b.name, b.location, u.name, u.email;

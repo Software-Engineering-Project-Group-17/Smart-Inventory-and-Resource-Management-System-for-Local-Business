@@ -9,7 +9,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "\"user\"") // Quoted because user is a reserved keyword in PostgreSQL
+@Table(name = "app_user") // Updated table name from "user" to app_user
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

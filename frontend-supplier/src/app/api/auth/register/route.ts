@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
       // Check if user already exists
       const existingUser = await client.query(
-        'SELECT user_id FROM "user" WHERE firebase_uid = $1',
+        'SELECT user_id FROM app_user WHERE firebase_uid = $1',
         [firebase_uid]
       );
 
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
       // Create user
       const userResult = await client.query(
-        `INSERT INTO "user" (firebase_uid, email, name, role_id, account_status, is_active)
+        `INSERT INTO app_user (firebase_uid, email, name, role_id, account_status, is_active)
          VALUES ($1, $2, $3, $4, 'active', true)
          RETURNING user_id`,
         [firebase_uid, email, name, supplierRoleId]

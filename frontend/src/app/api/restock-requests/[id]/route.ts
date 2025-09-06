@@ -49,7 +49,7 @@ export async function GET(
         SUM(rri.requested_quantity) as total_quantity_requested
         
       FROM restock_request rr
-      LEFT JOIN "user" u ON rr.created_by = u.user_id
+      LEFT JOIN app_user u ON rr.created_by = u.user_id
       LEFT JOIN branches b ON rr.branch_id = b.id
       LEFT JOIN restock_request_item rri ON rr.id = rri.restock_request_id
       WHERE rr.id = ${requestId}

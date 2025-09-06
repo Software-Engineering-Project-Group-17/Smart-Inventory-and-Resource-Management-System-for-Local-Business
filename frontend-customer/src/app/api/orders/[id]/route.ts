@@ -54,7 +54,7 @@ export async function PATCH(
                c.id as customer_id, c.customer_name, c.customer_email
         FROM customer_order co
         INNER JOIN customer c ON co.customer_id = c.id
-        INNER JOIN "user" u ON c.user_id = u.user_id
+        INNER JOIN app_user u ON c.user_id = u.user_id
         WHERE co.id = $1 AND u.firebase_uid = $2
       `;
       const orderResult = await client.query(orderOwnershipQuery, [
