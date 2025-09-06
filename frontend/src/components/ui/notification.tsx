@@ -156,7 +156,7 @@ const NotificationComponent: React.FC<NotificationProps> = ({
             </div>
           </div>
           <div className="p-3 border-t border-gray-100">
-            <button
+            {/* <button
               onClick={() => {
                 setShowAlertModal(false);
                 // Could navigate to a full notifications page here
@@ -165,7 +165,7 @@ const NotificationComponent: React.FC<NotificationProps> = ({
               style={{ color: "#3674B5", backgroundColor: "#3674B510" }}
             >
               View All Notifications
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
@@ -346,7 +346,7 @@ const NotificationComponent: React.FC<NotificationProps> = ({
 
             {/* Footer */}
             <div className="p-4 border-t border-gray-100 bg-white">
-              <button
+              {/* <button
                 onClick={() => {
                   setShowMobilePanel(false);
                   if (onMobileMenuClose) {
@@ -358,7 +358,7 @@ const NotificationComponent: React.FC<NotificationProps> = ({
                 style={{ color: "#3674B5", backgroundColor: "#3674B510" }}
               >
                 View All Notifications
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
