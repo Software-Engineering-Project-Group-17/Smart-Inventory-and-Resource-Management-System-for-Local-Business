@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import AWS from "aws-sdk";
 import { neon } from "@neondatabase/serverless";
+import { NotificationService } from "@/lib/notification-service";
 
 // Configure AWS S3
 const s3 = new AWS.S3({
@@ -251,6 +252,14 @@ export async function POST(request: NextRequest) {
 
     const newItem = insertResult[0];
 
+    // Check for low stock notification on newly created item
+    try {
+      await NotificationService.checkAndCreateLowStockNotification(newItem.inventory_id);
+    } catch (notificationError) {
+      // Don't fail the creation if notifications fail
+      console.error("Error creating low stock notification:", notificationError);
+    }
+
     // Get category name for response
     const categoryInfo = await sql`
       SELECT category_name FROM category WHERE id = ${categoryId}
@@ -466,6 +475,16 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    // Get current quantity before update (for restock completion detection)
+    const currentItem = await sql`
+      SELECT quantity, inventory_name 
+      FROM inventory_item 
+      WHERE inventory_id = ${inventoryId}
+    `;
+    
+    const previousQuantity = currentItem[0]?.quantity || 0;
+    const wasRestocked = quantity > previousQuantity;
+
     // Update inventory item in database
     const updateResult = await sql`
       UPDATE inventory_item 
@@ -481,6 +500,24 @@ export async function PUT(request: NextRequest) {
     `;
 
     const updatedItem = updateResult[0];
+
+    // Handle notifications
+    try {
+      // Check for low stock notification (always check after update)
+      await NotificationService.checkAndCreateLowStockNotification(inventoryId);
+
+      // Create restock completion notification if quantity increased significantly
+      if (wasRestocked && (quantity - previousQuantity) >= 5) {
+        await NotificationService.createRestockCompletionNotification(
+          inventoryId, 
+          previousQuantity, 
+          quantity
+        );
+      }
+    } catch (notificationError) {
+      // Don't fail the update if notifications fail
+      console.error("Error creating notifications:", notificationError);
+    }
 
     // Get category name for response
     const categoryInfo = await sql`
