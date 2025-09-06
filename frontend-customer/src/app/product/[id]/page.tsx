@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import RelatedProducts from "@/app/components/RelatedProducts";
-import { toast } from "sonner";
+import { toastUtils } from "@/lib/toast-utils";
 
 interface ProductDetails {
   inventory_id: number;
@@ -35,7 +35,7 @@ interface ProductDetails {
 const ProductPage = () => {
   const params = useParams();
   const router = useRouter();
-  const { addItem } = useCart();
+  const { addItem, removeItem } = useCart();
   const productId = params.id as string;
 
   const [product, setProduct] = useState<ProductDetails | null>(null);
@@ -77,20 +77,25 @@ const ProductPage = () => {
   const handleAddToCart = () => {
     if (!product || !product.is_in_stock) return;
 
-    addItem(
-      {
-        inventory_id: product.inventory_id,
-        inventory_name: product.inventory_name,
-        unit_price: product.unit_price,
-        image_url: product.image_url || undefined,
-        max_quantity: product.quantity,
-      },
-      quantity
+    const productToAdd = {
+      inventory_id: product.inventory_id,
+      inventory_name: product.inventory_name,
+      unit_price: product.unit_price,
+      image_url: product.image_url || undefined,
+      max_quantity: product.quantity,
+    };
+
+    addItem(productToAdd, quantity);
+
+    // Show success message with undo action using utility
+    toastUtils.addToCartSuccess(
+      product.inventory_name,
+      quantity,
+      product.unit_price,
+      () => {
+        removeItem(product.inventory_id);
+      }
     );
-
-    // Show success message
-
-    toast(`Added ${quantity} ${product.inventory_name} to cart!`);
   };
 
   const handleWishlistToggle = () => {

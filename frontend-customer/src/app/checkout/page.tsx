@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/hooks/useCart";
 import { ShoppingCart, CreditCard, MapPin, User } from "lucide-react";
+import { toastUtils } from "@/lib/toast-utils";
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
@@ -140,19 +141,24 @@ const CheckoutPage: React.FC = () => {
   };
 
   useEffect(() => {
-    setTotalAmount(calculateTotal());
+    const newTotal = items.reduce(
+      (total, item) => total + item.unit_price * item.quantity,
+      0
+    );
+    setTotalAmount(newTotal);
   }, [items]);
 
   const createOrder = async () => {
     if (!user || items.length === 0) {
-      setOrderError("Please login and add items to cart");
+      toastUtils.warning("Please login and add items to cart");
       return;
     }
 
     setIsCreatingOrder(true);
     setOrderError(null);
 
-    try {
+    // Create a promise for the order creation
+    const orderPromise = (async () => {
       const token = await user.getIdToken();
 
       const response = await fetch("/api/orders/create", {
@@ -173,23 +179,46 @@ const CheckoutPage: React.FC = () => {
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create order");
+      }
+
+      return data;
+    })();
+
+    // Use promise toast for automatic loading/success/error handling
+    toastUtils.promise(orderPromise, {
+      loading: "Creating your order...",
+      success: (data) => {
         setClientSecret(data.client_secret);
         setOrderId(data.order_id);
         setTotalAmount(data.total_amount);
-      } else {
-        setOrderError(data.error || "Failed to create order");
-      }
-    } catch (error) {
-      setOrderError("Network error occurred");
-    } finally {
+        return `Order #${data.order_id} created successfully!`;
+      },
+      error: (error) => {
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to create order";
+        setOrderError(errorMessage);
+        return "Failed to create order. Please try again.";
+      },
+    });
+
+    // Handle completion
+    orderPromise.finally(() => {
       setIsCreatingOrder(false);
-    }
+    });
   };
 
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true);
     clearCart();
+
+    // Show payment success toast with view order action
+    if (orderId) {
+      toastUtils.paymentSuccess(totalAmount, () => {
+        window.location.href = `/orders`;
+      });
+    }
   };
 
   if (!user) {
