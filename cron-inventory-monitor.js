@@ -17,13 +17,18 @@ const http = require("http");
 const { URL } = require("url");
 
 // Configuration
+// Configuration
 const config = {
-  apiBaseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000",
+  apiBaseUrl:
+    process.env.NEXT_PUBLIC_API_URL ||
+    process.env.API_BASE_URL ||
+    "http://localhost:3000",
   logLevel: process.env.LOG_LEVEL || "info", // 'debug', 'info', 'warn', 'error'
-  timeout: 30000, // 30 seconds
+  timeout: parseInt(process.env.CRON_TIMEOUT) || 30000, // 30 seconds
   branches: process.env.BRANCHES
     ? process.env.BRANCHES.split(",").map(Number)
     : [1, 2, 3, 4, 5], // Default branches
+  environment: process.env.NODE_ENV || "development",
 };
 
 // Logging utility
