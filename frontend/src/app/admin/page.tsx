@@ -42,7 +42,9 @@ function AdminDashboard() {
 
   const fetchRoles = async () => {
     try {
-      const response = await fetch("http://localhost:8084/api/auth/roles");
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8084";
+      const response = await fetch(`${API_BASE_URL}/api/auth/roles`);
       if (response.ok) {
         const data = await response.json();
         setRoles(data);
@@ -54,7 +56,9 @@ function AdminDashboard() {
 
   const fetchBranches = async () => {
     try {
-      const response = await fetch("http://localhost:8084/api/auth/branches");
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8084";
+      const response = await fetch(`${API_BASE_URL}/api/auth/branches`);
       if (response.ok) {
         const data = await response.json();
         setBranches(data);
@@ -82,8 +86,10 @@ function AdminDashboard() {
     setIsLoading(true);
 
     try {
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8084";
       const response = await fetch(
-        "http://localhost:8084/api/auth/admin/create-user",
+        `${API_BASE_URL}/api/auth/admin/create-user`,
         {
           method: "POST",
           headers: {

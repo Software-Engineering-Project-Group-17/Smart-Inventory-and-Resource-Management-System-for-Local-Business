@@ -32,7 +32,9 @@ export const useStaffManagement = () => {
         return;
       }
 
-      const apiUrl = `http://localhost:8084/api/roles/staff/manager/${uid}`;
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8084";
+      const apiUrl = `${API_BASE_URL}/api/roles/staff/manager/${uid}`;
       console.log("🔍 DEBUG - API URL:", apiUrl);
 
       const response = await fetch(apiUrl, {
@@ -90,7 +92,9 @@ export const useStaffManagement = () => {
         return false;
       }
 
-      const staffTypes = newMember.types.map((type) => type.toUpperCase());
+      const staffTypes = newMember.types.map((type: string) =>
+        type.toUpperCase()
+      );
 
       const createStaffRequest = {
         creatorFirebaseUid: uid,
@@ -104,7 +108,9 @@ export const useStaffManagement = () => {
         salary: newMember.salary || 0,
       };
 
-      const response = await fetch("http://localhost:8084/api/roles/staff", {
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8084";
+      const response = await fetch(`${API_BASE_URL}/api/roles/staff`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

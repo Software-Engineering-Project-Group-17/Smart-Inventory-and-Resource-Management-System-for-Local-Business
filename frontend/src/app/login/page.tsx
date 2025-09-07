@@ -27,7 +27,10 @@ export default function AdminLoginPage() {
       console.log("Google sign-in initiated");
     } catch (error) {
       console.error("Google sign-in error:", error);
-      toastUtils.error("Google Sign-in Failed", "Failed to sign in with Google. Please try again.");
+      toastUtils.error(
+        "Google Sign-in Failed",
+        "Failed to sign in with Google. Please try again."
+      );
     } finally {
       setIsGoogleLoading(false);
     }
@@ -37,7 +40,10 @@ export default function AdminLoginPage() {
     e.preventDefault();
 
     if (!email || !password) {
-      toastUtils.validationError("Missing Information", "All fields are required.");
+      toastUtils.validationError(
+        "Missing Information",
+        "All fields are required."
+      );
       return;
     }
     setIsLoading(true);
@@ -52,7 +58,11 @@ export default function AdminLoginPage() {
       const token = await userCredential.user.getIdToken();
 
       // Send token to backend
-      const response = await fetch("http://localhost:8084/api/auth/login", {
+
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8084";
+
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -156,17 +166,21 @@ export default function AdminLoginPage() {
       }
     } catch (error) {
       console.error("Login error:", error);
-      
+
       // Handle different types of authentication errors
       if (error instanceof Error) {
         if (error.message.includes("auth/")) {
-          const errorCode = error.message.split("(")[1]?.split(")")[0] || "unknown";
+          const errorCode =
+            error.message.split("(")[1]?.split(")")[0] || "unknown";
           toastUtils.loginError(errorCode);
         } else {
           toastUtils.error("Login Failed", error.message);
         }
       } else {
-        toastUtils.error("Login Failed", "An unexpected error occurred. Please try again.");
+        toastUtils.error(
+          "Login Failed",
+          "An unexpected error occurred. Please try again."
+        );
       }
     } finally {
       setIsLoading(false);

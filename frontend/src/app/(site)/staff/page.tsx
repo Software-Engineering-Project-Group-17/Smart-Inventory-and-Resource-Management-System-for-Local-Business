@@ -96,7 +96,10 @@ const StaffManagementPage = () => {
       }
 
       // Use the dedicated staff endpoint for this manager
-      const apiUrl = `http://localhost:8084/api/roles/staff/manager/${managerFirebaseUid}`;
+
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8084";
+      const apiUrl = `${API_BASE_URL}/api/roles/staff/manager/${managerFirebaseUid}`;
       console.log("API URL:", apiUrl);
 
       const response = await fetch(apiUrl, {
@@ -259,13 +262,19 @@ const StaffManagementPage = () => {
         };
 
         // Call the staff creation API
-        const response = await fetch("http://localhost:8084/api/roles/staff", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(createStaffRequest),
-        });
+
+        const API_BASE_URL =
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8084";
+        const response = await fetch(
+          `${API_BASE_URL}http://localhost:8084/api/roles/staff`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(createStaffRequest),
+          }
+        );
 
         const result = await response.text();
         let parsedResult;
