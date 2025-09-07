@@ -205,7 +205,7 @@ const RestockRequestsTable: React.FC<RestockRequestsTableProps> = ({
                       className="text-blue-600 hover:text-blue-900"
                       title="View Details"
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="size-6" />
                     </button>
                     {canCancelRequest(request) && onCancelRequest && (
                       <button
@@ -218,7 +218,7 @@ const RestockRequestsTable: React.FC<RestockRequestsTableProps> = ({
                             : "Cancel Request"
                         }
                       >
-                        <Ban className="h-4 w-4" />
+                        <Ban className="h-6 w-6" />
                       </button>
                     )}
                   </div>
