@@ -8,8 +8,8 @@ RUN mvn -B -DskipTests clean package
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-# Create a non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Create a non-root user with specific UID for Choreo
+RUN groupadd -r appuser --gid=10001 && useradd -r -g appuser appuser --uid=10001
 
 COPY --from=build /workspace/target/*.jar app.jar
 
@@ -20,8 +20,8 @@ ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75 -XX:+Alw
 
 EXPOSE 8084
 
-# Switch to non-root user
-USER appuser
+# Switch to non-root user (using numeric UID for Choreo compliance)
+USER 10001
 
 # Run the application
 ENTRYPOINT ["java","-jar","/app/app.jar"]
