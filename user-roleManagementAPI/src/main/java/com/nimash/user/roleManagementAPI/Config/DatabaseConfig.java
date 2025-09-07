@@ -20,6 +20,21 @@ public class DatabaseConfig {
             .ignoreIfMissing()
             .load();
 
+        // First try to get DATABASE_URL (for Choreo deployment)
+        String databaseUrl = System.getenv("DATABASE_URL");
+        if (databaseUrl == null) {
+            databaseUrl = dotenv.get("DATABASE_URL");
+        }
+
+        if (databaseUrl != null && !databaseUrl.isEmpty()) {
+            System.out.println("🔗 Using DATABASE_URL for connection");
+            return DataSourceBuilder.create()
+                .driverClassName("org.postgresql.Driver")
+                .url(databaseUrl)
+                .build();
+        }
+
+        // Fallback to individual environment variables (for local development)
         String host = dotenv.get("DB_HOST", "localhost");
         String dbName = dotenv.get("DB_NAME", "inventory");
         String username = dotenv.get("DB_USERNAME", "postgres");
