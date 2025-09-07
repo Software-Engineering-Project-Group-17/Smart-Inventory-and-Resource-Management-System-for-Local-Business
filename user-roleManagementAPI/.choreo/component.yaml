@@ -1,0 +1,31 @@
+# Choreo Build Configuration
+version: 1.0
+
+# Docker build configuration
+build:
+  dockerFile: Dockerfile
+  dockerContext: .
+
+# Port configuration
+containerPort: 8084
+
+# Environment variables will be injected by Choreo
+environmentVariables:
+  - name: DATABASE_URL
+    value: ${DATABASE_URL}
+  - name: FIREBASE_SERVICE_ACCOUNT_KEY
+    value: ${FIREBASE_SERVICE_ACCOUNT_KEY}
+  - name: ADMIN_SECRET_KEY
+    value: ${ADMIN_SECRET_KEY}
+
+# Health check endpoint
+healthCheckPath: /actuator/health
+
+# Resource allocation
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "1Gi"
+    cpu: "500m"
