@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import jakarta.validation.Valid;
 import java.util.List;
@@ -75,6 +76,16 @@ public class BranchController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Error creating branch: " + e.getMessage());
         }
+    }
+
+    @RequestMapping(method = RequestMethod.OPTIONS)
+    public ResponseEntity<Void> handleOptions() {
+        return ResponseEntity.ok()
+            .header("Access-Control-Allow-Origin", "*")
+            .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+            .header("Access-Control-Allow-Headers", "*")
+            .header("Access-Control-Allow-Credentials", "true")
+            .build();
     }
 
     @GetMapping
