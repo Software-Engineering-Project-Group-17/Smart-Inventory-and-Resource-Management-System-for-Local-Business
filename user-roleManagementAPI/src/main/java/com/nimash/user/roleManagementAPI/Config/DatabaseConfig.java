@@ -28,6 +28,12 @@ public class DatabaseConfig {
 
         if (databaseUrl != null && !databaseUrl.isEmpty()) {
             System.out.println("🔗 Using DATABASE_URL for connection");
+            
+            // Convert postgresql:// to jdbc:postgresql:// if needed
+            if (databaseUrl.startsWith("postgresql://")) {
+                databaseUrl = "jdbc:" + databaseUrl;
+            }
+            
             return DataSourceBuilder.create()
                 .driverClassName("org.postgresql.Driver")
                 .url(databaseUrl)
