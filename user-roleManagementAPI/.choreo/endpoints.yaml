@@ -4,3 +4,4 @@ endpoints:
     type: REST
     port: 8084
     context: /
+    networkVisibility: Public
