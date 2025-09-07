@@ -69,7 +69,9 @@ export default function OwnerCreationPage() {
       }
 
       // Send to backend API
-      const response = await fetch("http://localhost:8084/api/roles/owner", {
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8084";
+      const response = await fetch(`${API_BASE_URL}/api/roles/owner`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
