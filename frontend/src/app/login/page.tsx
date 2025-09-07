@@ -10,6 +10,7 @@ import { toastUtils } from "@/lib/toast-utils";
 import Input from "@/components/admin/Input";
 import Image from "next/image";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -231,10 +232,13 @@ export default function AdminLoginPage() {
             />
 
             <button
-              className="mt-4 sm:mt-6 px-8 sm:px-10 py-2 sm:py-2 bg-[#3674B5] hover:bg-blue-900 text-white rounded-4xl text-center text-base sm:text-lg heebo font-semibold transition-colors w-full sm:w-auto"
+              className="mt-4 sm:mt-6 px-8 sm:px-10 py-2 bg-[#3674B5] hover:bg-blue-900 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-4xl text-base sm:text-lg heebo font-semibold transition-all duration-200 w-full sm:w-auto flex items-center justify-center gap-2"
               type="submit"
-              // disabled={isLoading}
+              disabled={isLoading}
             >
+              {isLoading && (
+                <Loader2 className="animate-spin h-4 w-4 sm:h-5 sm:w-5" />
+              )}
               {isLoading ? "Signing In..." : "Login"}
             </button>
 
