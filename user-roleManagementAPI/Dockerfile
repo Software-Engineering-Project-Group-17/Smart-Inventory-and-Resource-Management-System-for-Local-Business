@@ -3,12 +3,12 @@ WORKDIR /workspace
 
 COPY . .
 
-RUN mvn -B -DskipTests -pl user-roleManagementAPI -am package
+RUN mvn -B -DskipTests clean package
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-COPY --from=build /workspace/user-roleManagementAPI/target/*.jar app.jar
+COPY --from=build /workspace/target/*.jar app.jar
 
 ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75 -XX:+AlwaysPreTouch"
 
