@@ -1,33 +1,6 @@
-# Choreo deployment configuration for user-roleManagementAPI
-
-# Build Configuration
-version: "1.0"
-
+version: 0.1
 endpoints:
-  # HTTP endpoint configuration
   - name: user-role-management-api
     type: REST
     port: 8084
     context: /
-    schemaFilePath: openapi.yaml
-
-# Environment Variables (these will be set in Choreo dashboard)
-env:
-  - name: DATABASE_URL
-    # Set this in Choreo dashboard to your Neon database URL
-  - name: FIREBASE_SERVICE_ACCOUNT_KEY
-    # Set this in Choreo dashboard with your Firebase service account JSON
-  - name: ADMIN_SECRET_KEY
-    # Set this in Choreo dashboard with a secure secret key
-
-# Resource requirements
-resources:
-  memory: 1Gi
-  cpu: 0.5
-
-# Health check
-healthCheck:
-  path: /actuator/health
-  port: 8084
-  initialDelaySeconds: 60
-  periodSeconds: 10

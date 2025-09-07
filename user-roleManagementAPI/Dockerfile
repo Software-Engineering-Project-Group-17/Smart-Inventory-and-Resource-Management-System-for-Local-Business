@@ -12,7 +12,7 @@ COPY --from=build /workspace/target/*.jar app.jar
 
 ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75 -XX:+AlwaysPreTouch"
 
-EXPOSE 8080
+EXPOSE 8084
 
 # Run the application
 ENTRYPOINT ["java","-jar","/app/app.jar"]
