@@ -8,9 +8,7 @@ import Banner from "../components/Banner";
 const page = async ({ searchParams }: { searchParams: any }) => {
   // Get category from URL params
 
-  const params = await searchParams;
-
-  const categoryParam = params?.cat;
+  const categoryParam = searchParams?.cat;
   let categoryName = "All Products";
 
   // If category is specified, convert URL param back to category name
