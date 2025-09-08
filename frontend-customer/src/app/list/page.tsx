@@ -5,16 +5,12 @@ import ProductList from "../components/ProductList";
 
 import Banner from "../components/Banner";
 
-const page = async ({
-  searchParams,
-}: {
-  searchParams: Promise<{ cat: string }>;
-}) => {
+const page = async ({ searchParams }: { searchParams: any }) => {
   // Get category from URL params
 
-  const { cat } = await searchParams;
+  const params = await searchParams;
 
-  const categoryParam = cat;
+  const categoryParam = params?.cat;
   let categoryName = "All Products";
 
   // If category is specified, convert URL param back to category name
