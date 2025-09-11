@@ -10,6 +10,7 @@ import {
   Package,
   Hash,
   AlertTriangle,
+  Barcode,
 } from "lucide-react";
 import { toastUtils } from "@/lib/toast-utils";
 import { showRoleAccessNotification } from "@/lib/auth";
@@ -306,20 +307,20 @@ export default function AddItemPage() {
             {/* Item Barcode */}
             <div>
               <label
-                htmlFor="inventoryName"
+                htmlFor="inventoryBarcode"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
                 Item Barcode *
               </label>
               <div className="relative">
-                <Package className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <input
                   type="text"
-                  id="inventoryName"
+                  id="inventoryBarcode"
                   value={formData.barcode}
                   onChange={(e) => handleInputChange("barcode", e.target.value)}
                   className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter item name"
+                  placeholder="Enter item barcode"
                   required
                 />
               </div>
