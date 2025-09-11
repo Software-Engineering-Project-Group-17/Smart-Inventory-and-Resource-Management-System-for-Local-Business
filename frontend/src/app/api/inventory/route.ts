@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const inventoryName = formData.get("inventoryName") as string;
+    const barcode = formData.get("barcode") as string;
     const quantity = parseInt(formData.get("quantity") as string);
     const categoryId = parseInt(formData.get("categoryId") as string);
     const lowStockThreshold = parseInt(
@@ -92,6 +93,7 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (
       !inventoryName ||
+      !barcode ||
       !userEmail ||
       isNaN(quantity) ||
       isNaN(categoryId) ||
@@ -231,6 +233,7 @@ export async function POST(request: NextRequest) {
     const insertResult = await sql`
       INSERT INTO inventory_item (
         inventory_name, 
+        barcode,
         quantity, 
         category_id, 
         low_stock_threshold, 
@@ -240,6 +243,7 @@ export async function POST(request: NextRequest) {
       ) 
       VALUES (
         ${inventoryName.trim()}, 
+        ${barcode.trim()},
         ${quantity}, 
         ${categoryId}, 
         ${lowStockThreshold || 0}, 
@@ -247,7 +251,7 @@ export async function POST(request: NextRequest) {
         ${branchId}, 
         ${imageUrl}
       ) 
-      RETURNING inventory_id, inventory_name, quantity, category_id, low_stock_threshold, unit_price, branch_id, image_url
+      RETURNING inventory_id, inventory_name, barcode, quantity, category_id, low_stock_threshold, unit_price, branch_id, image_url
     `;
 
     const newItem = insertResult[0];
@@ -292,6 +296,7 @@ export async function PUT(request: NextRequest) {
     const formData = await request.formData();
     const inventoryId = formData.get("inventoryId") as string;
     const inventoryName = formData.get("inventoryName") as string;
+    const barcode = formData.get("barcode") as string;
     const quantity = parseInt(formData.get("quantity") as string);
     const categoryId = parseInt(formData.get("categoryId") as string);
     const lowStockThreshold = parseInt(
@@ -304,6 +309,7 @@ export async function PUT(request: NextRequest) {
 
     if (
       !inventoryId ||
+      !barcode ||
       !inventoryName ||
       !userEmail ||
       isNaN(quantity) ||
@@ -495,6 +501,7 @@ export async function PUT(request: NextRequest) {
       UPDATE inventory_item 
       SET 
         inventory_name = ${inventoryName.trim()}, 
+        barcode = ${barcode.trim()},
         quantity = ${quantity}, 
         category_id = ${categoryId}, 
         low_stock_threshold = ${lowStockThreshold || 0}, 

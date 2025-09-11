@@ -32,6 +32,7 @@ export default function AddItemPage() {
 
   const [formData, setFormData] = useState({
     inventoryName: "",
+    barcode: "",
     quantity: "",
     categoryId: "",
     lowStockThreshold: "",
@@ -121,13 +122,18 @@ export default function AddItemPage() {
   };
 
   const validateForm = () => {
-    const { inventoryName, quantity, categoryId, unitPrice } = formData;
+    const { inventoryName, barcode, quantity, categoryId, unitPrice } =
+      formData;
 
     if (!inventoryName.trim()) {
       toastUtils.validationError(
         "Missing Information",
         "Item name is required"
       );
+      return false;
+    }
+    if (!barcode.trim()) {
+      toastUtils.validationError("Missing Information", "Barcode is required");
       return false;
     }
 
@@ -190,6 +196,7 @@ export default function AddItemPage() {
     try {
       const submitFormData = new FormData();
       submitFormData.append("inventoryName", formData.inventoryName.trim());
+      submitFormData.append("barcode", formData.barcode.trim());
       submitFormData.append("quantity", formData.quantity);
       submitFormData.append("categoryId", formData.categoryId);
       submitFormData.append(
@@ -218,6 +225,7 @@ export default function AddItemPage() {
         // Reset form
         setFormData({
           inventoryName: "",
+          barcode: "",
           quantity: "",
           categoryId: "",
           lowStockThreshold: "",
@@ -289,6 +297,27 @@ export default function AddItemPage() {
                   onChange={(e) =>
                     handleInputChange("inventoryName", e.target.value)
                   }
+                  className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter item name"
+                  required
+                />
+              </div>
+            </div>
+            {/* Item Barcode */}
+            <div>
+              <label
+                htmlFor="inventoryName"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Item Barcode *
+              </label>
+              <div className="relative">
+                <Package className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <input
+                  type="text"
+                  id="inventoryName"
+                  value={formData.barcode}
+                  onChange={(e) => handleInputChange("barcode", e.target.value)}
                   className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter item name"
                   required
