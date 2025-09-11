@@ -145,12 +145,27 @@ export async function POST(request: NextRequest) {
       WHERE LOWER(inventory_name) = LOWER(${inventoryName.trim()}) 
       AND branch_id = ${branchId}
     `;
+    const existingBarcode = await sql`
+      SELECT inventory_id 
+      FROM inventory_item 
+      WHERE LOWER(barcode) = LOWER(${barcode.trim()}) 
+      
+    `;
 
     if (existingItem.length > 0) {
       return NextResponse.json(
         {
           error:
             "An inventory item with this name already exists in your branch",
+        },
+        { status: 409 }
+      );
+    }
+    if (existingBarcode.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "An inventory item with this barcode already exists in your branch",
         },
         { status: 409 }
       );
@@ -377,12 +392,27 @@ export async function PUT(request: NextRequest) {
       AND branch_id = ${branchId} 
       AND inventory_id != ${inventoryId}
     `;
+    const barcodeConflict = await sql`
+      SELECT inventory_id 
+      FROM inventory_item 
+      WHERE LOWER(barcode) = LOWER(${barcode.trim()}) 
+      
+    `;
 
     if (nameConflict.length > 0) {
       return NextResponse.json(
         {
           error:
             "An inventory item with this name already exists in your branch",
+        },
+        { status: 409 }
+      );
+    }
+    if (barcodeConflict.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "An inventory item with this barcode already exists in your branch",
         },
         { status: 409 }
       );
