@@ -112,7 +112,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({
           className={`px-6 py-3 rounded-lg font-medium transition-colors ${
             isProcessing
               ? "bg-gray-400 text-gray-600 cursor-not-allowed"
-              : "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-zeta text-white hover:bg-orange-700"
           }`}
         >
           {isProcessing ? "Processing..." : `Pay $${totalAmount.toFixed(2)}`}
@@ -363,7 +363,7 @@ const CheckoutPage: React.FC = () => {
                     items.length === 0 ||
                     !shippingAddress.trim()
                       ? "bg-gray-400 text-gray-600 cursor-not-allowed"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
+                      : "bg-zeta text-white hover:bg-orange-700"
                   }`}
                 >
                   {isCreatingOrder ? "Creating Order..." : "Proceed to Payment"}
