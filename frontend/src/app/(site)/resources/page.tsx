@@ -11,6 +11,7 @@ import { ResourceTable } from "@/components/resources/ResourceTable";
 import { AssignmentTable } from "@/components/resources/AssignmentTable";
 import { useResourceManagement } from "@/components/resources/useResourceManagementAPI";
 import { RESOURCE_CONSTANTS } from "@/components/resources/constants";
+import { withAuth } from "@/hooks/useAuth";
 
 const ResourceTrackingPage = () => {
   const {
@@ -152,4 +153,6 @@ const ResourceTrackingPage = () => {
   );
 };
 
-export default ResourceTrackingPage;
+export default withAuth(ResourceTrackingPage, {
+  requiredRoles: ["STAFF", "BRANCH_MANAGER"],
+});
