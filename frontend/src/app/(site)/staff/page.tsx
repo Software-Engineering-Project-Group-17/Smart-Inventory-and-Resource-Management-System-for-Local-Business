@@ -20,6 +20,7 @@ import {
   UserCheck,
   Filter,
 } from "lucide-react";
+import { withAuth } from "@/hooks/useAuth";
 
 interface StaffMember {
   id: number;
@@ -1164,4 +1165,6 @@ const StaffManagementPage = () => {
   );
 };
 
-export default StaffManagementPage;
+export default withAuth(StaffManagementPage, {
+  requiredRoles: ["STAFF", "BRANCH_MANAGER"],
+});

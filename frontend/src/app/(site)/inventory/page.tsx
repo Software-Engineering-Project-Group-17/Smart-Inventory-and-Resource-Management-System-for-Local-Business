@@ -160,5 +160,5 @@ const InventoryPage = () => {
 };
 
 export default withAuth(InventoryPage, {
-  requiredRoles: ["STAFF", "BRANCH_MANAGER", "OWNER"],
+  requiredRoles: ["STAFF", "BRANCH_MANAGER"],
 });
