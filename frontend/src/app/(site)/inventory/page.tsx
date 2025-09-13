@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import { RefreshCw, AlertTriangle, Plus } from "lucide-react";
 import { withAuth } from "@/hooks/useAuth";
 import { useInventoryData } from "@/hooks/useInventoryData";
@@ -7,8 +7,13 @@ import { InventoryTable } from "@/components/inventory/InventoryList";
 import { StatsCards } from "@/components/inventory/StatsCards";
 import { SimpleInventoryFilters } from "@/components/inventory/SimpleInventoryFilters";
 import Link from "next/link";
+import { showRoleAccessNotification } from "@/lib/auth";
 
 const InventoryPage = () => {
+  useEffect(() => {
+    showRoleAccessNotification("Inventory Management");
+  }, []);
+
   const {
     // Data
     inventory,
