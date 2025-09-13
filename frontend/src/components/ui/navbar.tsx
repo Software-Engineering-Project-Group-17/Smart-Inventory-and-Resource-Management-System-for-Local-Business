@@ -13,6 +13,7 @@ import {
   User,
   ShoppingCart,
   Archive,
+  Receipt,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -174,6 +175,11 @@ const Navbar: React.FC = () => {
 
       case "STAFF":
         return [
+          {
+            label: "Sales",
+            href: "/sales",
+            icon: <Receipt size={20}/>,
+          },
           {
             label: "Inventory",
             href: "/inventory",
