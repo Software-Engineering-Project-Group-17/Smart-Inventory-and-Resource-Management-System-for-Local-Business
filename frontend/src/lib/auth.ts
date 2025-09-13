@@ -75,19 +75,14 @@ export const getDefaultRedirectPath = (role: string): string => {
   switch (role.toUpperCase()) {
     case "OWNER":
       return "/branches";
-    case "MANAGER":
-      return "/staff";
-    case "BRANCH":
+    case "BRANCH_MANAGER":
+      return "/inventory";
     case "INVENTORY":
     case "RESOURCE":
     case "SALES":
-    case "NORMAL_EMPLOYEE":
-      return "/inventory";
     case "STAFF":
       return "/inventory";
     case "SUPPLIER":
-      return "/profile";
-    case "CUSTOMER":
       return "/profile";
     default:
       return "/profile";

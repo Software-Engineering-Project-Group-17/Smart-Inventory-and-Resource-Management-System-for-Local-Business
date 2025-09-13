@@ -114,7 +114,7 @@ const CartDropdown = () => {
                     <Link href="/checkout">
                       <button
                         onClick={toggleCart}
-                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                        className="w-full bg-zeta text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors"
                       >
                         Checkout
                       </button>
