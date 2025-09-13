@@ -9,8 +9,6 @@ export async function GET(request: NextRequest) {
     const userId = request.headers.get("x-user-id");
     const userEmail = request.headers.get("x-user-email");
 
-    console.log("Inventory API - Headers received:", { userId, userEmail });
-
     if (!userId || !userEmail) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -70,8 +68,6 @@ export async function GET(request: NextRequest) {
         { status: 403 }
       );
     }
-
-    console.log("Inventory API - User found:", userResult[0]);
 
     const user = userResult[0];
     const branchId = user.branch_id;

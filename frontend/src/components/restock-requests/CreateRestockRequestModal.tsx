@@ -15,6 +15,7 @@ interface CreateRestockRequestModalProps {
   onClose: () => void;
   onSuccess: () => void;
   availableInventory: InventoryItem[];
+  allInventory: InventoryItem[];
 }
 
 const CreateRestockRequestModal: React.FC<CreateRestockRequestModalProps> = ({
@@ -22,6 +23,7 @@ const CreateRestockRequestModal: React.FC<CreateRestockRequestModalProps> = ({
   onClose,
   onSuccess,
   availableInventory,
+  allInventory,
 }) => {
   const [formData, setFormData] = useState<CreateRestockRequest>({
     title: "",
@@ -36,11 +38,16 @@ const CreateRestockRequestModal: React.FC<CreateRestockRequestModalProps> = ({
   const [quantity, setQuantity] = useState<string>("1");
   const [itemNotes, setItemNotes] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [inventoryMode, setInventoryMode] = useState<"low-stock" | "all">(
+    "low-stock"
+  );
 
   const addItem = () => {
     if (!selectedInventoryId || !quantity) return;
 
-    const inventoryItem = availableInventory.find(
+    const currentInventoryList =
+      inventoryMode === "low-stock" ? availableInventory : allInventory;
+    const inventoryItem = currentInventoryList.find(
       (item) => item.inventoryId.toString() === selectedInventoryId
     );
 
@@ -120,6 +127,10 @@ const CreateRestockRequestModal: React.FC<CreateRestockRequestModalProps> = ({
           notes: "",
           items: [],
         });
+        setSelectedInventoryId("");
+        setQuantity("1");
+        setItemNotes("");
+        setInventoryMode("low-stock");
       } else {
         const error = await response.json();
         toastUtils.error(
@@ -225,63 +236,150 @@ const CreateRestockRequestModal: React.FC<CreateRestockRequestModalProps> = ({
 
           {/* Add Items Section */}
           <div className="border rounded-lg p-4 mb-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              Add Items
-            </h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Add Items</h3>
+
+              {/* Mode Toggle */}
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInventoryMode("low-stock");
+                    setSelectedInventoryId("");
+                  }}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                    inventoryMode === "low-stock"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  Low Stock Items ({availableInventory.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInventoryMode("all");
+                    setSelectedInventoryId("");
+                  }}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                    inventoryMode === "all"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  All Items ({allInventory.length})
+                </button>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Low Stock Inventory Items
+                  {inventoryMode === "low-stock"
+                    ? "Low Stock Inventory Items"
+                    : "All Inventory Items"}
                 </label>
                 <select
                   value={selectedInventoryId}
                   onChange={(e) => setSelectedInventoryId(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">Select a low stock item</option>
-                  {availableInventory.map((item) => {
-                    const urgencyLevel =
-                      item.currentStock <= item.reorderLevel * 0.5
-                        ? "CRITICAL"
-                        : item.currentStock <= item.reorderLevel * 0.75
-                        ? "HIGH"
-                        : "MEDIUM";
-                    const urgencyColor =
-                      urgencyLevel === "CRITICAL"
-                        ? "🔴"
-                        : urgencyLevel === "HIGH"
-                        ? "🟡"
-                        : "🟠";
+                  <option value="">
+                    {inventoryMode === "low-stock"
+                      ? "Select a low stock item"
+                      : "Select an inventory item"}
+                  </option>
+                  {(inventoryMode === "low-stock"
+                    ? availableInventory
+                    : allInventory
+                  ).map((item) => {
+                    if (inventoryMode === "low-stock") {
+                      const urgencyLevel =
+                        item.currentStock <= item.reorderLevel * 0.5
+                          ? "CRITICAL"
+                          : item.currentStock <= item.reorderLevel * 0.75
+                          ? "HIGH"
+                          : "MEDIUM";
+                      const urgencyColor =
+                        urgencyLevel === "CRITICAL"
+                          ? "🔴"
+                          : urgencyLevel === "HIGH"
+                          ? "🟡"
+                          : "🟠";
 
-                    return (
-                      <option key={item.inventoryId} value={item.inventoryId}>
-                        {urgencyColor} {item.itemName} - Stock:{" "}
-                        {item.currentStock}/{item.reorderLevel} (
-                        {item.categoryName})
-                      </option>
-                    );
+                      return (
+                        <option key={item.inventoryId} value={item.inventoryId}>
+                          {urgencyColor} {item.itemName} - Stock:{" "}
+                          {item.currentStock}/{item.reorderLevel} (
+                          {item.categoryName})
+                        </option>
+                      );
+                    } else {
+                      const stockStatus =
+                        item.currentStock <= item.reorderLevel ? "⚠️" : "🟢";
+                      return (
+                        <option key={item.inventoryId} value={item.inventoryId}>
+                          {stockStatus} {item.itemName} - Stock:{" "}
+                          {item.currentStock} ({item.categoryName})
+                        </option>
+                      );
+                    }
                   })}
                 </select>
                 {selectedInventoryId && (
                   <div className="mt-1 text-xs text-gray-600">
                     {(() => {
-                      const item = availableInventory.find(
+                      const currentInventoryList =
+                        inventoryMode === "low-stock"
+                          ? availableInventory
+                          : allInventory;
+                      const item = currentInventoryList.find(
                         (i) => i.inventoryId.toString() === selectedInventoryId
                       );
                       if (!item) return null;
-                      const deficit = item.reorderLevel - item.currentStock;
-                      const suggestedQuantity = Math.max(
-                        deficit,
-                        item.reorderLevel
-                      );
-                      return (
-                        <span className="text-blue-600">
-                          Suggested quantity: {suggestedQuantity} units
-                          (Current: {item.currentStock}, Target:{" "}
-                          {item.reorderLevel})
-                        </span>
-                      );
+
+                      if (inventoryMode === "low-stock") {
+                        const deficit = item.reorderLevel - item.currentStock;
+                        const suggestedQuantity = Math.max(
+                          deficit,
+                          item.reorderLevel
+                        );
+                        return (
+                          <span className="text-blue-600">
+                            Suggested quantity: {suggestedQuantity} units
+                            (Current: {item.currentStock}, Target:{" "}
+                            {item.reorderLevel})
+                          </span>
+                        );
+                      } else {
+                        const isLowStock =
+                          item.currentStock <= item.reorderLevel;
+                        return (
+                          <div className="flex flex-col">
+                            <span
+                              className={
+                                isLowStock
+                                  ? "text-orange-600"
+                                  : "text-green-600"
+                              }
+                            >
+                              Current stock: {item.currentStock} units
+                              {isLowStock &&
+                                ` (Below reorder level: ${item.reorderLevel})`}
+                            </span>
+                            {isLowStock && (
+                              <span className="text-blue-600">
+                                Suggested quantity:{" "}
+                                {Math.max(
+                                  item.reorderLevel - item.currentStock,
+                                  item.reorderLevel
+                                )}{" "}
+                                units
+                              </span>
+                            )}
+                          </div>
+                        );
+                      }
                     })()}
                   </div>
                 )}
@@ -300,16 +398,36 @@ const CreateRestockRequestModal: React.FC<CreateRestockRequestModalProps> = ({
                   placeholder={
                     selectedInventoryId
                       ? (() => {
-                          const item = availableInventory.find(
+                          const currentInventoryList =
+                            inventoryMode === "low-stock"
+                              ? availableInventory
+                              : allInventory;
+                          const item = currentInventoryList.find(
                             (i) =>
                               i.inventoryId.toString() === selectedInventoryId
                           );
                           if (!item) return "1";
-                          const deficit = item.reorderLevel - item.currentStock;
-                          return Math.max(
-                            deficit,
-                            item.reorderLevel
-                          ).toString();
+
+                          if (inventoryMode === "low-stock") {
+                            const deficit =
+                              item.reorderLevel - item.currentStock;
+                            return Math.max(
+                              deficit,
+                              item.reorderLevel
+                            ).toString();
+                          } else {
+                            const isLowStock =
+                              item.currentStock <= item.reorderLevel;
+                            if (isLowStock) {
+                              const deficit =
+                                item.reorderLevel - item.currentStock;
+                              return Math.max(
+                                deficit,
+                                item.reorderLevel
+                              ).toString();
+                            }
+                            return "1";
+                          }
                         })()
                       : "1"
                   }

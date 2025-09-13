@@ -21,6 +21,7 @@ const RestockRequestsPage = () => {
   const [availableInventory, setAvailableInventory] = useState<InventoryItem[]>(
     []
   );
+  const [allInventory, setAllInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -84,6 +85,10 @@ const RestockRequestsPage = () => {
 
       if (response.ok) {
         const data = await response.json();
+
+        // Store all inventory items
+        setAllInventory(data.inventory);
+
         // Filter to show only low stock items and sort by urgency
         const lowStockItems = data.inventory
           .filter(
@@ -210,6 +215,7 @@ const RestockRequestsPage = () => {
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={loadRequests}
         availableInventory={availableInventory}
+        allInventory={allInventory}
       />
     </div>
   );

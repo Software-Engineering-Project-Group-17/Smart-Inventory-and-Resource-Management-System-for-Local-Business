@@ -303,7 +303,7 @@ const ProductPage = () => {
                 disabled={!product.is_in_stock}
                 className={`w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white ${
                   product.is_in_stock
-                    ? "bg-[#3674B5] hover:bg-blue-900 focus:ring-2 focus:ring-[#3674B5]"
+                    ? "bg-zeta hover:bg-orange-700 focus:ring-2 focus:ring-[#3674B5]"
                     : "bg-gray-400 cursor-not-allowed"
                 }`}
               >

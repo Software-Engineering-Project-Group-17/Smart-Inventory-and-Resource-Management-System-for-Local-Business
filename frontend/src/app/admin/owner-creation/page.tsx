@@ -21,15 +21,8 @@ export default function OwnerCreationPage() {
     password: "",
   });
 
-  // This is restricted to system admins only
-  // You can use a secret key or check for specific admin emails
-  const ADMIN_SECRET_KEY = "INVENTORY_SYSTEM_ADMIN_2024"; // Change this in production
+  const ADMIN_SECRET_KEY = process.env.NEXT_PUBLIC_ADMIN_SECRET_KEY;
   const canCreateOwner = secretKey === ADMIN_SECRET_KEY;
-
-  // Show role access notification on page load
-  // useEffect(() => {
-  //   showRoleAccessNotification("System Admin - Owner Creation");
-  // }, []);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
