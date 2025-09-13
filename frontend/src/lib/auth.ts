@@ -77,15 +77,12 @@ export const getDefaultRedirectPath = (role: string): string => {
       return "/branches";
     case "BRANCH_MANAGER":
       return "/inventory";
-    case "BRANCH":
     case "INVENTORY":
     case "RESOURCE":
     case "SALES":
     case "STAFF":
       return "/inventory";
     case "SUPPLIER":
-      return "/profile";
-    case "CUSTOMER":
       return "/profile";
     default:
       return "/profile";
