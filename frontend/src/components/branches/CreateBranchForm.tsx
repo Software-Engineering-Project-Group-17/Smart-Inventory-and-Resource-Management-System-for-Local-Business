@@ -115,7 +115,6 @@ export const CreateBranchForm: React.FC<CreateBranchFormProps> = ({
         >
           <FileText size={16} className="inline mr-2" />
           {CREATE_BRANCH_CONSTANTS.labels.description}{" "}
-          {CREATE_BRANCH_CONSTANTS.labels.optional}
         </label>
         <textarea
           id="description"

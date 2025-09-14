@@ -14,6 +14,8 @@ import { BranchesError } from "@/components/branches-main/BranchesError";
 import { BranchesFilters } from "@/components/branches-main/BranchesFilters";
 import { BranchesTable } from "@/components/branches-main/BranchesTable";
 import { useBranchesManagement } from "@/components/branches-main/useBranchesManagement";
+import { useEffect } from "react";
+import { showRoleAccessNotification } from "@/lib/auth";
 
 const BranchesPage = () => {
   const {
@@ -23,7 +25,7 @@ const BranchesPage = () => {
     error,
     currentUserEmail,
     searchTerm,
-    
+
     // Modal states
     showAddManagerModal,
     showRemoveManagerModal,
@@ -32,14 +34,14 @@ const BranchesPage = () => {
     managerEmail,
     selectedManagerEmail,
     isProcessing,
-    
+
     // Actions
     setSearchTerm,
     fetchBranches,
     handleCreateManager,
     handleLogin,
     handleAddBranch,
-    
+
     // Modal actions
     setShowAddManagerModal,
     setShowRemoveManagerModal,
@@ -51,6 +53,11 @@ const BranchesPage = () => {
     handleRemoveManager,
     handleDeleteBranch,
   } = useBranchesManagement();
+
+  // Show role access notification on page load
+  useEffect(() => {
+    showRoleAccessNotification("Branch Management");
+  }, []);
 
   const handleRemoveManagerClick = (branch: any) => {
     setSelectedBranch(branch);

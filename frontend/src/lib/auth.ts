@@ -1,4 +1,5 @@
 // Authentication utility functions
+import { toastUtils } from "./toast-utils";
 
 export interface UserProfile {
   address: string;
@@ -74,19 +75,14 @@ export const getDefaultRedirectPath = (role: string): string => {
   switch (role.toUpperCase()) {
     case "OWNER":
       return "/branches";
-    case "MANAGER":
-      return "/staff";
-    case "BRANCH":
+    case "BRANCH_MANAGER":
+      return "/inventory";
     case "INVENTORY":
     case "RESOURCE":
     case "SALES":
-    case "NORMAL_EMPLOYEE":
-      return "/inventory";
     case "STAFF":
       return "/inventory";
     case "SUPPLIER":
-      return "/profile";
-    case "CUSTOMER":
       return "/profile";
     default:
       return "/profile";
@@ -115,4 +111,30 @@ export const hasPermissionLevel = (requiredLevel: number): boolean => {
   const userLevel =
     ROLE_HIERARCHY[userRole.toUpperCase() as keyof typeof ROLE_HIERARCHY] || 0;
   return userLevel >= requiredLevel;
+};
+
+// Check permission and show toast if denied
+export const checkPermissionWithToast = (
+  action: string,
+  requiredLevel: number
+): boolean => {
+  if (!isAuthenticated()) {
+    toastUtils.permissionError("access this feature - please log in");
+    return false;
+  }
+
+  if (!hasPermissionLevel(requiredLevel)) {
+    toastUtils.permissionError(action);
+    return false;
+  }
+
+  return true;
+};
+
+// Show role access notification
+export const showRoleAccessNotification = (feature: string): void => {
+  const userRole = getUserRole();
+  if (userRole) {
+    toastUtils.roleAccess(userRole, feature);
+  }
 };
