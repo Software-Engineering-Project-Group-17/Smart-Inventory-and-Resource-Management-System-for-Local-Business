@@ -1166,5 +1166,5 @@ const StaffManagementPage = () => {
 };
 
 export default withAuth(StaffManagementPage, {
-  requiredRoles: ["STAFF", "BRANCH_MANAGER"],
+  requiredRoles: ["BRANCH_MANAGER"],
 });
