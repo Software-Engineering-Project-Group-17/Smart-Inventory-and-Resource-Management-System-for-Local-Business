@@ -1,7 +1,9 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, ShoppingCart, Percent, DollarSign, User, Printer, Trash2, Plus, Minus, Scan, Receipt, Star, Clock, Edit3 } from 'lucide-react';
+import { Search, ShoppingCart, Percent, DollarSign, User, Printer, Trash2, Plus, Minus, Scan, Receipt, Star, Clock, Edit3, Smartphone, Wifi, WifiOff, QrCode } from 'lucide-react';
 import { getUserProfile } from '@/lib/auth';
+import { useBarcodeWebSocket } from '@/hooks/useBarcodeWebSocket';
+import QRCode from 'qrcode';
 
 // Type definitions
 interface InventoryItem {
@@ -56,12 +58,23 @@ function SalesPage() {
   const [invoiceNumber, setInvoiceNumber] = useState<string>('');
   const [currentDate, setCurrentDate] = useState<string>('');
   const [cartIdCounter, setCartIdCounter] = useState<number>(1);
+  const [showMobileScannerUrl, setShowMobileScannerUrl] = useState<boolean>(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   
   // Get user email from session/auth - you may need to implement this based on your auth system
   const userProfile = getUserProfile();
   const userEmail = userProfile?.email || "admin@example.com";
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // WebSocket integration for barcode scanning
+  const { 
+    isConnected: wsConnected, 
+    lastScannedBarcode, 
+    connectionStatus, 
+    sendBarcode, 
+    reconnect: wsReconnect 
+  } = useBarcodeWebSocket();
 
   // Set client-side only values after component mounts
   useEffect(() => {
@@ -70,7 +83,51 @@ function SalesPage() {
     setCurrentDate(new Date().toLocaleDateString());
     console.log('User email:', userEmail);
     console.log('User profile:', userProfile);
+    
+    // Generate QR code for mobile scanner
+    generateQRCode();
   }, []);
+
+  // Generate QR code for mobile scanner URL
+  const generateQRCode = async () => {
+    try {
+      const scannerUrl = `https://192.168.1.4:3443/scanner?user=${encodeURIComponent(userEmail)}`;
+      const qrCodeDataUrl = await QRCode.toDataURL(scannerUrl, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#3674B5', // QR code color
+          light: '#FFFFFF' // Background color
+        },
+        errorCorrectionLevel: 'M'
+      });
+      setQrCodeDataUrl(qrCodeDataUrl);
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+    }
+  };
+
+  // Handle barcode scans from WebSocket
+  useEffect(() => {
+    if (lastScannedBarcode) {
+      console.log('🔍 Barcode received via WebSocket:', lastScannedBarcode);
+      console.log('🔍 Current search term before update:', searchTerm);
+      console.log('🔍 Current selected item before update:', selectedItem);
+      
+      setSearchTerm(lastScannedBarcode);
+      setSearchType('barcode');
+      // Clear any previously selected item
+      setSelectedItem(null);
+      
+      // Show success message to indicate barcode was received
+      setSuccess(`Barcode scanned: ${lastScannedBarcode}`);
+      setTimeout(() => setSuccess(''), 3000);
+      
+      // Automatically search for the scanned barcode
+      console.log('🔍 Triggering search for barcode:', lastScannedBarcode);
+      searchInventory(lastScannedBarcode, 'barcode');
+    }
+  }, [lastScannedBarcode]);
 
   // Search for inventory items
   const searchInventory = async (term: string, type: 'name' | 'barcode') => {
@@ -79,24 +136,41 @@ function SalesPage() {
       return;
     }
 
-    console.log('Searching for:', term, 'Type:', type, 'UserEmail:', userEmail);
+    console.log('🔍 Searching for:', term, 'Type:', type, 'UserEmail:', userEmail);
+    
+    // Clear previous error
+    setError('');
 
     try {
       const response = await fetch(`/api/sales?search=${encodeURIComponent(term)}&type=${type}&userEmail=${encodeURIComponent(userEmail)}`);
       const data = await response.json();
       
-      console.log('Search response:', data);
+      console.log('🔍 Search response:', data);
+      console.log('🔍 Number of results:', data.inventory?.length || 0);
       
       if (data.success) {
         setSuggestions(data.inventory);
-        console.log('Suggestions set:', data.inventory);
+        console.log('🔍 Suggestions set:', data.inventory);
+        
+        // Auto-select first result for barcode scans (when term matches lastScannedBarcode)
+        if (type === 'barcode' && data.inventory.length > 0 && term === lastScannedBarcode) {
+          console.log('🔍 Auto-selecting first barcode result:', data.inventory[0]);
+          setSelectedItem(data.inventory[0]);
+          setSuggestions([]); // Clear suggestions since we auto-selected
+          setSuccess(`Found item: ${data.inventory[0].name}`);
+          setTimeout(() => setSuccess(''), 5000);
+        } else if (type === 'barcode' && data.inventory.length === 0) {
+          setError(`No item found for barcode: ${term}`);
+          console.log('🔍 No items found for barcode:', term);
+          setTimeout(() => setError(''), 5000);
+        }
       } else {
         setError(data.error || 'Failed to search inventory');
         setSuggestions([]);
-        console.error('Search failed:', data.error);
+        console.error('🔍 Search failed:', data.error);
       }
     } catch (error) {
-      console.error('Error searching inventory:', error);
+      console.error('🔍 Error searching inventory:', error);
       setError('Failed to search inventory');
       setSuggestions([]);
     }
@@ -397,7 +471,144 @@ function SalesPage() {
                 >
                   Show All
                 </button>
+                
+                <button
+                  onClick={() => setShowMobileScannerUrl(!showMobileScannerUrl)}
+                  className="px-4 py-3 rounded-xl text-sm font-semibold bg-green-100 hover:bg-green-200 text-green-700 flex items-center justify-center"
+                >
+                  {showMobileScannerUrl ? (
+                    <>
+                      <QrCode className="w-4 h-4 mr-2" />
+                      Hide QR Code
+                    </>
+                  ) : (
+                    <>
+                      <Smartphone className="w-4 h-4 mr-2" />
+                      Mobile Scanner
+                    </>
+                  )}
+                </button>
               </div>
+
+              {/* WebSocket Connection Status */}
+              <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  {wsConnected ? (
+                    <Wifi className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <WifiOff className="w-4 h-4 text-red-600" />
+                  )}
+                  <span className="text-sm font-medium text-gray-700">
+                    Scanner: {connectionStatus}
+                  </span>
+                  {lastScannedBarcode && (
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                      Last: {lastScannedBarcode}
+                    </span>
+                  )}
+                </div>
+                {!wsConnected && (
+                  <button
+                    onClick={wsReconnect}
+                    className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
+                  >
+                    Reconnect
+                  </button>
+                )}
+              </div>
+
+              {/* Mobile Scanner URL */}
+              {showMobileScannerUrl && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl">
+                  <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
+                    <Smartphone className="w-4 h-4 mr-2 text-green-600" />
+                    Mobile Barcode Scanner
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Scan the QR code or visit the URL on your phone to start scanning barcodes:
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* QR Code */}
+                    <div className="flex flex-col items-center justify-center bg-white p-4 rounded-lg border">
+                      {qrCodeDataUrl ? (
+                        <div className="flex flex-col items-center">
+                          <img 
+                            src={qrCodeDataUrl} 
+                            alt="Scanner QR Code"
+                            className="w-40 h-40 border border-gray-200 rounded-lg"
+                          />
+                          <div className="mt-2 flex items-center text-xs text-gray-600">
+                            <QrCode className="w-3 h-3 mr-1" />
+                            Scan with your phone camera
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-40 h-40 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <div className="text-gray-500 text-center">
+                            <QrCode className="w-8 h-8 mx-auto mb-2" />
+                            <span className="text-xs">Generating QR...</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* URL and Buttons */}
+                    <div className="flex flex-col justify-center space-y-3">
+                      <div className="bg-white p-3 rounded-lg border">
+                        <div className="text-xs text-gray-500 mb-1">Scanner URL:</div>
+                        <code className="text-xs font-mono text-blue-600 break-all">
+                          https://192.168.1.4:3443/scanner?user={encodeURIComponent(userEmail)}
+                        </code>
+                      </div>
+                      
+                      <div className="flex flex-col space-y-2">
+                        <button
+                          onClick={() => {
+                            const url = `https://192.168.1.4:3443/scanner?user=${encodeURIComponent(userEmail)}`;
+                            navigator.clipboard.writeText(url);
+                            setSuccess('Scanner URL copied to clipboard!');
+                            setTimeout(() => setSuccess(''), 3000);
+                          }}
+                          className="flex items-center justify-center px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm font-medium"
+                        >
+                          <span>📋</span>
+                          <span className="ml-2">Copy URL</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            const url = `https://192.168.1.4:3443/scanner?user=${encodeURIComponent(userEmail)}`;
+                            window.open(url, '_blank');
+                          }}
+                          className="flex items-center justify-center px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm font-medium"
+                        >
+                          <Smartphone className="w-4 h-4" />
+                          <span className="ml-2">Open Scanner</span>
+                        </button>
+                        
+                        <button
+                          onClick={generateQRCode}
+                          className="flex items-center justify-center px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 text-sm font-medium"
+                        >
+                          <QrCode className="w-4 h-4" />
+                          <span className="ml-2">Refresh QR</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start space-x-2 text-xs text-blue-700">
+                      <div className="text-blue-500 mt-0.5">💡</div>
+                      <div>
+                        <strong>Tip:</strong> Most phones can scan QR codes directly with their camera app. 
+                        Just point your camera at the QR code and tap the notification that appears.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="relative mb-6">
                 <input
