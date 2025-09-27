@@ -67,3 +67,5 @@ ehthumbs.db
 *.bak
 *.tmp
 /resourceManagementAPI/node_modules/
+
+certificates
