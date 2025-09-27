@@ -3,16 +3,25 @@ WORKDIR /workspace
 
 COPY . .
 
-RUN mvn -B -DskipTests -pl user-roleManagementAPI -am package
+RUN mvn -B -DskipTests clean package
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-COPY --from=build /workspace/user-roleManagementAPI/target/*.jar app.jar
+# Create a non-root user with specific UID for Choreo
+RUN groupadd -r appuser --gid=10001 && useradd -r -g appuser appuser --uid=10001
+
+COPY --from=build /workspace/target/*.jar app.jar
+
+# Change ownership of the app directory to the non-root user
+RUN chown -R appuser:appuser /app
 
 ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75 -XX:+AlwaysPreTouch"
 
-EXPOSE 8080
+EXPOSE 8084
+
+# Switch to non-root user (using numeric UID for Choreo compliance)
+USER 10001
 
 # Run the application
 ENTRYPOINT ["java","-jar","/app/app.jar"]

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { getUserProfile, clearAuthData } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { LogOut, User } from "lucide-react";
+import { toastUtils } from "@/lib/toast-utils";
 
 export default function UserProfileHeader() {
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -16,6 +17,7 @@ export default function UserProfileHeader() {
 
   const handleLogout = () => {
     clearAuthData();
+    toastUtils.logoutSuccess();
     router.push("/login");
   };
 

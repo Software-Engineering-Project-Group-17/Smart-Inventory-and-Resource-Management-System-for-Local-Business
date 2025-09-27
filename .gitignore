@@ -24,6 +24,7 @@ resourceManagementAPI/yarn-error.log
 resourceManagementAPI/dist/
 
 frontend-customer/node_modules/
+frontend-supplier/node_modules/
 
 # Logs
 logs/

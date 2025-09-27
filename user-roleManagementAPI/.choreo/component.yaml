@@ -1,0 +1,15 @@
+schemaVersion: "1.2"
+
+# Build configuration
+build:
+  dockerfile: Dockerfile
+
+# Endpoint configuration
+endpoints:
+  - name: user-role-management-api
+    type: REST
+    service:
+      port: 8084
+    context: /
+    networkVisibility: Public
+    schemaFilePath: openapi.yaml
