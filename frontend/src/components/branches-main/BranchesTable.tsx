@@ -138,23 +138,23 @@ export const BranchesTable: React.FC<BranchesTableProps> = ({
                       onClick={() => onCreateManager(branch.id, branch.name)}
                       variant="primary"
                     />
-                    <ActionButton
+                    {/* <ActionButton
                       icon={UserMinus}
                       label={BRANCHES_CONSTANTS.labels.removeManager}
                       onClick={() => onRemoveManager(branch)}
                       disabled={branch.managerCount === 0}
-                    />
-                    <ActionButton
+                    /> */}
+                    {/* <ActionButton
                       icon={LogIn}
                       label={BRANCHES_CONSTANTS.labels.login}
                       onClick={() => onLogin(branch.id)}
-                    />
-                    <ActionButton
+                    /> */}
+                    {/* <ActionButton
                       icon={Trash2}
                       label={BRANCHES_CONSTANTS.labels.delete}
                       onClick={() => onDelete(branch)}
                       variant="danger"
-                    />
+                    /> */}
                   </div>
                 </td>
               </tr>

@@ -13,6 +13,8 @@ import {
   X,
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { toastUtils } from "@/lib/toast-utils";
+import { showRoleAccessNotification } from "@/lib/auth";
 
 const ProfilePage = () => {
   const { user, isLoading, isLoggedIn, userRole, userEmail, userName } =
@@ -41,6 +43,7 @@ const ProfilePage = () => {
 
   // Debug logging
   useEffect(() => {
+    showRoleAccessNotification("Profile Management");
     console.log("ProfilePage Debug:", {
       isLoading,
       isLoggedIn,
@@ -85,6 +88,7 @@ const ProfilePage = () => {
   const handleSave = () => {
     // Here you would typically save to your backend
     console.log("Saving profile data:", formData);
+    toastUtils.formSuccess("Profile updated successfully");
     setIsEditing(false);
   };
 

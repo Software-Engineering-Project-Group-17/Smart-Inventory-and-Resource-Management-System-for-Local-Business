@@ -7,6 +7,7 @@ import {
   InventoryFormData,
 } from "./types";
 import { INVENTORY_CONSTANTS } from "./constants";
+import { toastUtils } from "@/lib/toast-utils";
 
 // Sample data - in real app this would come from API
 const SAMPLE_INVENTORY: InventoryItem[] = [
