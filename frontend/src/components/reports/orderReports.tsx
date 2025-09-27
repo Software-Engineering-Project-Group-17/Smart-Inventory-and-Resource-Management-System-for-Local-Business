@@ -181,9 +181,51 @@ export default function OrdersReportsPage() {
   }, [filteredRows]);
 
   const handleDownloadPDF = async () => {
-    if (!filteredRows.length) return;
-    alert(`PDF download would contain ${filteredRows.length} rows of ${currentReport.label} data`);
-  };
+  if (!filteredRows.length) return;
+
+  const [{ jsPDF }, autoTableModule] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable')
+  ]);
+
+  const autoTable = autoTableModule.default;
+  const doc = new jsPDF({ orientation: 'l', unit: 'pt' }); // landscape for wide tables
+
+  const headers = Object.keys(filteredRows[0]);
+  const head = [headers.map(h => h.replace(/_/g, ' '))];
+  const body = filteredRows.map(r => headers.map(h => String((r as any)[h] ?? '')));
+
+  // Header
+  doc.setFontSize(16);
+  doc.text(currentReport.label, 40, 32);
+  doc.setFontSize(10);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 48);
+
+  // Table
+  autoTable(doc, {
+    head,
+    body,
+    startY: 60,
+    margin: { left: 40, right: 40 },
+    styles: { fontSize: 8, cellPadding: 4, overflow: 'linebreak' },
+    headStyles: { fillColor: [54, 116, 181], textColor: 255 },
+    didDrawPage: (data) => {
+      // optional footer
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFontSize(9);
+      doc.text(
+        `${report} • ${filteredRows.length} rows`,
+        pageWidth - 40,
+        pageHeight - 20,
+        { align: 'right' }
+      );
+    }
+  });
+
+  doc.save(`${report}-${new Date().toISOString().split('T')[0]}.pdf`);
+};
+
 
   const handleRetry = () => {
     setError(null);
