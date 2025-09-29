@@ -4,6 +4,9 @@ import { Search, ShoppingCart, Percent, DollarSign, User, Printer, Trash2, Plus,
 import { getUserProfile } from '@/lib/auth';
 import { useBarcodeWebSocket } from '@/hooks/useBarcodeWebSocket';
 import QRCode from 'qrcode';
+//import { generateInvoicePDF, downloadInvoicePDF, printInvoicePDF, previewInvoicePDF } from '@/lib/pdfInvoice';
+import { downloadSimplePDF, printSimplePDF, previewSimplePDF } from '@/lib/simplePdf';
+import ClientOnly from '@/components/ui/ClientOnly';
 
 // Type definitions
 interface InventoryItem {
@@ -60,6 +63,8 @@ function SalesPage() {
   const [cartIdCounter, setCartIdCounter] = useState<number>(1);
   const [showMobileScannerUrl, setShowMobileScannerUrl] = useState<boolean>(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+  const [showPrintOptions, setShowPrintOptions] = useState<boolean>(false);
+  const [lastCompletedSale, setLastCompletedSale] = useState<any>(null);
   
   // Get user email from session/auth - you may need to implement this based on your auth system
   const userProfile = getUserProfile();
@@ -79,19 +84,18 @@ function SalesPage() {
   // Set client-side only values after component mounts
   useEffect(() => {
     setIsClient(true);
-    setInvoiceNumber(`INV-${Date.now().toString().slice(-6)}`);
+    // Generate invoice number only on client side to avoid hydration mismatch
+    const timestamp = Date.now();
+    setInvoiceNumber(`INV-${timestamp.toString().slice(-6)}`);
     setCurrentDate(new Date().toLocaleDateString());
     console.log('User email:', userEmail);
     console.log('User profile:', userProfile);
-    
-    // Generate QR code for mobile scanner
-    generateQRCode();
   }, []);
 
   // Generate QR code for mobile scanner URL
   const generateQRCode = async () => {
     try {
-      const scannerUrl = `https://192.168.1.4:3443/scanner?user=${encodeURIComponent(userEmail)}`;
+      const scannerUrl = `https://10.10.17.111:3443/scanner?user=${encodeURIComponent(userEmail)}`;
       const qrCodeDataUrl = await QRCode.toDataURL(scannerUrl, {
         width: 200,
         margin: 2,
@@ -222,6 +226,13 @@ function SalesPage() {
     }
   }, [customerInfo.isRegistered]);
 
+  // Generate QR code when mobile scanner is shown and QR code doesn't exist
+  useEffect(() => {
+    if (showMobileScannerUrl && !qrCodeDataUrl && isClient) {
+      generateQRCode();
+    }
+  }, [showMobileScannerUrl, qrCodeDataUrl, isClient]);
+
   const handleAddItem = (item: InventoryItem) => {
     const discountAmount = discount.type === 'percentage' 
       ? (item.price * quantity * discount.amount / 100)
@@ -296,7 +307,9 @@ function SalesPage() {
           quantity: item.quantity,
           price: item.price,
           discountAmount: item.discountAmount,
-          totalPrice: item.totalPrice
+          totalPrice: item.totalPrice,
+          discount: item.discount,
+          discountType: item.discountType
         })),
         customerInfo: (customerInfo.name && customerInfo.phone) ? customerInfo : null,
         paymentAmount: payment,
@@ -320,6 +333,43 @@ function SalesPage() {
       if (data.success) {
         setSuccess(`Sale completed successfully! Invoice: ${data.invoiceNumber}`);
         
+        // Store sale data for PDF generation
+        const completedSale = {
+          invoiceNumber: data.invoiceNumber || invoiceNumber,
+          date: currentDate,
+          time: new Date().toLocaleTimeString(),
+          cashier: userProfile?.firstName && userProfile?.lastName 
+            ? `${userProfile.firstName} ${userProfile.lastName}` 
+            : userProfile?.username || userProfile?.email || 'Admin User',
+          customer: (customerInfo.name && customerInfo.phone) ? customerInfo : null,
+          items: items.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            discount: item.discount,
+            discountType: item.discountType,
+            totalPrice: item.totalPrice
+          })),
+          subtotal,
+          totalDiscount,
+          total,
+          paymentAmount: payment,
+          loyaltyPointsUsed: (customerInfo.isRegistered && loyaltyPoints > 0) ? loyaltyPoints : 0,
+          finalTotal,
+          change: finalBalance,
+          company: {
+            name: "BUILDMATE",
+            branch: "Main Branch",
+            address: "123 Construction Avenue, Builder City, BC 12345",
+            phone: "+1 (555) BUILD-IT",
+            email: "info@buildmate.com",
+            website: "www.buildmate.com"
+          }
+        };
+        
+        setLastCompletedSale(completedSale);
+        setShowPrintOptions(true);
+        
         // Clear the cart and form
         setItems([]);
         setCartIdCounter(1);
@@ -327,11 +377,6 @@ function SalesPage() {
         setLoyaltyPoints(0);
         setCustomerInfo({ name: '', phone: '', isRegistered: false });
         setShowCustomerForm(false);
-        
-        // Print invoice
-        setTimeout(() => {
-          handlePrintInvoice();
-        }, 1000);
       } else {
         setError(data.error || 'Failed to complete sale');
       }
@@ -355,6 +400,48 @@ function SalesPage() {
     window.print();
   };
 
+  const handlePrintPDF = async () => {
+    if (lastCompletedSale) {
+      try {
+        console.log('Printing PDF for user:', userEmail);
+        await printSimplePDF(lastCompletedSale, userEmail);
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please check the console for details.');
+      }
+    } else {
+      console.warn('No completed sale data available for PDF generation');
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (lastCompletedSale) {
+      try {
+        console.log('Downloading PDF for user:', userEmail);
+        await downloadSimplePDF(lastCompletedSale, undefined, userEmail);
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please check the console for details.');
+      }
+    } else {
+      console.warn('No completed sale data available for PDF generation');
+    }
+  };
+
+  const handlePreviewPDF = async () => {
+    if (lastCompletedSale) {
+      try {
+        console.log('Previewing PDF for user:', userEmail);
+        await previewSimplePDF(lastCompletedSale, userEmail);
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Failed to generate PDF. Please check the console for details.');
+      }
+    } else {
+      console.warn('No completed sale data available for PDF generation');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-whitep-2 sm:p-4">
       <div className="max-w-full mx-auto">
@@ -367,15 +454,19 @@ function SalesPage() {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">Invoicing</h1>
-                <p className="text-sm sm:text-base text-gray-600">
-                  {isClient ? `Invoice #${invoiceNumber}` : 'Invoice #INV-000000'}
-                </p>
+                <ClientOnly fallback={<p className="text-sm sm:text-base text-gray-600">Loading invoice...</p>}>
+                  <p className="text-sm sm:text-base text-gray-600">
+                    {isClient ? `Invoice #${invoiceNumber}` : 'Loading invoice...'}
+                  </p>
+                </ClientOnly>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6 text-sm text-gray-600">
               <div className="flex items-center space-x-2">
                 <Clock className="w-4 h-4" />
-                <span className="font-medium">{isClient ? currentDate : 'Loading...'}</span>
+                <ClientOnly fallback={<span className="font-medium">Loading date...</span>}>
+                  <span className="font-medium">{isClient ? currentDate : new Date().toLocaleDateString()}</span>
+                </ClientOnly>
               </div>
               <div className="text-center sm:text-right">
                 <p className="font-semibold text-gray-700">Items: {items.length}</p>
@@ -417,6 +508,96 @@ function SalesPage() {
                     <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
                   </svg>
                 </span>
+              </div>
+            </div>
+          )}
+
+          {/* PDF Print Options Modal */}
+          {showPrintOptions && lastCompletedSale && (
+            <div className="xl:col-span-5 mb-4">
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-xl p-6 relative">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
+                      <Receipt className="text-white w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-green-800">Sale Completed Successfully!</h3>
+                      <p className="text-green-700">Invoice #{lastCompletedSale.invoiceNumber} - Choose your printing option:</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setShowPrintOptions(false)}
+                    className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100"
+                  >
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <button
+                    onClick={handlePreviewPDF}
+                    className="flex flex-col items-center p-4 bg-white rounded-lg border-2 border-blue-200 hover:border-blue-400 hover:shadow-lg transition-all duration-200"
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
+                      <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                        <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-gray-800">Preview PDF</span>
+                    <span className="text-xs text-gray-600 mt-1 text-center">View invoice before printing</span>
+                  </button>
+
+                  <button
+                    onClick={handlePrintPDF}
+                    className="flex flex-col items-center p-4 bg-white rounded-lg border-2 border-green-200 hover:border-green-400 hover:shadow-lg transition-all duration-200"
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center mb-3">
+                      <Printer className="w-6 h-6 text-green-600" />
+                    </div>
+                    <span className="font-semibold text-gray-800">Print PDF</span>
+                    <span className="text-xs text-gray-600 mt-1 text-center">Professional PDF format</span>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadPDF}
+                    className="flex flex-col items-center p-4 bg-white rounded-lg border-2 border-purple-200 hover:border-purple-400 hover:shadow-lg transition-all duration-200"
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center mb-3">
+                      <svg className="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd"/>
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-gray-800">Download PDF</span>
+                    <span className="text-xs text-gray-600 mt-1 text-center">Save to computer</span>
+                  </button>
+
+                  <button
+                    onClick={handlePrintInvoice}
+                    className="flex flex-col items-center p-4 bg-white rounded-lg border-2 border-gray-200 hover:border-gray-400 hover:shadow-lg transition-all duration-200"
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center mb-3">
+                      <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clipRule="evenodd"/>
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-gray-800">Browser Print</span>
+                    <span className="text-xs text-gray-600 mt-1 text-center">Traditional print dialog</span>
+                  </button>
+                </div>
+
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start space-x-2 text-sm text-blue-700">
+                    <div className="text-blue-500 mt-0.5">💡</div>
+                    <div>
+                      <strong>Recommendation:</strong> Use "Print PDF" for clean, professional invoices with BUILDMATE branding 
+                      and company details. The PDF includes branch information and meets business invoice standards.
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -473,7 +654,13 @@ function SalesPage() {
                 </button>
                 
                 <button
-                  onClick={() => setShowMobileScannerUrl(!showMobileScannerUrl)}
+                  onClick={() => {
+                    setShowMobileScannerUrl(!showMobileScannerUrl);
+                    // Generate QR code immediately when showing the scanner section
+                    if (!showMobileScannerUrl && !qrCodeDataUrl) {
+                      setTimeout(() => generateQRCode(), 100);
+                    }
+                  }}
                   className="px-4 py-3 rounded-xl text-sm font-semibold bg-green-100 hover:bg-green-200 text-green-700 flex items-center justify-center"
                 >
                   {showMobileScannerUrl ? (
@@ -1019,8 +1206,8 @@ function SalesPage() {
                   </>
                 ) : (
                   <>
-                    <Printer className="w-5 h-5" />
-                    <span>Complete & Print Invoice</span>
+                    <Receipt className="w-5 h-5" />
+                    <span>Complete Sale & Generate Invoice</span>
                   </>
                 )}
               </button>
@@ -1051,6 +1238,36 @@ function SalesPage() {
                   Exact Amount
                 </button>
               </div>
+
+              {/* Last Invoice Quick Actions */}
+              {lastCompletedSale && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                    <Receipt className="w-4 h-4 mr-2 text-blue-600" />
+                    Last Invoice: #{lastCompletedSale.invoiceNumber}
+                  </h4>
+                  <div className="grid grid-cols-3 gap-1">
+                    <button
+                      onClick={handlePreviewPDF}
+                      className="py-1.5 px-2 text-xs font-medium text-blue-700 bg-blue-100 rounded hover:bg-blue-200 transition-colors duration-200"
+                    >
+                      Preview
+                    </button>
+                    <button
+                      onClick={handlePrintPDF}
+                      className="py-1.5 px-2 text-xs font-medium text-green-700 bg-green-100 rounded hover:bg-green-200 transition-colors duration-200"
+                    >
+                      Print PDF
+                    </button>
+                    <button
+                      onClick={handleDownloadPDF}
+                      className="py-1.5 px-2 text-xs font-medium text-purple-700 bg-purple-100 rounded hover:bg-purple-200 transition-colors duration-200"
+                    >
+                      Download
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

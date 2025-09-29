@@ -83,6 +83,55 @@ class BranchAPI {
     return response.json();
   }
 
+  // Get the authenticated user's specific branch (recommended for PDF generation)
+  async getMyBranch(userEmail?: string): Promise<BranchResponse> {
+    // Try the Next.js internal API first
+    try {
+      let url = `/api/branches/my-branch`;
+      if (userEmail) {
+        url += `?email=${encodeURIComponent(userEmail)}`;
+      }
+      
+      const response = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": userEmail || "",
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Internal API failed: ${errorText}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.branch) {
+        return result.branch;
+      } else {
+        throw new Error(`Internal API returned no branch: ${JSON.stringify(result)}`);
+      }
+    } catch (internalError) {
+      console.log("Internal API failed, trying external API:", internalError);
+      
+      // Fallback to external API
+      if (!userEmail) {
+        throw new Error("User email required for external API fallback");
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/api/branches/my-branch`, {
+        headers: this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch user's branch from external API");
+      }
+
+      const result = await response.json();
+      return result.branch || result; // Handle different response formats
+    }
+  }
+
   // Get branches by owner email (for current implementation)
   async getBranchesByOwner(ownerEmail: string): Promise<BranchResponse[]> {
     // Try the authenticated endpoint first
