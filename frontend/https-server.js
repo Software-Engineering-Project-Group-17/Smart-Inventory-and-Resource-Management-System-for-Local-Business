@@ -45,7 +45,7 @@ app.prepare().then(() => {
   httpServer.listen(port, hostname, (err) => {
     if (err) throw err;
     console.log(`🌐 HTTP Server ready on http://${hostname}:${port}`);
-    console.log(`🌐 Network: http://192.168.1.4:${port}`);
+    console.log(`🌐 Network: http://192.168.50.154:${port}`);
   });
 
   // Create HTTPS server if certificates are available
@@ -58,8 +58,8 @@ app.prepare().then(() => {
     httpsServer.listen(httpsPort, hostname, (err) => {
       if (err) throw err;
       console.log(`🔐 HTTPS Server ready on https://${hostname}:${httpsPort}`);
-      console.log(`🔐 Network: https://192.168.1.4:${httpsPort}`);
-      console.log(`📱 Mobile Scanner: https://192.168.1.4:${httpsPort}/scanner?user=<email>`);
+      console.log(`🔐 Network: https://192.168.50.154:${httpsPort}`);
+      console.log(`📱 Mobile Scanner: https://192.168.50.154:${httpsPort}/scanner?user=<email>`);
     });
   } else {
     console.log('❌ HTTPS server not started - certificates not available');
