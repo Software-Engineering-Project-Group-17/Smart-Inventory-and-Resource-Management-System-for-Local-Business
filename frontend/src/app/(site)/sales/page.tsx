@@ -443,13 +443,13 @@ function SalesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-whitep-2 sm:p-4">
+    <div className="min-h-screen bg-whitep-2 sm:p-4 bg-gray-50">
       <div className="max-w-full mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-100">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-100">
           <div className="flex flex-col lg:flex-row justify-between items-center">
             <div className="flex items-center space-x-3 mb-4 lg:mb-0">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl shadow-md flex items-center justify-center" style={{backgroundColor: '#3674B5'}}>
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg shadow flex items-center justify-center" style={{backgroundColor: '#3674B5'}}>
                 <Receipt className="text-white w-6 h-6 sm:w-8 sm:h-8" />
               </div>
               <div>
@@ -480,7 +480,7 @@ function SalesPage() {
           {/* Error and Success Messages */}
           {error && (
             <div className="xl:col-span-5 mb-4">
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative">
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative">
                 <span className="block sm:inline">{error}</span>
                 <span 
                   className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
@@ -497,7 +497,7 @@ function SalesPage() {
 
           {success && (
             <div className="xl:col-span-5 mb-4">
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-xl relative">
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative">
                 <span className="block sm:inline">{success}</span>
                 <span 
                   className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
@@ -516,7 +516,7 @@ function SalesPage() {
           {/* Left Column - Expanded */}
           <div className="xl:col-span-3">
             {/* Search Section */}
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-100">
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-100">
               <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center">
                 <Search className="w-5 h-5 sm:w-6 sm:h-6 mr-2" style={{color: '#3674B5'}} />
                 Add Items to Cart
@@ -525,9 +525,9 @@ function SalesPage() {
               <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mb-4 sm:mb-6">
                 <button
                   onClick={() => setSearchType('name')}
-                  className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  className={`flex-1 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${
                     searchType === 'name' 
-                      ? 'text-white shadow-lg transform scale-105' 
+                      ? 'text-white shadow transform scale-105' 
                       : 'text-gray-600 bg-gray-100 hover:bg-gray-200 hover:scale-102'
                   }`}
                   style={searchType === 'name' ? {backgroundColor: '#3674B5'} : {}}
@@ -536,9 +536,9 @@ function SalesPage() {
                 </button>
                 <button
                   onClick={() => setSearchType('barcode')}
-                  className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center ${
+                  className={`flex-1 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center ${
                     searchType === 'barcode' 
-                      ? 'text-white shadow-lg transform scale-105' 
+                      ? 'text-white shadow transform scale-105' 
                       : 'text-gray-600 bg-gray-100 hover:bg-gray-200 hover:scale-102'
                   }`}
                   style={searchType === 'barcode' ? {backgroundColor: '#3674B5'} : {}}
@@ -560,7 +560,7 @@ function SalesPage() {
                       console.error('Error:', error);
                     }
                   }}
-                  className="px-4 py-3 rounded-xl text-sm font-semibold bg-blue-100 hover:bg-blue-200 text-blue-700"
+                  className="px-4 py-3 rounded-lg text-sm font-semibold bg-blue-100 hover:bg-blue-200 text-blue-700"
                 >
                   Show All
                 </button>
@@ -573,7 +573,7 @@ function SalesPage() {
                       setTimeout(() => generateQRCode(), 100);
                     }
                   }}
-                  className="px-4 py-3 rounded-xl text-sm font-semibold bg-green-100 hover:bg-green-200 text-green-700 flex items-center justify-center"
+                  className="px-4 py-3 rounded-lg text-sm font-semibold bg-green-100 hover:bg-green-200 text-green-700 flex items-center justify-center"
                 >
                   {showMobileScannerUrl ? (
                     <>
@@ -618,7 +618,7 @@ function SalesPage() {
 
               {/* Mobile Scanner URL */}
               {showMobileScannerUrl && (
-                <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl">
+                <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg">
                   <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
                     <Smartphone className="w-4 h-4 mr-2 text-green-600" />
                     Mobile Barcode Scanner
@@ -716,10 +716,10 @@ function SalesPage() {
                   placeholder={searchType === 'name' ? 'Type product name...' : 'Scan or enter barcode...'}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base transition-all duration-200"
+                  className="w-full p-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base transition-all duration-200"
                 />
                 {suggestions.length > 0 && !selectedItem && (
-                  <div className="absolute z-20 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl max-h-80 overflow-y-auto">
+                  <div className="absolute z-20 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow max-h-80 overflow-y-auto">
                     {suggestions.map(item => (
                       <div
                         key={item.id}
@@ -746,7 +746,7 @@ function SalesPage() {
               </div>
 
               {selectedItem && (
-                <div className="p-6 border-2 rounded-xl shadow-sm" style={{borderColor: '#FADA7A', backgroundColor: '#FADA7A10'}}>
+                <div className="p-6 border-2 rounded-lg shadow-sm" style={{borderColor: '#FADA7A', backgroundColor: '#FADA7A10'}}>
                   <h3 className="font-bold text-gray-800 mb-4 text-lg">{selectedItem.name}</h3>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
@@ -820,7 +820,7 @@ function SalesPage() {
                   <button
                     onClick={() => handleAddItem(selectedItem)}
                     disabled={quantity > selectedItem.stock}
-                    className="w-full py-4 px-6 text-white rounded-xl font-bold text-lg transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed hover:shadow-lg disabled:hover:shadow-none"
+                    className="w-full py-2 px-4 text-white rounded-lg font-bold text-base transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed hover:shadow disabled:hover:shadow-none"
                     style={{backgroundColor: quantity > selectedItem.stock ? '#ccc' : '#3674B5'}}
                   >
                     {quantity > selectedItem.stock ? 'Insufficient Stock' : 'Add to Cart'}
@@ -830,7 +830,7 @@ function SalesPage() {
             </div>
 
             {/* Shopping Cart Table */}
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6 border border-gray-100">
               <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center">
                 <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 mr-2" style={{color: '#3674B5'}} />
                 Shopping Cart ({items.length} items)
@@ -962,7 +962,7 @@ function SalesPage() {
 
               {/* Cart Summary */}
               {items.length > 0 && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
                     <div className="text-sm text-gray-600">
                       <p>Items: {items.length} | Qty: {items.reduce((sum, item) => sum + item.quantity, 0)}</p>
@@ -982,7 +982,7 @@ function SalesPage() {
           {/* Right Column - Compact */}
           <div className="xl:col-span-2">
             {/* Customer Information */}
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-100">
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-100">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-gray-800 flex items-center">
                   <User className="w-5 h-5 mr-2" style={{color: '#3674B5'}} />
@@ -990,7 +990,7 @@ function SalesPage() {
                 </h2>
                 <button
                   onClick={() => setShowCustomerForm(!showCustomerForm)}
-                  className="text-sm px-4 py-2 rounded-lg font-semibold transition-all duration-200 hover:shadow-md"
+                  className="text-sm px-4 py-2 rounded-lg font-semibold transition-all duration-200 hover:shadow"
                   style={{backgroundColor: '#FADA7A', color: '#3674B5'}}
                 >
                   {showCustomerForm ? 'Hide' : 'Add'}
@@ -1027,7 +1027,7 @@ function SalesPage() {
             </div>
 
             {/* Payment Summary */}
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6 border border-gray-100">
               <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
                 <DollarSign className="w-5 h-5 mr-2" style={{color: '#3674B5'}} />
                 Payment
@@ -1042,7 +1042,7 @@ function SalesPage() {
                   <span className="font-medium">Discount:</span>
                   <span className="text-green-600 font-bold">-${totalDiscount.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between font-bold text-gray-800 text-xl py-3 border-t-2 border-gray-300">
+                <div className="flex justify-between font-bold text-gray-800 text-xl py-3 ">
                   <span>Total:</span>
                   <span style={{color: '#3674B5'}}>${total.toFixed(2)}</span>
                 </div>
@@ -1056,7 +1056,7 @@ function SalesPage() {
                     value={customerPayment}
                     onChange={(e) => setCustomerPayment(e.target.value)}
                     placeholder="0.00"
-                    className="w-full p-4 border-2 border-gray-200 rounded-xl text-lg font-bold"
+                    className="w-full p-2 border-2 border-gray-200 rounded-lg text-base font-bold"
                     step="0.01"
                   />
                 </div>
@@ -1072,7 +1072,7 @@ function SalesPage() {
                       value={loyaltyPoints}
                       onChange={(e) => setLoyaltyPoints(Math.min(total, Math.max(0, parseFloat(e.target.value) || 0)))}
                       placeholder="0.00"
-                      className="w-full p-4 border-2 border-gray-200 rounded-xl text-lg font-bold"
+                      className="w-full p-4 border-2 border-gray-200 rounded-lg text-lg font-bold"
                       step="0.01"
                       max={total}
                     />
@@ -1081,7 +1081,7 @@ function SalesPage() {
               </div>
 
               {customerInfo.isRegistered && loyaltyPoints > 0 && (
-                <div className="p-4 rounded-xl mb-6 border-2" style={{backgroundColor: '#FADA7A20', borderColor: '#FADA7A'}}>
+                <div className="p-4 rounded-lg mb-6 border-2" style={{backgroundColor: '#FADA7A20', borderColor: '#FADA7A'}}>
                   <div className="flex justify-between text-lg font-bold">
                     <span>After Loyalty Points:</span>
                     <span style={{color: '#3674B5'}}>${finalTotal.toFixed(2)}</span>
@@ -1090,8 +1090,8 @@ function SalesPage() {
               )}
 
               {payment > 0 && (
-                <div className="p-4 rounded-xl mb-6 border-2" style={{backgroundColor: finalBalance >= 0 ? '#E7F5E7' : '#FFE7E7', borderColor: finalBalance >= 0 ? '#10B981' : '#EF4444'}}>
-                  <div className="flex justify-between text-xl font-bold">
+                <div className="p-2 rounded-lg mb-6 border-2" style={{backgroundColor: finalBalance >= 0 ? '#E7F5E7' : '#FFE7E7', borderColor: finalBalance >= 0 ? '#10B981' : '#EF4444'}}>
+                  <div className="flex justify-between text-base font-bold">
                     <span>{finalBalance >= 0 ? 'Change:' : 'Balance Due:'}</span>
                     <span className={finalBalance >= 0 ? 'text-green-700' : 'text-red-700'}>
                       ${Math.abs(finalBalance).toFixed(2)}
@@ -1108,7 +1108,7 @@ function SalesPage() {
               <button
                 onClick={handleCompleteSale}
                 disabled={items.length === 0 || finalBalance < 0 || loading}
-                className="w-full py-4 px-6 text-white rounded-xl font-bold text-lg transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed hover:shadow-lg disabled:hover:shadow-none flex items-center justify-center space-x-3"
+                className="w-full py-4 px-6 text-white rounded-lg font-bold text-lg transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed hover:shadow disabled:hover:shadow-none flex items-center justify-center space-x-3"
                 style={{backgroundColor: items.length === 0 || finalBalance < 0 || loading ? '#ccc' : '#3674B5'}}
               >
                 {loading ? (
