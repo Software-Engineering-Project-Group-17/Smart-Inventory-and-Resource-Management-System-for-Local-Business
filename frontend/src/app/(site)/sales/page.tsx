@@ -75,7 +75,8 @@ function SalesPage() {
   // WebSocket integration for barcode scanning
   const { 
     isConnected: wsConnected, 
-    lastScannedBarcode, 
+    lastScannedBarcode,
+    lastScanEvent, 
     connectionStatus, 
     sendBarcode, 
     reconnect: wsReconnect 
@@ -113,25 +114,26 @@ function SalesPage() {
 
   // Handle barcode scans from WebSocket
   useEffect(() => {
-    if (lastScannedBarcode) {
-      console.log('🔍 Barcode received via WebSocket:', lastScannedBarcode);
+    if (lastScanEvent) {
+      const barcode = lastScanEvent.barcode;
+      console.log('🔍 Barcode received via WebSocket:', barcode, 'Scan ID:', lastScanEvent.scanId);
       console.log('🔍 Current search term before update:', searchTerm);
       console.log('🔍 Current selected item before update:', selectedItem);
       
-      setSearchTerm(lastScannedBarcode);
+      setSearchTerm(barcode);
       setSearchType('barcode');
       // Clear any previously selected item
       setSelectedItem(null);
       
       // Show success message to indicate barcode was received
-      setSuccess(`Barcode scanned: ${lastScannedBarcode}`);
+      setSuccess(`Barcode scanned: ${barcode}`);
       setTimeout(() => setSuccess(''), 3000);
       
       // Automatically search for the scanned barcode
-      console.log('🔍 Triggering search for barcode:', lastScannedBarcode);
-      searchInventory(lastScannedBarcode, 'barcode');
+      console.log('🔍 Triggering search for barcode:', barcode);
+      searchInventory(barcode, 'barcode');
     }
-  }, [lastScannedBarcode]);
+  }, [lastScanEvent]);
 
   // Search for inventory items
   const searchInventory = async (term: string, type: 'name' | 'barcode') => {
@@ -156,8 +158,8 @@ function SalesPage() {
         setSuggestions(data.inventory);
         console.log('🔍 Suggestions set:', data.inventory);
         
-        // Auto-select first result for barcode scans (when term matches lastScannedBarcode)
-        if (type === 'barcode' && data.inventory.length > 0 && term === lastScannedBarcode) {
+        // Auto-select first result for barcode scans from WebSocket
+        if (type === 'barcode' && data.inventory.length > 0 && lastScanEvent && term === lastScanEvent.barcode) {
           console.log('🔍 Auto-selecting first barcode result:', data.inventory[0]);
           setSelectedItem(data.inventory[0]);
           setSuggestions([]); // Clear suggestions since we auto-selected
@@ -657,14 +659,14 @@ function SalesPage() {
                       <div className="bg-white p-3 rounded-lg border">
                         <div className="text-xs text-gray-500 mb-1">Scanner URL:</div>
                         <code className="text-xs font-mono text-blue-600 break-all">
-                          https://192.168.1.4:3443/scanner?user={encodeURIComponent(userEmail)}
+                          https://192.168.50.154:3443/scanner?user={encodeURIComponent(userEmail)}
                         </code>
                       </div>
                       
                       <div className="flex flex-col space-y-2">
                         <button
                           onClick={() => {
-                            const url = `https://192.168.1.4:3443/scanner?user=${encodeURIComponent(userEmail)}`;
+                            const url = `https://192.168.50.154:3443/scanner?user=${encodeURIComponent(userEmail)}`;
                             navigator.clipboard.writeText(url);
                             setSuccess('Scanner URL copied to clipboard!');
                             setTimeout(() => setSuccess(''), 3000);
@@ -677,7 +679,7 @@ function SalesPage() {
                         
                         <button
                           onClick={() => {
-                            const url = `https://192.168.1.4:3443/scanner?user=${encodeURIComponent(userEmail)}`;
+                            const url = `https://192.168.50.154:3443/scanner?user=${encodeURIComponent(userEmail)}`;
                             window.open(url, '_blank');
                           }}
                           className="flex items-center justify-center px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm font-medium"
