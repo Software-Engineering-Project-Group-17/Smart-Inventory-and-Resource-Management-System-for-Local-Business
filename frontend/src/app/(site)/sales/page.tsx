@@ -527,8 +527,8 @@ function SalesPage() {
                   onClick={() => setSearchType('name')}
                   className={`flex-1 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 ${
                     searchType === 'name' 
-                      ? 'text-white shadow transform scale-105' 
-                      : 'text-gray-600 bg-gray-100 hover:bg-gray-200 hover:scale-102'
+                      ? 'text-white shadow-lg' 
+                      : 'text-gray-600 bg-gray-100 hover:bg-gray-200 hover:shadow-md'
                   }`}
                   style={searchType === 'name' ? {backgroundColor: '#3674B5'} : {}}
                 >
@@ -538,8 +538,8 @@ function SalesPage() {
                   onClick={() => setSearchType('barcode')}
                   className={`flex-1 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center ${
                     searchType === 'barcode' 
-                      ? 'text-white shadow transform scale-105' 
-                      : 'text-gray-600 bg-gray-100 hover:bg-gray-200 hover:scale-102'
+                      ? 'text-white shadow-lg' 
+                      : 'text-gray-600 bg-gray-100 hover:bg-gray-200 hover:shadow-md'
                   }`}
                   style={searchType === 'barcode' ? {backgroundColor: '#3674B5'} : {}}
                 >
@@ -746,7 +746,12 @@ function SalesPage() {
               </div>
 
               {selectedItem && (
-                <div className="p-6 border-2 rounded-lg shadow-sm" style={{borderColor: '#FADA7A', backgroundColor: '#FADA7A10'}}>
+                <div className="p-6 border-2 rounded-lg shadow-sm" style={{borderColor: '#FADA7A', backgroundColor: '#FADA7A10'}}
+                     onKeyDown={(e) => {
+                       if (e.key === 'Enter' && quantity <= selectedItem.stock) {
+                         handleAddItem(selectedItem);
+                       }
+                     }}>
                   <h3 className="font-bold text-gray-800 mb-4 text-lg">{selectedItem.name}</h3>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
@@ -756,24 +761,56 @@ function SalesPage() {
                         <button
                           onClick={() => setQuantity(Math.max(1, quantity - 1))}
                           className="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors duration-150"
+                          tabIndex={-1}
                         >
                           <Minus className="w-5 h-5" />
                         </button>
                         <input
+                          ref={(input) => {
+                            // Auto-focus quantity input when item is selected
+                            if (input && selectedItem) {
+                              setTimeout(() => {
+                                input.focus();
+                                input.select(); // Select all text for easy overwriting
+                              }, 100);
+                            }
+                          }}
                           type="number"
                           value={quantity}
                           onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="w-20 text-center p-2 border-2 border-gray-300 rounded-lg text-lg font-semibold"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (quantity <= selectedItem.stock) {
+                                handleAddItem(selectedItem);
+                              }
+                            }
+                            // Allow arrow keys to adjust quantity
+                            if (e.key === 'ArrowUp') {
+                              e.preventDefault();
+                              setQuantity(Math.min(selectedItem.stock, quantity + 1));
+                            }
+                            if (e.key === 'ArrowDown') {
+                              e.preventDefault();
+                              setQuantity(Math.max(1, quantity - 1));
+                            }
+                          }}
+                          className="w-20 text-center p-2 border-2 border-gray-300 rounded-lg text-lg font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                           min="1"
                           max={selectedItem.stock}
+                          placeholder="Qty"
                         />
                         <button
                           onClick={() => setQuantity(Math.min(selectedItem.stock, quantity + 1))}
                           className="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors duration-150"
+                          tabIndex={-1}
                         >
                           <Plus className="w-5 h-5" />
                         </button>
                       </div>
+                      <p className="text-xs text-gray-500 mt-2 text-center">
+                        Press Enter to add • Use ↑↓ arrows to adjust
+                      </p>
                     </div>
 
                     <div>
@@ -783,6 +820,14 @@ function SalesPage() {
                           value={discount.type}
                           onChange={(e) => setDiscount({...discount, type: e.target.value as 'value' | 'percentage'})}
                           className="flex-1 p-2 border-2 border-gray-300 rounded-lg text-sm font-medium"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (quantity <= selectedItem.stock) {
+                                handleAddItem(selectedItem);
+                              }
+                            }
+                          }}
                         >
                           <option value="value">$ Amount</option>
                           <option value="percentage">% Percent</option>
@@ -791,6 +836,14 @@ function SalesPage() {
                           type="number"
                           value={discount.amount}
                           onChange={(e) => setDiscount({...discount, amount: parseFloat(e.target.value) || 0})}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (quantity <= selectedItem.stock) {
+                                handleAddItem(selectedItem);
+                              }
+                            }
+                          }}
                           className="flex-1 p-2 border-2 border-gray-300 rounded-lg font-semibold"
                           min="0"
                           step="0.01"
@@ -820,11 +873,21 @@ function SalesPage() {
                   <button
                     onClick={() => handleAddItem(selectedItem)}
                     disabled={quantity > selectedItem.stock}
-                    className="w-full py-2 px-4 text-white rounded-lg font-bold text-base transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed hover:shadow disabled:hover:shadow-none"
+                    className="w-full py-2 px-4 text-white rounded-lg font-bold text-lg transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed hover:shadow disabled:hover:shadow-none"
                     style={{backgroundColor: quantity > selectedItem.stock ? '#ccc' : '#3674B5'}}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (quantity <= selectedItem.stock) {
+                          handleAddItem(selectedItem);
+                        }
+                      }
+                    }}
                   >
-                    {quantity > selectedItem.stock ? 'Insufficient Stock' : 'Add to Cart'}
+                    {quantity > selectedItem.stock ? 'Insufficient Stock' : 'Add to Cart (Press Enter)'}
                   </button>
+                  
+                 
                 </div>
               )}
             </div>
