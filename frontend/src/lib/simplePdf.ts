@@ -194,7 +194,7 @@ export const generateSimplePDF = async (invoiceData: InvoiceData, userEmail?: st
   const maxItemNameWidth = qtyX - itemNameX - 5;
   
   invoiceData.items.forEach((item, index) => {
-    if (yPos > pageHeight - 110) {
+    if (yPos > pageHeight - 60) {
       doc.addPage();
       yPos = 30;
       
