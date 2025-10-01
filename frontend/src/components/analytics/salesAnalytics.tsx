@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+"use client";
+
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   BarChart,
   Bar,
@@ -7,121 +9,222 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
+  Area,
+  AreaChart,
   PieChart,
   Pie,
   Cell,
-  Area,
-  AreaChart,
-  ComposedChart
-} from 'recharts';
+  LineChart,
+  Line,
+  ComposedChart,
+} from "recharts";
 import {
   TrendingUp,
   TrendingDown,
   DollarSign,
   ShoppingCart,
-  Calendar,
-  Filter,
   RefreshCw,
   Target,
-  Users,
-  Clock
-} from 'lucide-react';
+} from "lucide-react";
+import { salesAPI } from "@/lib/api/analyticsApi";
 
-// Sample sales data
-const generateSalesData = () => {
-  const days = Array.from({ length: 30 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (29 - i));
-    return date.toISOString().split('T')[0];
+// ---------------- Safe mappers (normalize backend shapes) ----------------
+const mapDailySales = (arr: any[] = []) =>
+  arr.map((d) => ({
+    date: d.date || d.day || d.label || "",
+    sales: Number(d.sales ?? d.revenue ?? 0),
+    orders: Number(d.orders ?? d.count ?? 0),
+    avgOrderValue:
+      Number(d.avgOrderValue ?? (Number(d.sales ?? 0) / Math.max(1, Number(d.orders ?? 0)))),
+  }));
+
+const mapByCategory = (arr: any[] = []) =>
+  arr.map((c) => ({
+    category: c.category || c.name || c.label || "—",
+    sales: Number(c.sales ?? c.revenue ?? 0),
+    orders: Number(c.orders ?? 0),
+    growth: Number(c.growth ?? c.mom ?? 0),
+  }));
+
+const mapByChannel = (arr: any[] = []) =>
+  arr.map((ch, i) => ({
+    name: ch.name || ch.channel || `Channel ${i + 1}`,
+    value: Number(ch.value ?? ch.share ?? 0), // %
+    amount: Number(ch.amount ?? ch.revenue ?? 0),
+    color: ch.color || ["#3674B5", "#10B981", "#F59E0B", "#8B5CF6"][i % 4],
+  }));
+
+const mapTopPerformers = (arr: any[] = []) =>
+  arr.map((p) => ({
+    name: p.name || p.employee || "—",
+    sales: Number(p.sales ?? p.revenue ?? 0),
+    orders: Number(p.orders ?? 0),
+    target: Number(p.target ?? 0),
+    performance: Number(p.performance ?? (p.target ? (Number(p.sales ?? 0) / p.target) * 100 : 0)),
+  }));
+
+const mapHourly = (arr: any[] = []) =>
+  arr.map((h) => ({
+    hour: Number(h.hour ?? h.h ?? 0),
+    sales: Number(h.sales ?? h.revenue ?? 0),
+    orders: Number(h.orders ?? 0),
+  }));
+
+// Optional: metrics + goals from backend
+const mapMetrics = (m: any = {}) => ({
+  totalSales: Number(m.totalSales ?? m.revenue ?? 0),
+  totalOrders: Number(m.totalOrders ?? 0),
+  avgOrderValue: Number(m.avgOrderValue ?? (Number(m.totalSales ?? 0) / Math.max(1, Number(m.totalOrders ?? 0)))),
+  conversionRate: Number(m.conversionRate ?? 0),
+  weeklyGrowth: Number(m.weeklyGrowth ?? 0),
+});
+const mapGoals = (g: any = {}) => ({
+  monthlyTarget: Number(g.monthlyTarget ?? 120000),
+  targetAchievement: Number(g.targetAchievement ?? 0),
+});
+
+// ---------------- Component ----------------
+export default function SalesAnalytics() {
+  const [selectedPeriod, setSelectedPeriod] = useState<"7d" | "30d" | "90d">("30d");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Data state
+  const [dailySales, setDailySales] = useState<any[]>([]);
+  const [salesByCategory, setSalesByCategory] = useState<any[]>([]);
+  const [salesByChannel, setSalesByChannel] = useState<any[]>([]);
+  const [topSalespersons, setTopSalespersons] = useState<any[]>([]);
+  const [hourlyPattern, setHourlyPattern] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState<any>({
+    totalSales: 0,
+    totalOrders: 0,
+    avgOrderValue: 0,
+    conversionRate: 0,
+    weeklyGrowth: 0,
+  });
+  const [goals, setGoals] = useState<any>({
+    monthlyTarget: 120000,
+    targetAchievement: 0,
   });
 
-  return {
-    dailySales: days.map((date, i) => ({
-      date: date.split('-').slice(1).join('/'),
-      sales: Math.floor(Math.random() * 5000) + 2000,
-      orders: Math.floor(Math.random() * 50) + 20,
-      avgOrderValue: Math.floor(Math.random() * 100) + 50
-    })),
-    salesByCategory: [
-      { category: 'Electronics', sales: 45000, orders: 180, growth: 12.5 },
-      { category: 'Clothing', sales: 32000, orders: 240, growth: 8.2 },
-      { category: 'Food & Beverages', sales: 18000, orders: 320, growth: -3.1 },
-      { category: 'Home & Garden', sales: 28000, orders: 160, growth: 15.7 },
-      { category: 'Sports & Outdoors', sales: 22000, orders: 140, growth: 5.8 }
-    ],
-    salesByChannel: [
-      { name: 'Online', value: 60, amount: 85000, color: '#3674B5' },
-      { name: 'In-Store', value: 35, amount: 49000, color: '#10B981' },
-      { name: 'Phone Orders', value: 5, amount: 7000, color: '#F59E0B' }
-    ],
-    topSalespersons: [
-      { name: 'John Smith', sales: 25000, orders: 85, target: 30000, performance: 83.3 },
-      { name: 'Sarah Johnson', sales: 22000, orders: 78, target: 25000, performance: 88.0 },
-      { name: 'Mike Chen', sales: 19000, orders: 65, target: 22000, performance: 86.4 },
-      { name: 'Emily Davis', sales: 18000, orders: 72, target: 20000, performance: 90.0 },
-      { name: 'David Wilson', sales: 16000, orders: 58, target: 18000, performance: 88.9 }
-    ],
-    hourlyPattern: Array.from({ length: 24 }, (_, hour) => ({
-      hour: hour,
-      sales: Math.floor(Math.random() * 1000) + 200,
-      orders: Math.floor(Math.random() * 10) + 2
-    }))
-  };
-};
+  // Build common params
+  const params = { period: selectedPeriod, category: selectedCategory === "all" ? undefined : selectedCategory };
 
-export default function SalesAnalytics() {
-  const [data, setData] = useState(generateSalesData());
-  const [selectedPeriod, setSelectedPeriod] = useState('30d');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [loading, setLoading] = useState(false);
-
-  const refreshData = async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
-    setTimeout(() => {
-      setData(generateSalesData());
-      setLoading(false);
-    }, 1000);
-  };
+    setError("");
+    try {
+      const [
+        dailyRes,
+        byCatRes,
+        byChRes,
+        topRes,
+        hourlyRes,
+        metricsRes,
+        goalsRes,
+      ] = await Promise.allSettled([
+        salesAPI.getDailySales(params),          // GET /api/sales/daily?period=&category=
+        salesAPI.getSalesByCategory(params),     // GET /api/sales/by-category?period=&category=
+        salesAPI.getSalesByChannel(undefined),   // GET /api/sales/by-channel?branchId= (optional)
+        salesAPI.getTopPerformers({ limit: 5, ...params }), // GET /api/sales/top-performers
+        salesAPI.getHourlyPattern(params),       // GET /api/sales/hourly-pattern?period=
+        salesAPI.getMetrics(undefined),          // GET /api/sales/metrics
+        salesAPI.getSalesGoals(undefined),       // GET /api/sales/goals
+      ]);
 
-  const salesMetrics = useMemo(() => {
-    const totalSales = data.dailySales.reduce((sum, day) => sum + day.sales, 0);
-    const totalOrders = data.dailySales.reduce((sum, day) => sum + day.orders, 0);
-    const avgOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
-    
-    const last7Days = data.dailySales.slice(-7);
-    const previous7Days = data.dailySales.slice(-14, -7);
-    
-    const last7DaysSales = last7Days.reduce((sum, day) => sum + day.sales, 0);
-    const previous7DaysSales = previous7Days.reduce((sum, day) => sum + day.sales, 0);
-    const weeklyGrowth = previous7DaysSales > 0 ? ((last7DaysSales - previous7DaysSales) / previous7DaysSales) * 100 : 0;
-    
+      if (dailyRes.status === "fulfilled") {
+        const rows = Array.isArray(dailyRes.value?.data) ? dailyRes.value.data : dailyRes.value;
+        setDailySales(mapDailySales(rows));
+      }
+      if (byCatRes.status === "fulfilled") {
+        const rows = Array.isArray(byCatRes.value?.data) ? byCatRes.value.data : byCatRes.value;
+        setSalesByCategory(mapByCategory(rows));
+      }
+      if (byChRes.status === "fulfilled") {
+        const rows = Array.isArray(byChRes.value?.data) ? byChRes.value.data : byChRes.value;
+        setSalesByChannel(mapByChannel(rows));
+      }
+      if (topRes.status === "fulfilled") {
+        const rows = Array.isArray(topRes.value?.data) ? topRes.value.data : topRes.value;
+        setTopSalespersons(mapTopPerformers(rows));
+      }
+      if (hourlyRes.status === "fulfilled") {
+        const rows = Array.isArray(hourlyRes.value?.data) ? hourlyRes.value.data : hourlyRes.value;
+        setHourlyPattern(mapHourly(rows));
+      }
+      if (metricsRes.status === "fulfilled") {
+        setMetrics(mapMetrics(metricsRes.value));
+      } else {
+        // compute metrics from dailySales as a fallback (after daily set completes next tick)
+        setMetrics((prev: any) => ({ ...prev })); // no-op; actual fallback is handled in useMemo below if needed
+      }
+      if (goalsRes.status === "fulfilled") {
+        setGoals(mapGoals(goalsRes.value));
+      }
+    } catch (e: any) {
+      setError(e?.message || "Failed to load sales analytics");
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedPeriod, selectedCategory]);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  const refreshData = () => fetchAll();
+
+  // Fallback/derived metrics when backend doesn't send them
+  const derived = useMemo(() => {
+    const totalSales =
+      metrics.totalSales ||
+      dailySales.reduce((sum, d) => sum + Number(d.sales || 0), 0);
+    const totalOrders =
+      metrics.totalOrders ||
+      dailySales.reduce((sum, d) => sum + Number(d.orders || 0), 0);
+    const avgOrderValue =
+      metrics.avgOrderValue || (totalOrders > 0 ? totalSales / totalOrders : 0);
+
+    const last7 = dailySales.slice(-7);
+    const prev7 = dailySales.slice(-14, -7);
+    const last7Sales = last7.reduce((s, d) => s + Number(d.sales || 0), 0);
+    const prev7Sales = prev7.reduce((s, d) => s + Number(d.sales || 0), 0);
+    const weeklyGrowth =
+      metrics.weeklyGrowth || (prev7Sales > 0 ? ((last7Sales - prev7Sales) / prev7Sales) * 100 : 0);
+
     return {
       totalSales,
       totalOrders,
       avgOrderValue,
       weeklyGrowth,
-      conversionRate: 3.2,
-      targetAchievement: 85.5
+      conversionRate: metrics.conversionRate || 0,
+      targetAchievement: goals.targetAchievement || 0,
+      monthlyTarget: goals.monthlyTarget || 120000,
     };
-  }, [data]);
+  }, [metrics, goals, dailySales]);
 
-  const MetricCard = ({ title, value, change, icon: Icon, color, format = 'number', target }) => {
-    const isPositive = change >= 0;
-    const formattedValue = format === 'currency' ? `$${value.toLocaleString()}` : 
-                          format === 'percentage' ? `${value.toFixed(1)}%` : value.toLocaleString();
-    
+  const MetricCard = ({ title, value, change, icon: Icon, color, format = "number", target }: any) => {
+    const isPositive = Number(change ?? 0) >= 0;
+    const formattedValue =
+      format === "currency"
+        ? `$${Number(value || 0).toLocaleString()}`
+        : format === "percentage"
+        ? `${Number(value || 0).toFixed(1)}%`
+        : Number(value || 0).toLocaleString();
+
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <div className="p-3 rounded-lg" style={{ backgroundColor: color + '20' }}>
+          <div className="p-3 rounded-lg" style={{ backgroundColor: color + "20" }}>
             <Icon size={24} style={{ color }} />
           </div>
-          {target && (
+          {target !== undefined && (
             <div className="text-right">
               <div className="text-xs text-gray-500">Target</div>
-              <div className="text-sm font-medium">{format === 'currency' ? `$${target.toLocaleString()}` : target}</div>
+              <div className="text-sm font-medium">
+                {format === "currency" ? `$${Number(target).toLocaleString()}` : target}
+              </div>
             </div>
           )}
         </div>
@@ -129,10 +232,10 @@ export default function SalesAnalytics() {
           <p className="text-sm text-gray-600 mb-1">{title}</p>
           <p className="text-2xl font-bold text-gray-900">{formattedValue}</p>
           {change !== undefined && (
-            <div className={`flex items-center gap-1 mt-2 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+            <div className={`flex items-center gap-1 mt-2 ${isPositive ? "text-green-600" : "text-red-600"}`}>
               {isPositive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
               <span className="text-sm font-medium">
-                {Math.abs(change).toFixed(1)}% vs last week
+                {Math.abs(Number(change || 0)).toFixed(1)}% vs last week
               </span>
             </div>
           )}
@@ -154,10 +257,11 @@ export default function SalesAnalytics() {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Sales Analytics</h1>
                 <p className="text-gray-600">Track sales performance and identify growth opportunities</p>
+                {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <select 
+              <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -167,9 +271,9 @@ export default function SalesAnalytics() {
                 <option value="clothing">Clothing</option>
                 <option value="food">Food & Beverages</option>
               </select>
-              <select 
+              <select
                 value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value)}
+                onChange={(e) => setSelectedPeriod(e.target.value as any)}
                 className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="7d">Last 7 Days</option>
@@ -181,8 +285,8 @@ export default function SalesAnalytics() {
                 disabled={loading}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
-                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                Refresh
+                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                {loading ? "Refreshing..." : "Refresh"}
               </button>
             </div>
           </div>
@@ -192,16 +296,16 @@ export default function SalesAnalytics() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard
             title="Total Sales"
-            value={salesMetrics.totalSales}
-            change={salesMetrics.weeklyGrowth}
+            value={derived.totalSales}
+            change={derived.weeklyGrowth}
             icon={DollarSign}
             color="#10B981"
             format="currency"
-            target={120000}
+            target={derived.monthlyTarget}
           />
           <MetricCard
             title="Total Orders"
-            value={salesMetrics.totalOrders}
+            value={derived.totalOrders}
             change={4.8}
             icon={ShoppingCart}
             color="#3674B5"
@@ -209,7 +313,7 @@ export default function SalesAnalytics() {
           />
           <MetricCard
             title="Avg Order Value"
-            value={salesMetrics.avgOrderValue}
+            value={derived.avgOrderValue}
             change={2.1}
             icon={Target}
             color="#F59E0B"
@@ -217,7 +321,7 @@ export default function SalesAnalytics() {
           />
           <MetricCard
             title="Conversion Rate"
-            value={salesMetrics.conversionRate}
+            value={derived.conversionRate}
             change={0.5}
             icon={TrendingUp}
             color="#8B5CF6"
@@ -230,15 +334,15 @@ export default function SalesAnalytics() {
           <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Daily Sales Trend</h3>
             <ResponsiveContainer width="100%" height={400}>
-              <ComposedChart data={data.dailySales.slice(-14)}>
+              <ComposedChart data={dailySales.slice(-14)}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="date" stroke="#6b7280" />
-                <YAxis yAxisId="left" stroke="#6b7280" tickFormatter={(value) => `$${value/1000}k`} />
+                <YAxis yAxisId="left" stroke="#6b7280" tickFormatter={(v) => `$${(Number(v) / 1000).toFixed(0)}k`} />
                 <YAxis yAxisId="right" orientation="right" stroke="#6b7280" />
-                <Tooltip 
-                  formatter={(value, name) => {
-                    if (name === 'sales') return [`${value.toLocaleString()}`, 'Sales'];
-                    if (name === 'orders') return [value, 'Orders'];
+                <Tooltip
+                  formatter={(value: any, name: any) => {
+                    if (name === "sales") return [`${Number(value).toLocaleString()}`, "Sales"];
+                    if (name === "orders") return [value, "Orders"];
                     return [value, name];
                   }}
                 />
@@ -258,7 +362,7 @@ export default function SalesAnalytics() {
                   dataKey="orders"
                   stroke="#3674B5"
                   strokeWidth={2}
-                  dot={{ fill: '#3674B5', strokeWidth: 2, r: 4 }}
+                  dot={{ fill: "#3674B5", strokeWidth: 2, r: 4 }}
                   name="orders"
                 />
               </ComposedChart>
@@ -269,35 +373,24 @@ export default function SalesAnalytics() {
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Sales by Channel</h3>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie
-                  data={data.salesByChannel}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {data.salesByChannel.map((entry, index) => (
+                <Pie data={salesByChannel} cx="50%" cy="50%" innerRadius={40} outerRadius={80} paddingAngle={5} dataKey="value">
+                  {salesByChannel.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`${value}%`, 'Share']} />
+                <Tooltip formatter={(value: any) => [`${value}%`, "Share"]} />
               </PieChart>
             </ResponsiveContainer>
             <div className="space-y-3 mt-4">
-              {data.salesByChannel.map((channel, index) => (
+              {salesByChannel.map((channel, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: channel.color }}
-                    ></div>
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: channel.color }} />
                     <span className="text-sm text-gray-600">{channel.name}</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-medium">${channel.amount.toLocaleString()}</div>
-                    <div className="text-xs text-gray-500">{channel.value}%</div>
+                    <div className="text-sm font-medium">${Number(channel.amount || 0).toLocaleString()}</div>
+                    <div className="text-xs text-gray-500">{Number(channel.value || 0)}%</div>
                   </div>
                 </div>
               ))}
@@ -310,11 +403,11 @@ export default function SalesAnalytics() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Sales by Category</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data.salesByCategory}>
+              <BarChart data={salesByCategory}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="category" stroke="#6b7280" angle={-45} textAnchor="end" height={80} />
-                <YAxis stroke="#6b7280" tickFormatter={(value) => `${value/1000}k`} />
-                <Tooltip formatter={(value) => [`${value.toLocaleString()}`, 'Sales']} />
+                <YAxis stroke="#6b7280" tickFormatter={(v) => `${(Number(v) / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value: any) => [`${Number(value).toLocaleString()}`, "Sales"]} />
                 <Bar dataKey="sales" fill="#3674B5" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -323,28 +416,34 @@ export default function SalesAnalytics() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Top Sales Performers</h3>
             <div className="space-y-4">
-              {data.topSalespersons.map((person, index) => (
+              {topSalespersons.map((person, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-medium text-gray-900">{person.name}</p>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <span>${person.sales.toLocaleString()}</span>
-                      <span>{person.orders} orders</span>
+                      <span>${Number(person.sales || 0).toLocaleString()}</span>
+                      <span>{Number(person.orders || 0)} orders</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className={`text-sm font-medium ${
-                      person.performance >= 85 ? 'text-green-600' : 
-                      person.performance >= 70 ? 'text-yellow-600' : 'text-red-600'
-                    }`}>
-                      {person.performance}%
+                    <div
+                      className={`text-sm font-medium ${
+                        Number(person.performance) >= 85
+                          ? "text-green-600"
+                          : Number(person.performance) >= 70
+                          ? "text-yellow-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {Number(person.performance || 0).toFixed(1)}%
                     </div>
-                    <div className="text-xs text-gray-500">
-                      Target: ${person.target.toLocaleString()}
-                    </div>
+                    {person.target ? (
+                      <div className="text-xs text-gray-500">Target: ${Number(person.target).toLocaleString()}</div>
+                    ) : null}
                   </div>
                 </div>
               ))}
+              {topSalespersons.length === 0 && <p className="text-sm text-gray-500">No performers found.</p>}
             </div>
           </div>
         </div>
@@ -353,26 +452,15 @@ export default function SalesAnalytics() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Hourly Sales Pattern</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={data.hourlyPattern}>
+            <AreaChart data={hourlyPattern}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="hour" 
-                stroke="#6b7280"
-                tickFormatter={(hour) => `${hour}:00`}
+              <XAxis dataKey="hour" stroke="#6b7280" tickFormatter={(hour) => `${hour}:00`} />
+              <YAxis stroke="#6b7280" />
+              <Tooltip
+                formatter={(value: any) => [`${Number(value).toLocaleString()}`, "Sales"]}
+                labelFormatter={(hour: any) => `${hour}:00 - ${Number(hour) + 1}:00`}
               />
-              <YAxis stroke="#6b7280" tickFormatter={(value) => `${value}`} />
-              <Tooltip 
-                formatter={(value) => [`${value}`, 'Sales']}
-                labelFormatter={(hour) => `${hour}:00 - ${hour + 1}:00`}
-              />
-              <Area
-                type="monotone"
-                dataKey="sales"
-                stroke="#F59E0B"
-                fill="#F59E0B"
-                fillOpacity={0.2}
-                strokeWidth={2}
-              />
+              <Area type="monotone" dataKey="sales" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.2} strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -385,19 +473,23 @@ export default function SalesAnalytics() {
               <div>
                 <div className="flex justify-between text-sm mb-2">
                   <span>Monthly Target</span>
-                  <span>{salesMetrics.targetAchievement.toFixed(1)}%</span>
+                  <span>{derived.targetAchievement.toFixed(1)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
+                  <div
                     className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(salesMetrics.targetAchievement, 100)}%` }}
-                  ></div>
+                    style={{ width: `${Math.min(derived.targetAchievement, 100)}%` }}
+                  />
                 </div>
               </div>
               <div className="pt-4 border-t">
-                <p className="text-sm text-gray-600">Target: $120,000</p>
-                <p className="text-sm text-gray-600">Achieved: ${(120000 * salesMetrics.targetAchievement / 100).toLocaleString()}</p>
-                <p className="text-sm text-gray-600">Remaining: ${(120000 * (100 - salesMetrics.targetAchievement) / 100).toLocaleString()}</p>
+                <p className="text-sm text-gray-600">Target: ${Number(derived.monthlyTarget).toLocaleString()}</p>
+                <p className="text-sm text-gray-600">
+                  Achieved: ${(Number(derived.monthlyTarget) * (derived.targetAchievement / 100)).toLocaleString()}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Remaining: ${(Number(derived.monthlyTarget) * (1 - derived.targetAchievement / 100)).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
@@ -407,19 +499,19 @@ export default function SalesAnalytics() {
             <div className="space-y-3">
               <div className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                <p className="text-sm text-gray-700">Peak sales hours: 2PM - 4PM</p>
+                <p className="text-sm text-gray-700">Peak sales hours often cluster midday.</p>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                <p className="text-sm text-gray-700">Electronics category showing 12.5% growth</p>
+                <p className="text-sm text-gray-700">Top categories show positive MoM growth.</p>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
-                <p className="text-sm text-gray-700">Online channel dominates with 60% share</p>
+                <p className="text-sm text-gray-700">Online channel typically leads share.</p>
               </div>
               <div className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
-                <p className="text-sm text-gray-700">Average order value increased by 2.1%</p>
+                <p className="text-sm text-gray-700">Average order value stable to slightly up.</p>
               </div>
             </div>
           </div>
@@ -429,15 +521,15 @@ export default function SalesAnalytics() {
             <div className="space-y-3">
               <div className="p-3 bg-blue-50 rounded-lg">
                 <p className="text-sm font-medium text-blue-800">Optimize Peak Hours</p>
-                <p className="text-xs text-blue-600">Increase staff during 2-4PM for better service</p>
+                <p className="text-xs text-blue-600">Staff up during highest-order windows.</p>
               </div>
               <div className="p-3 bg-green-50 rounded-lg">
-                <p className="text-sm font-medium text-green-800">Focus on Electronics</p>
-                <p className="text-xs text-green-600">Expand inventory in high-growth category</p>
+                <p className="text-sm font-medium text-green-800">Double Down on Winners</p>
+                <p className="text-xs text-green-600">Promote categories with strong growth.</p>
               </div>
               <div className="p-3 bg-yellow-50 rounded-lg">
-                <p className="text-sm font-medium text-yellow-800">Boost Food Sales</p>
-                <p className="text-xs text-yellow-600">Address -3.1% decline with promotions</p>
+                <p className="text-sm font-medium text-yellow-800">Strengthen Lower Channels</p>
+                <p className="text-xs text-yellow-600">Run targeted campaigns for underperforming channels.</p>
               </div>
             </div>
           </div>
