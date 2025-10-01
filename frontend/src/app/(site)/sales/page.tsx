@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, ShoppingCart, Percent, DollarSign, User, Printer, Trash2, Plus, Minus, Scan, Receipt, Star, Clock, Edit3, Smartphone, Wifi, WifiOff, QrCode } from 'lucide-react';
 import { getUserProfile } from '@/lib/auth';
-import { useBarcodeWebSocket } from '@/hooks/useBarcodeWebSocket';
+import { useBarcodeSocket } from '@/hooks/useBarcodeSocket';
 import QRCode from 'qrcode';
 //import { generateInvoicePDF, downloadInvoicePDF, printInvoicePDF, previewInvoicePDF } from '@/lib/pdfInvoice';
 import { downloadSimplePDF, printSimplePDF, previewSimplePDF } from '@/lib/simplePdf';
@@ -73,7 +73,7 @@ function SalesPage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // WebSocket integration for barcode scanning
+  // Socket.IO integration for barcode scanning
   const { 
     isConnected: wsConnected, 
     lastScannedBarcode,
@@ -81,7 +81,7 @@ function SalesPage() {
     connectionStatus, 
     sendBarcode, 
     reconnect: wsReconnect 
-  } = useBarcodeWebSocket();
+  } = useBarcodeSocket();
 
   // Set client-side only values after component mounts
   useEffect(() => {
