@@ -15,11 +15,11 @@ export default function MobileScannerPage() {
   const scanningRef = useRef<boolean>(false);
   
   const searchParams = useSearchParams();
-  // Prioritize URL parameter for email, then fall back to auth system
   const urlUserEmail = searchParams.get('user');
-  const userProfile = getUserProfile();
-  const userEmail = urlUserEmail || userProfile?.email;
   
+  // State to track client-side mounting
+  const [isMounted, setIsMounted] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>('');
   const [isScanning, setIsScanning] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
   const [lastScannedCode, setLastScannedCode] = useState<string>('');
@@ -28,6 +28,15 @@ export default function MobileScannerPage() {
   const [cameraError, setCameraError] = useState<string>('');
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+
+  // Initialize client-side data after mounting
+  useEffect(() => {
+    setIsMounted(true);
+    // Prioritize URL parameter for email, then fall back to auth system
+    const userProfile = getUserProfile();
+    const email = urlUserEmail || userProfile?.email || '';
+    setUserEmail(email);
+  }, [urlUserEmail]);
 
   // Initialize WebSocket connection
   const initializeWebSocket = useCallback(() => {
@@ -390,6 +399,18 @@ export default function MobileScannerPage() {
     };
   }, [stopCamera]);
 
+  // Show loading state until client-side mounting is complete
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white">Loading scanner...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!userEmail) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
@@ -404,7 +425,7 @@ export default function MobileScannerPage() {
               💡 <strong>Expected URL format:</strong>
             </p>
             <code className="text-xs bg-blue-100 p-1 rounded mt-1 block">
-              https://192.168.1.4:3443/scanner?user=your-email@example.com
+              https://192.168.50.154:3443/scanner?user=your-email@example.com
             </code>
             <p className="text-xs text-blue-600 mt-2">
               Use HTTPS (port 3443) for mobile camera access
@@ -620,7 +641,7 @@ export default function MobileScannerPage() {
               For camera access, use HTTPS on your mobile device:
             </p>
             <div className="bg-blue-700 p-2 rounded font-mono text-xs break-all">
-              https://192.168.1.4:3443/scanner?user={userEmail}
+              https://192.168.50.154:3443/scanner?user={userEmail}
             </div>
             <p className="text-xs text-blue-200 mt-2">
               ⚠️ <strong>Security Warning:</strong> Click "Advanced" → "Proceed to site" when prompted.

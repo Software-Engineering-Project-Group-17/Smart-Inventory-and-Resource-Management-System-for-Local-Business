@@ -11,9 +11,16 @@ interface BarcodeMessage {
   user?: string;
 }
 
+interface BarcodeScanEvent {
+  barcode: string;
+  timestamp: number;
+  scanId: string; // Unique identifier for each scan
+}
+
 interface UseBarcodeWebSocketReturn {
   isConnected: boolean;
   lastScannedBarcode: string | null;
+  lastScanEvent: BarcodeScanEvent | null;
   connectionStatus: string;
   sendBarcode: (barcode: string) => void;
   reconnect: () => void;
@@ -45,6 +52,7 @@ const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 export function useBarcodeWebSocket(): UseBarcodeWebSocketReturn {
   const [isConnected, setIsConnected] = useState(false);
   const [lastScannedBarcode, setLastScannedBarcode] = useState<string | null>(null);
+  const [lastScanEvent, setLastScanEvent] = useState<BarcodeScanEvent | null>(null);
   const [connectionStatus, setConnectionStatus] = useState('Disconnected');
   
   const wsRef = useRef<WebSocket | null>(null);
@@ -147,6 +155,13 @@ export function useBarcodeWebSocket(): UseBarcodeWebSocketReturn {
           console.log('🔍 Barcode received:', message.barcode);
           if (message.barcode) {
             setLastScannedBarcode(message.barcode);
+            // Create a unique scan event even for duplicate barcodes
+            const scanEvent: BarcodeScanEvent = {
+              barcode: message.barcode,
+              timestamp: Date.now(),
+              scanId: `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            };
+            setLastScanEvent(scanEvent);
           }
           break;
 
@@ -250,6 +265,7 @@ export function useBarcodeWebSocket(): UseBarcodeWebSocketReturn {
   return {
     isConnected,
     lastScannedBarcode,
+    lastScanEvent,
     connectionStatus,
     sendBarcode,
     reconnect,
