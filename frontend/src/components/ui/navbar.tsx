@@ -351,7 +351,7 @@ const Navbar: React.FC = () => {
       {/* Mobile Sidebar Overlay with Blur Effect */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 z-40 md:hidden"
+          className="fixed inset-0 -z-50 md:hidden"
           style={{
             backdropFilter: "blur(4px)",
             backgroundColor: "rgba(0, 0, 0, 0.3)",
