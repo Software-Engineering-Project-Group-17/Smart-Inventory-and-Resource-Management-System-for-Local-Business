@@ -5,11 +5,11 @@ import { useSearchParams } from 'next/navigation';
 import { Camera, CameraOff, Wifi, WifiOff, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
 import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
 import { getUserProfile } from '@/lib/auth';
+import { useBarcodeSocket } from '@/hooks/useBarcodeSocket';
 
 export default function MobileScannerPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const wsRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
   const scanningRef = useRef<boolean>(false);
@@ -21,13 +21,23 @@ export default function MobileScannerPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
   const [isScanning, setIsScanning] = useState(false);
-  const [wsConnected, setWsConnected] = useState(false);
   const [lastScannedCode, setLastScannedCode] = useState<string>('');
   const [scanHistory, setScanHistory] = useState<string[]>([]);
   const [error, setError] = useState<string>('');
   const [cameraError, setCameraError] = useState<string>('');
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+
+  // Socket.IO integration with user email from URL parameters
+  const { 
+    isConnected: wsConnected, 
+    lastScannedBarcode,
+    connectionStatus, 
+    sendBarcode: socketSendBarcode, 
+    reconnect 
+  } = useBarcodeSocket({ 
+    userEmail: userEmail // Pass user email to Socket.IO hook
+  });
 
   // Initialize client-side data after mounting
   useEffect(() => {
@@ -38,130 +48,33 @@ export default function MobileScannerPage() {
     setUserEmail(email);
   }, [urlUserEmail]);
 
-  // Initialize WebSocket connection
-  const initializeWebSocket = useCallback(() => {
-    if (!userEmail) {
-      setError('User email is required');
-      return;
-    }
-
-    const tryConnections = async () => {
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const wsHost = isLocalhost ? 'localhost' : window.location.hostname;
-      const isHTTPS = window.location.protocol === 'https:';
-      
-      // Prepare connection options
-      const connections = [];
-      
-      if (isHTTPS) {
-        // For HTTPS pages, try WSS first, then WS as fallback
-        connections.push({
-          url: `wss://${wsHost}:8443?user=${encodeURIComponent(userEmail)}`,
-          type: 'secure',
-          description: 'Secure WebSocket (WSS)'
-        });
-        connections.push({
-          url: `ws://${wsHost}:8080?user=${encodeURIComponent(userEmail)}`,
-          type: 'fallback',
-          description: 'Insecure WebSocket (WS) - may be blocked'
-        });
-      } else {
-        // For HTTP pages, try WS first
-        connections.push({
-          url: `ws://${wsHost}:8080?user=${encodeURIComponent(userEmail)}`,
-          type: 'standard',
-          description: 'WebSocket (WS)'
-        });
-      }
-
-      // Try each connection in order
-      for (const connection of connections) {
-        try {
-          console.log(`Attempting ${connection.description} connection to:`, connection.url);
-          
-          const ws = new WebSocket(connection.url);
-          
-          // Create a promise that resolves when connected or rejects on error/timeout
-          const connectionPromise = new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              ws.close();
-              reject(new Error(`Connection timeout for ${connection.description}`));
-            }, 5000);
-
-            ws.onopen = () => {
-              clearTimeout(timeout);
-              console.log(`${connection.description} connected successfully`);
-              setWsConnected(true);
-              setError('');
-              resolve(ws);
-            };
-
-            ws.onerror = (error) => {
-              clearTimeout(timeout);
-              console.error(`${connection.description} error:`, error);
-              reject(new Error(`${connection.description} failed`));
-            };
-          });
-
-          // Wait for connection or timeout
-          const connectedWs = await connectionPromise as WebSocket;
-          
-          // Set up successful connection handlers
-          connectedWs.onclose = (event: CloseEvent) => {
-            console.log(`${connection.description} disconnected. Code:`, event.code, 'Reason:', event.reason);
-            setWsConnected(false);
-            
-            // Retry with a delay
-            setTimeout(() => initializeWebSocket(), 3000);
-          };
-
-          connectedWs.onerror = (error: Event) => {
-            console.error(`${connection.description} error:`, error);
-            setWsConnected(false);
-          };
-
-          // Store the working connection
-          wsRef.current = connectedWs;
-          return; // Success - exit the function
-
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          console.log(`${connection.description} failed:`, errorMessage);
-          // Continue to next connection type
-        }
-      }
-
-      // If we get here, all connections failed
-      setWsConnected(false);
-      setError('Failed to connect to scanner service. Please ensure WebSocket server is running.');
-      console.error('All WebSocket connection attempts failed');
-    };
-
-    tryConnections().catch(error => {
-      console.error('Error in connection attempts:', error);
-      setError('Failed to initialize scanner connection');
-    });
-  }, [userEmail]);
-
-  // Send barcode via WebSocket
+  // Send barcode via Socket.IO
   const sendBarcode = useCallback((barcode: string) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      const message = {
-        type: 'barcode',
-        barcode: barcode,
-        timestamp: new Date().toISOString(),
-        user: userEmail
-      };
-      
-      wsRef.current.send(JSON.stringify(message));
-      console.log('Barcode sent via WebSocket:', barcode);
+    if (wsConnected && socketSendBarcode) {
+      socketSendBarcode(barcode);
+      console.log('Barcode sent via Socket.IO:', barcode);
       
       setLastScannedCode(barcode);
       setScanHistory(prev => [barcode, ...prev.slice(0, 9)]); // Keep last 10 scans
     } else {
       setError('Scanner connection not available');
+      console.log('Connection status:', { wsConnected, status: connectionStatus });
     }
-  }, [userEmail]);
+  }, [wsConnected, socketSendBarcode, connectionStatus]);
+
+  // Update scanned barcode from Socket.IO
+  useEffect(() => {
+    if (lastScannedBarcode) {
+      setLastScannedCode(lastScannedBarcode);
+      setScanHistory(prev => {
+        // Avoid duplicates
+        if (prev[0] !== lastScannedBarcode) {
+          return [lastScannedBarcode, ...prev.slice(0, 9)];
+        }
+        return prev;
+      });
+    }
+  }, [lastScannedBarcode]);
 
   // Initialize camera and barcode reader
   const startCamera = useCallback(async () => {
@@ -230,7 +143,7 @@ export default function MobileScannerPage() {
                     const barcodeText = result.getText();
                     console.log('Barcode detected:', barcodeText);
                     
-                    // Prevent duplicate scans
+                    // Prevent duplicate scans by comparing with current lastScannedCode state
                     if (barcodeText !== lastScannedCode) {
                       sendBarcode(barcodeText);
                       
@@ -337,9 +250,7 @@ export default function MobileScannerPage() {
       setIsScanning(false);
       scanningRef.current = false;
     }
-  }, [facingMode, lastScannedCode, sendBarcode]);
-
-
+  }, [sendBarcode]);
 
   // Stop camera
   const stopCamera = useCallback(() => {
@@ -362,42 +273,143 @@ export default function MobileScannerPage() {
     }
   }, []);
 
+  // Handle camera restart when facing mode changes
+  const handleCameraToggle = useCallback(async () => {
+    if (isScanning) {
+      // Stop camera first
+      try {
+        if (codeReaderRef.current) {
+          codeReaderRef.current.reset();
+        }
+        
+        if (videoRef.current && videoRef.current.srcObject) {
+          const stream = videoRef.current.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+          videoRef.current.srcObject = null;
+        }
+        
+        scanningRef.current = false;
+        setIsScanning(false);
+      } catch (error) {
+        console.error('Error stopping camera:', error);
+      }
+
+      // Wait a bit before restarting
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Restart with current facing mode
+      try {
+        setCameraError('');
+        setError('');
+        
+        const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        if (isMobile && !isSecure) {
+          console.warn('Camera access on mobile typically requires HTTPS, but attempting with HTTP...');
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('MediaDevices API not supported in this browser');
+        }
+        
+        if (!codeReaderRef.current) {
+          codeReaderRef.current = new BrowserMultiFormatReader();
+        }
+
+        scanningRef.current = true;
+        setIsScanning(true);
+
+        const constraints = {
+          video: {
+            facingMode: facingMode,
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 }
+          }
+        };
+
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+          console.log('Camera restarted successfully');
+          
+          // Start scanning loop
+          const scanLoop = () => {
+            if (scanningRef.current && videoRef.current && codeReaderRef.current) {
+              codeReaderRef.current.decodeOnceFromVideoDevice(undefined, videoRef.current)
+                .then((result) => {
+                  if (result && scanningRef.current) {
+                    const barcodeText = result.getText();
+                    console.log('Barcode detected:', barcodeText);
+                    
+                    if (barcodeText !== lastScannedCode) {
+                      sendBarcode(barcodeText);
+                      scanningRef.current = false;
+                      setTimeout(() => {
+                        scanningRef.current = true;
+                        scanLoop();
+                      }, 2000);
+                      return;
+                    }
+                  }
+                  
+                  if (scanningRef.current) {
+                    setTimeout(scanLoop, 100);
+                  }
+                })
+                .catch((error) => {
+                  if (!(error instanceof NotFoundException)) {
+                    console.debug('Scanning...', error.message);
+                  }
+                  if (scanningRef.current) {
+                    setTimeout(scanLoop, 100);
+                  }
+                });
+            }
+          };
+          
+          scanLoop();
+        }
+      } catch (error: any) {
+        console.error('Error restarting camera:', error);
+        setCameraError(error.message || 'Failed to restart camera');
+        setIsScanning(false);
+        scanningRef.current = false;
+      }
+    }
+  }, [isScanning, facingMode, lastScannedCode, sendBarcode]);
+
   // Toggle camera (front/back)
   const toggleCamera = useCallback(() => {
-    setFacingMode((prev: 'user' | 'environment') => prev === 'user' ? 'environment' : 'user');
-  }, []);
-
-  // Initialize WebSocket on mount
-  useEffect(() => {
-    initializeWebSocket();
-    
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
-  }, [initializeWebSocket]);
-
-  // Restart camera when facing mode changes
-  useEffect(() => {
-    if (isScanning) {
-      stopCamera();
-      // Small delay to ensure camera is properly stopped before restarting
-      setTimeout(() => {
-        startCamera();
-      }, 500);
-    }
-  }, [facingMode]);
+    setFacingMode((prev: 'user' | 'environment') => {
+      const newMode = prev === 'user' ? 'environment' : 'user';
+      // Restart camera with new facing mode after state update
+      setTimeout(() => handleCameraToggle(), 100);
+      return newMode;
+    });
+  }, [handleCameraToggle]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopCamera();
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
     };
   }, [stopCamera]);
+
+  // Manual reconnect handler
+  const handleReconnect = useCallback(() => {
+    setReconnectAttempts(prev => prev + 1);
+    reconnect();
+    setError('Attempting to reconnect...');
+  }, [reconnect]);
+
+  // Clear error handler
+  const clearError = useCallback(() => {
+    setError('');
+    setCameraError('');
+  }, []);
 
   // Show loading state until client-side mounting is complete
   if (!isMounted) {
@@ -505,7 +517,7 @@ export default function MobileScannerPage() {
 
       {/* Controls */}
       <div className="p-4 space-y-4">
-        {/* WebSocket Connection Status & Controls */}
+        {/* Socket.IO Connection Status & Controls */}
         <div className="bg-gray-800 p-4 rounded-lg">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold">Scanner Connection</h3>
@@ -530,10 +542,7 @@ export default function MobileScannerPage() {
                 Connection to scanner service failed. Attempts: {reconnectAttempts}
               </p>
               <button
-                onClick={() => {
-                  setReconnectAttempts(prev => prev + 1);
-                  initializeWebSocket();
-                }}
+                onClick={handleReconnect}
                 className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium"
               >
                 Retry Connection
@@ -543,7 +552,7 @@ export default function MobileScannerPage() {
                   💡 <strong>Troubleshooting:</strong>
                 </p>
                 <ul className="text-xs text-yellow-100 mt-1 space-y-1">
-                  <li>• Ensure WebSocket server is running on port 8080</li>
+                  <li>• Ensure Socket.IO server is running on port 8080</li>
                   <li>• Check if mixed content is blocked in browser</li>
                   <li>• Try using HTTP instead of HTTPS if possible</li>
                 </ul>
@@ -606,6 +615,10 @@ export default function MobileScannerPage() {
           <div className="flex justify-between">
             <span>Camera Mode:</span>
             <span className="text-blue-400 capitalize">{facingMode}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>User:</span>
+            <span className="text-yellow-400 text-sm break-all">{userEmail}</span>
           </div>
         </div>
 
