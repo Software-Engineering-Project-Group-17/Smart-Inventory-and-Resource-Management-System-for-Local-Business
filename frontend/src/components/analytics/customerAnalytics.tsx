@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+"use client";
+
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
-  BarChart,
+  BarChart as RBarChart,
   Bar,
   XAxis,
   YAxis,
@@ -19,130 +21,201 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
-  Funnel,
-  FunnelChart
-} from 'recharts';
+} from "recharts";
 import {
   Users,
   TrendingUp,
   TrendingDown,
   DollarSign,
-  ShoppingBag,
-  Heart,
-  UserCheck,
   RefreshCw,
-  Calendar,
   Target,
-  Award
-} from 'lucide-react';
+  Heart,
+  Award,
+} from "lucide-react";
+import { customerAPI } from "@/lib/api/analyticsApi";
 
-// Sample customer data
-const generateCustomerData = () => {
-  return {
-    customerSegments: [
-      { segment: 'VIP Customers', count: 156, revenue: 125000, avgOrderValue: 280, color: '#8B5CF6' },
-      { segment: 'Regular Customers', count: 842, revenue: 220000, avgOrderValue: 95, color: '#3674B5' },
-      { segment: 'Occasional Buyers', count: 1205, revenue: 85000, avgOrderValue: 45, color: '#10B981' },
-      { segment: 'One-time Buyers', count: 324, revenue: 15000, avgOrderValue: 35, color: '#F59E0B' }
-    ],
-    customerLifecycle: [
-      { stage: 'Awareness', customers: 10000, conversion: 15 },
-      { stage: 'Interest', customers: 1500, conversion: 35 },
-      { stage: 'Consideration', customers: 525, conversion: 60 },
-      { stage: 'Purchase', customers: 315, conversion: 80 },
-      { stage: 'Retention', customers: 252, conversion: 70 },
-      { stage: 'Advocacy', customers: 176, conversion: 85 }
-    ],
-    monthlyAcquisition: Array.from({ length: 12 }, (_, i) => {
-      const month = new Date(2024, i).toLocaleDateString('en', { month: 'short' });
-      return {
-        month,
-        newCustomers: Math.floor(Math.random() * 150) + 50,
-        returningCustomers: Math.floor(Math.random() * 300) + 200,
-        churnedCustomers: Math.floor(Math.random() * 50) + 20
-      };
-    }),
-    ageDistribution: [
-      { ageGroup: '18-25', customers: 285, percentage: 18, spending: 45000 },
-      { ageGroup: '26-35', customers: 456, percentage: 28, spending: 125000 },
-      { ageGroup: '36-45', customers: 378, percentage: 24, spending: 165000 },
-      { ageGroup: '46-55', customers: 295, percentage: 19, spending: 98000 },
-      { ageGroup: '56+', customers: 213, percentage: 11, spending: 67000 }
-    ],
-    customerBehavior: [
-      { behavior: 'Purchase Frequency', score: 75 },
-      { behavior: 'Brand Loyalty', score: 68 },
-      { behavior: 'Price Sensitivity', score: 45 },
-      { behavior: 'Product Diversity', score: 82 },
-      { behavior: 'Seasonal Shopping', score: 58 },
-      { behavior: 'Online Engagement', score: 91 }
-    ],
-    topCustomers: [
-      { name: 'Alice Johnson', totalSpent: 8500, orders: 24, avgOrder: 354, lastPurchase: '2 days ago', segment: 'VIP' },
-      { name: 'Bob Smith', totalSpent: 7200, orders: 18, avgOrder: 400, lastPurchase: '1 week ago', segment: 'VIP' },
-      { name: 'Carol Davis', totalSpent: 6800, orders: 31, avgOrder: 219, lastPurchase: '3 days ago', segment: 'VIP' },
-      { name: 'David Wilson', totalSpent: 5900, orders: 15, avgOrder: 393, lastPurchase: '5 days ago', segment: 'VIP' },
-      { name: 'Eva Martinez', totalSpent: 5400, orders: 22, avgOrder: 245, lastPurchase: '1 day ago', segment: 'VIP' }
-    ],
-    retentionCohort: Array.from({ length: 6 }, (_, i) => ({
-      cohort: `Month ${i + 1}`,
-      retention: Math.max(100 - i * 15 - Math.random() * 10, 20)
-    }))
-  };
-};
+// --- Color helpers (consistent with your design palette) ---
+const SEGMENT_COLORS = ["#8B5CF6", "#3674B5", "#10B981", "#F59E0B", "#EF4444", "#0EA5E9"];
+
+// --- Safe mappers (tolerate minor shape differences from backend) ---
+const mapSegments = (arr = []) =>
+  arr.map((s, idx) => ({
+    segment: s.segment || s.name || `Segment ${idx + 1}`,
+    count: Number(s.count ?? s.customers ?? 0),
+    revenue: Number(s.revenue ?? 0),
+    avgOrderValue: Number(s.avgOrderValue ?? s.aov ?? 0),
+    color: SEGMENT_COLORS[idx % SEGMENT_COLORS.length],
+  }));
+
+const mapAcquisition = (arr = []) =>
+  arr.map((m) => ({
+    month: m.month || m.label || m.date || "",
+    newCustomers: Number(m.newCustomers ?? m.new ?? 0),
+    returningCustomers: Number(m.returningCustomers ?? m.returning ?? 0),
+    churnedCustomers: Number(m.churnedCustomers ?? m.churned ?? 0),
+  }));
+
+const mapDemographics = (arr = []) =>
+  arr.map((d) => ({
+    ageGroup: d.ageGroup || d.group || d.label || "",
+    customers: Number(d.customers ?? d.count ?? 0),
+    percentage: Number(d.percentage ?? d.percent ?? 0),
+    spending: Number(d.spending ?? 0),
+  }));
+
+const mapBehavior = (arr = []) =>
+  arr.map((b) => ({
+    behavior: b.behavior || b.metric || b.name || "",
+    score: Number(b.score ?? b.value ?? 0),
+  }));
+
+const mapTopCustomers = (arr = []) =>
+  arr.map((c) => ({
+    name: c.name || c.customerName || "—",
+    totalSpent: Number(c.totalSpent ?? c.revenue ?? 0),
+    orders: Number(c.orders ?? c.totalOrders ?? 0),
+    avgOrder: Number(c.avgOrder ?? c.avgOrderValue ?? 0),
+    lastPurchase: c.lastPurchase || c.lastSeen || "—",
+    segment: c.segment || c.tier || "—",
+  }));
+
+const mapRetention = (arr = []) =>
+  arr.map((r, idx) => ({
+    cohort: r.cohort || r.label || `Month ${idx + 1}`,
+    retention: Number(r.retention ?? r.rate ?? 0),
+  }));
 
 export default function CustomerAnalytics() {
-  const [data, setData] = useState(generateCustomerData());
-  const [selectedPeriod, setSelectedPeriod] = useState('12m');
-  const [selectedSegment, setSelectedSegment] = useState('all');
+  // Filters (extend with branchId when you have multi-branch UI)
+  const [selectedPeriod, setSelectedPeriod] = useState("12m");
+  const [selectedSegment, setSelectedSegment] = useState("all");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const refreshData = async () => {
+  // Data state
+  const [segments, setSegments] = useState<any[]>([]);
+  const [acquisition, setAcquisition] = useState<any[]>([]);
+  const [demographics, setDemographics] = useState<any[]>([]);
+  const [behavior, setBehavior] = useState<any[]>([]);
+  const [topCustomers, setTopCustomers] = useState<any[]>([]);
+  const [retention, setRetention] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState<any>({
+    totalCustomers: 0,
+    totalRevenue: 0,
+    avgCustomerValue: 0,
+    retentionRate: 0,
+    customerGrowth: 0,
+    vipRevenue: 0,
+  });
+
+  // Fetch all sections
+  const fetchAll = useCallback(async () => {
     setLoading(true);
-    setTimeout(() => {
-      setData(generateCustomerData());
+    setError("");
+    try {
+      const [segmentsRes, acquisitionRes, demographicsRes, behaviorRes, topRes, retentionRes, metricsRes] =
+        await Promise.allSettled([
+          customerAPI.getSegments(), // GET /api/customers/segments
+          customerAPI.getAcquisition({ period: selectedPeriod }), // GET /api/customers/acquisition?period=12m
+          customerAPI.getDemographics(), // GET /api/customers/demographics
+          customerAPI.getBehavior(), // GET /api/customers/behavior
+          customerAPI.getTopCustomers({ limit: 5 }), // GET /api/customers/top-customers?limit=5
+          customerAPI.getRetention(), // GET /api/customers/retention
+          customerAPI.getMetrics(), // GET /api/customers/metrics
+        ]);
+
+      if (segmentsRes.status === "fulfilled") setSegments(mapSegments(segmentsRes.value?.segments || segmentsRes.value));
+      if (acquisitionRes.status === "fulfilled")
+        setAcquisition(mapAcquisition(acquisitionRes.value?.data || acquisitionRes.value));
+      if (demographicsRes.status === "fulfilled")
+        setDemographics(mapDemographics(demographicsRes.value?.ageDistribution || demographicsRes.value));
+      if (behaviorRes.status === "fulfilled")
+        setBehavior(mapBehavior(behaviorRes.value?.profile || behaviorRes.value));
+      if (topRes.status === "fulfilled") setTopCustomers(mapTopCustomers(topRes.value?.customers || topRes.value));
+      if (retentionRes.status === "fulfilled")
+        setRetention(mapRetention(retentionRes.value?.cohorts || retentionRes.value));
+      if (metricsRes.status === "fulfilled") {
+        const m = metricsRes.value || {};
+        setMetrics({
+          totalCustomers: Number(m.totalCustomers ?? 0),
+          totalRevenue: Number(m.totalRevenue ?? 0),
+          avgCustomerValue: Number(m.avgCustomerValue ?? m.acv ?? 0),
+          retentionRate: Number(m.retentionRate ?? 0),
+          customerGrowth: Number(m.customerGrowth ?? m.growth ?? 0),
+          vipRevenue: Number(m.vipRevenue ?? 0),
+        });
+      }
+
+      // Fallbacks if backend doesn’t send metrics
+      if (metricsRes.status !== "fulfilled") {
+        const totals = segments.reduce(
+          (acc, s) => {
+            acc.customers += Number(s.count ?? 0);
+            acc.revenue += Number(s.revenue ?? 0);
+            return acc;
+          },
+          { customers: 0, revenue: 0 }
+        );
+        const churned = acquisition.reduce((a, m) => a + Number(m.churnedCustomers ?? 0), 0);
+        const retentionRate =
+          totals.customers > 0 ? ((totals.customers - churned) / totals.customers) * 100 : 0;
+        setMetrics((prev: any) => ({
+          ...prev,
+          totalCustomers: totals.customers,
+          totalRevenue: totals.revenue,
+          avgCustomerValue: totals.customers ? totals.revenue / totals.customers : 0,
+          retentionRate,
+        }));
+      }
+    } catch (e: any) {
+      setError(e?.message || "Failed to load customer analytics");
+    } finally {
       setLoading(false);
-    }, 1000);
-  };
+    }
+  }, [selectedPeriod]);
 
+  // Initial & refetch on period change
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  const refreshData = () => fetchAll();
+
+  // Derived metric cards (use backend metrics when available)
   const customerMetrics = useMemo(() => {
-    const totalCustomers = data.customerSegments.reduce((sum, seg) => sum + seg.count, 0);
-    const totalRevenue = data.customerSegments.reduce((sum, seg) => sum + seg.revenue, 0);
-    const avgCustomerValue = totalRevenue / totalCustomers;
-    
-    const newCustomers = data.monthlyAcquisition.reduce((sum, month) => sum + month.newCustomers, 0);
-    const churnedCustomers = data.monthlyAcquisition.reduce((sum, month) => sum + month.churnedCustomers, 0);
-    const retentionRate = ((totalCustomers - churnedCustomers) / totalCustomers) * 100;
-    
-    const vipCustomers = data.customerSegments.find(seg => seg.segment === 'VIP Customers');
-    const vipRevenue = vipCustomers ? (vipCustomers.revenue / totalRevenue) * 100 : 0;
-    
     return {
-      totalCustomers,
-      totalRevenue,
-      avgCustomerValue,
-      newCustomers,
-      retentionRate,
-      vipRevenue,
-      customerGrowth: 8.5
+      totalCustomers: metrics.totalCustomers || segments.reduce((s, seg) => s + (seg.count || 0), 0),
+      totalRevenue:
+        metrics.totalRevenue ||
+        segments.reduce((s, seg) => s + (seg.revenue || 0), 0),
+      avgCustomerValue:
+        metrics.avgCustomerValue ||
+        (segments.reduce((s, seg) => s + (seg.revenue || 0), 0) /
+          Math.max(1, segments.reduce((s, seg) => s + (seg.count || 0), 0))),
+      retentionRate: metrics.retentionRate || 0,
+      customerGrowth: metrics.customerGrowth ?? 0,
     };
-  }, [data]);
+  }, [metrics, segments]);
 
-  const MetricCard = ({ title, value, change, icon: Icon, color, format = 'number', subtitle }) => {
-    const isPositive = change >= 0;
-    const formattedValue = format === 'currency' ? `$${value.toLocaleString()}` : 
-                          format === 'percentage' ? `${value.toFixed(1)}%` : value.toLocaleString();
-    
+  const MetricCard = ({ title, value, change, icon: Icon, color, format = "number", subtitle }) => {
+    const isPositive = (change ?? 0) >= 0;
+    const formattedValue =
+      format === "currency"
+        ? `$${Number(value || 0).toLocaleString()}`
+        : format === "percentage"
+        ? `${Number(value || 0).toFixed(1)}%`
+        : Number(value || 0).toLocaleString();
+
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <div className="p-3 rounded-lg" style={{ backgroundColor: color + '20' }}>
+          <div className="p-3 rounded-lg" style={{ backgroundColor: color + "20" }}>
             <Icon size={24} style={{ color }} />
           </div>
           {change !== undefined && (
-            <div className={`flex items-center gap-1 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+            <div className={`flex items-center gap-1 ${isPositive ? "text-green-600" : "text-red-600"}`}>
               {isPositive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-              <span className="text-sm font-medium">{Math.abs(change).toFixed(1)}%</span>
+              <span className="text-sm font-medium">{Math.abs(Number(change || 0)).toFixed(1)}%</span>
             </div>
           )}
         </div>
@@ -168,10 +241,11 @@ export default function CustomerAnalytics() {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Customer Analytics</h1>
                 <p className="text-gray-600">Understand customer behavior, segments, and lifetime value</p>
+                {error && <p className="text-red-600 mt-2 text-sm">{error}</p>}
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <select 
+              <select
                 value={selectedSegment}
                 onChange={(e) => setSelectedSegment(e.target.value)}
                 className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-yellow-500"
@@ -181,7 +255,7 @@ export default function CustomerAnalytics() {
                 <option value="regular">Regular Customers</option>
                 <option value="occasional">Occasional Buyers</option>
               </select>
-              <select 
+              <select
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value)}
                 className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-yellow-500"
@@ -195,8 +269,8 @@ export default function CustomerAnalytics() {
                 disabled={loading}
                 className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50"
               >
-                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                Refresh
+                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                {loading ? "Refreshing..." : "Refresh"}
               </button>
             </div>
           </div>
@@ -207,7 +281,7 @@ export default function CustomerAnalytics() {
           <MetricCard
             title="Total Customers"
             value={customerMetrics.totalCustomers}
-            change={customerMetrics.customerGrowth}
+            change={metrics.customerGrowth ?? 0}
             icon={Users}
             color="#F59E0B"
             subtitle="Active customer base"
@@ -215,7 +289,7 @@ export default function CustomerAnalytics() {
           <MetricCard
             title="Customer Revenue"
             value={customerMetrics.totalRevenue}
-            change={12.3}
+            change={metrics.revenueGrowth ?? 12.3}
             icon={DollarSign}
             color="#10B981"
             format="currency"
@@ -224,7 +298,7 @@ export default function CustomerAnalytics() {
           <MetricCard
             title="Avg Customer Value"
             value={customerMetrics.avgCustomerValue}
-            change={5.7}
+            change={metrics.acvGrowth ?? 5.7}
             icon={Target}
             color="#3674B5"
             format="currency"
@@ -233,7 +307,7 @@ export default function CustomerAnalytics() {
           <MetricCard
             title="Retention Rate"
             value={customerMetrics.retentionRate}
-            change={2.1}
+            change={metrics.retentionGrowth ?? 2.1}
             icon={Heart}
             color="#8B5CF6"
             format="percentage"
@@ -241,38 +315,31 @@ export default function CustomerAnalytics() {
           />
         </div>
 
-        {/* Customer Segments and Acquisition Trend */}
+        {/* Customer Segments + Acquisition */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Customer Segments</h3>
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
-                <Pie
-                  data={data.customerSegments}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  paddingAngle={3}
-                  dataKey="count"
-                >
-                  {data.customerSegments.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                <Pie data={segments} cx="50%" cy="50%" outerRadius={80} paddingAngle={3} dataKey="count">
+                  {segments.map((entry, index) => (
+                    <Cell key={index} fill={entry.color || SEGMENT_COLORS[index % SEGMENT_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [value, 'Customers']} />
+                <Tooltip formatter={(value) => [value as any, "Customers"]} />
               </PieChart>
             </ResponsiveContainer>
             <div className="space-y-2 mt-4">
-              {data.customerSegments.map((segment, index) => (
+              {segments.map((segment, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div 
+                    <div
                       className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: segment.color }}
+                      style={{ backgroundColor: segment.color || SEGMENT_COLORS[index % SEGMENT_COLORS.length] }}
                     ></div>
                     <span className="text-sm text-gray-600">{segment.segment}</span>
                   </div>
-                  <span className="text-sm font-medium">{segment.count}</span>
+                  <span className="text-sm font-medium">{segment.count?.toLocaleString?.() ?? segment.count}</span>
                 </div>
               ))}
             </div>
@@ -281,94 +348,75 @@ export default function CustomerAnalytics() {
           <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Customer Acquisition Trend</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={data.monthlyAcquisition}>
+              <AreaChart data={acquisition}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" stroke="#6b7280" />
                 <YAxis stroke="#6b7280" />
                 <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="newCustomers"
-                  stackId="1"
-                  stroke="#10B981"
-                  fill="#10B981"
-                  fillOpacity={0.8}
-                  name="New Customers"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="returningCustomers"
-                  stackId="1"
-                  stroke="#3674B5"
-                  fill="#3674B5"
-                  fillOpacity={0.8}
-                  name="Returning Customers"
-                />
+                <Area type="monotone" dataKey="newCustomers" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.8} name="New Customers" />
+                <Area type="monotone" dataKey="returningCustomers" stackId="1" stroke="#3674B5" fill="#3674B5" fillOpacity={0.8} name="Returning Customers" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Age Distribution and Customer Behavior */}
+        {/* Demographics + Behavior */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Customer Demographics</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data.ageDistribution} layout="horizontal">
+              <RBarChart data={demographics} layout="horizontal">
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis type="number" stroke="#6b7280" />
                 <YAxis dataKey="ageGroup" type="category" stroke="#6b7280" />
                 <Tooltip />
                 <Bar dataKey="customers" fill="#F59E0B" name="Customers" />
-              </BarChart>
+              </RBarChart>
             </ResponsiveContainer>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Customer Behavior Profile</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <RadarChart data={data.customerBehavior}>
+              <RadarChart data={behavior}>
                 <PolarGrid />
                 <PolarAngleAxis dataKey="behavior" className="text-xs" />
                 <PolarRadiusAxis angle={60} domain={[0, 100]} />
-                <Radar
-                  name="Score"
-                  dataKey="score"
-                  stroke="#8B5CF6"
-                  fill="#8B5CF6"
-                  fillOpacity={0.3}
-                  strokeWidth={2}
-                />
+                <Radar name="Score" dataKey="score" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.3} strokeWidth={2} />
                 <Tooltip />
               </RadarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Top Customers and Retention Cohort */}
+        {/* Top Customers + Retention */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Top Customers</h3>
             <div className="space-y-4">
-              {data.topCustomers.map((customer, index) => (
+              {topCustomers.map((customer, index) => (
                 <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center">
                       <span className="text-white font-bold text-sm">
-                        {customer.name.split(' ').map(n => n[0]).join('')}
+                        {customer.name
+                          .toString()
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")}
                       </span>
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">{customer.name}</p>
                       <div className="flex items-center gap-4 text-sm text-gray-600">
                         <span>{customer.orders} orders</span>
-                        <span>Avg: ${customer.avgOrder}</span>
+                        <span>Avg: ${Number(customer.avgOrder || 0).toLocaleString()}</span>
                         <span>Last: {customer.lastPurchase}</span>
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-gray-900">${customer.totalSpent.toLocaleString()}</p>
+                    <p className="font-semibold text-gray-900">${Number(customer.totalSpent || 0).toLocaleString()}</p>
                     <div className="flex items-center gap-1">
                       <Award size={12} className="text-purple-600" />
                       <span className="text-xs text-purple-600">{customer.segment}</span>
@@ -376,38 +424,53 @@ export default function CustomerAnalytics() {
                   </div>
                 </div>
               ))}
+              {topCustomers.length === 0 && <p className="text-sm text-gray-500">No top customers found.</p>}
             </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Retention Cohort</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={data.retentionCohort}>
+              <LineChart data={retention}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="cohort" stroke="#6b7280" />
                 <YAxis stroke="#6b7280" domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
-                <Tooltip formatter={(value) => [`${value.toFixed(1)}%`, 'Retention Rate']} />
-                <Line 
-                  type="monotone" 
-                  dataKey="retention" 
-                  stroke="#10B981" 
+                <Tooltip formatter={(value: any) => [`${Number(value).toFixed(1)}%`, "Retention Rate"]} />
+                <Line
+                  type="monotone"
+                  dataKey="retention"
+                  stroke="#10B981"
                   strokeWidth={3}
-                  dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+                  dot={{ fill: "#10B981", strokeWidth: 2, r: 4 }}
                 />
               </LineChart>
             </ResponsiveContainer>
+            {/* Optional quick summary, can be replaced with backend-provided summaries */}
             <div className="mt-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">1-Month Retention</span>
-                <span className="font-medium">85.2%</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">6-Month Retention</span>
-                <span className="font-medium">42.8%</span>
-              </div>
+              {retention.slice(0, 1).map((r, i) => (
+                <div key={i} className="flex justify-between text-sm">
+                  <span className="text-gray-600">1-Month Retention</span>
+                  <span className="font-medium">
+                    {typeof r.retention === "number" ? `${r.retention.toFixed(1)}%` : "—"}
+                  </span>
+                </div>
+              ))}
+              {retention.slice(5, 6).map((r, i) => (
+                <div key={i} className="flex justify-between text-sm">
+                  <span className="text-gray-600">6-Month Retention</span>
+                  <span className="font-medium">
+                    {typeof r.retention === "number" ? `${r.retention.toFixed(1)}%` : "—"}
+                  </span>
+                </div>
+              ))}
+              {/* If your backend provides 12m directly, replace this with that item */}
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">12-Month Retention</span>
-                <span className="font-medium">28.5%</span>
+                <span className="font-medium">
+                  {retention.length >= 12 && typeof retention[11].retention === "number"
+                    ? `${retention[11].retention.toFixed(1)}%`
+                    : "—"}
+                </span>
               </div>
             </div>
           </div>

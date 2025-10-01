@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+"use client";
+
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   BarChart,
   Bar,
@@ -7,176 +9,254 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
+  Area,
+  AreaChart,
   PieChart,
   Pie,
   Cell,
-  Area,
-  AreaChart,
-  RadialBarChart,
-  RadialBar
-} from 'recharts';
+  LineChart,
+  Line
+} from "recharts";
 import {
   Package,
   TrendingUp,
   TrendingDown,
   AlertTriangle,
-  Truck,
   DollarSign,
-  BarChart3,
   RefreshCw,
-  Calendar,
   Activity
-} from 'lucide-react';
+} from "lucide-react";
+import { inventoryAPI } from "@/lib/api/analyticsApi";
 
-// Sample inventory data
-const generateInventoryData = () => {
-  return {
-    categoryOverview: [
-      { 
-        category: 'Electronics', 
-        stock: 450, 
-        lowStock: 35, 
-        outOfStock: 5, 
-        value: 125000, 
-        turnover: 8.2,
-        trend: 12.5 
-      },
-      { 
-        category: 'Clothing', 
-        stock: 680, 
-        lowStock: 45, 
-        outOfStock: 8, 
-        value: 89000, 
-        turnover: 6.5,
-        trend: -3.2 
-      },
-      { 
-        category: 'Food & Beverages', 
-        stock: 890, 
-        lowStock: 78, 
-        outOfStock: 12, 
-        value: 45000, 
-        turnover: 12.1,
-        trend: 8.7 
-      },
-      { 
-        category: 'Home & Garden', 
-        stock: 320, 
-        lowStock: 28, 
-        outOfStock: 3, 
-        value: 67000, 
-        turnover: 4.8,
-        trend: 15.3 
-      },
-      { 
-        category: 'Sports & Outdoors', 
-        stock: 280, 
-        lowStock: 22, 
-        outOfStock: 4, 
-        value: 52000, 
-        turnover: 7.3,
-        trend: -1.8 
-      }
-    ],
-    stockLevels: [
-      { name: 'In Stock', value: 75, count: 2620, color: '#10B981' },
-      { name: 'Low Stock', value: 15, count: 208, color: '#F59E0B' },
-      { name: 'Out of Stock', value: 10, count: 32, color: '#EF4444' }
-    ],
-    monthlyMovement: Array.from({ length: 12 }, (_, i) => {
-      const month = new Date(2024, i).toLocaleDateString('en', { month: 'short' });
-      return {
-        month,
-        inbound: Math.floor(Math.random() * 500) + 200,
-        outbound: Math.floor(Math.random() * 600) + 300,
-        net: Math.floor(Math.random() * 200) - 100
-      };
-    }),
-    topMovingItems: [
-      { name: 'Wireless Headphones', movement: 285, category: 'Electronics', status: 'High', velocity: 95 },
-      { name: 'Coffee Beans', movement: 420, category: 'Food & Beverages', status: 'High', velocity: 88 },
-      { name: 'Running Shoes', movement: 156, category: 'Sports & Outdoors', status: 'Medium', velocity: 72 },
-      { name: 'Garden Tools', movement: 89, category: 'Home & Garden', status: 'Low', velocity: 45 },
-      { name: 'Winter Jackets', movement: 203, category: 'Clothing', status: 'Medium', velocity: 68 }
-    ],
-    warehouseUtilization: [
-      { warehouse: 'Main Warehouse', capacity: 10000, used: 8500, utilization: 85 },
-      { warehouse: 'Branch A', capacity: 5000, used: 3200, utilization: 64 },
-      { warehouse: 'Branch B', capacity: 5000, used: 4100, utilization: 82 },
-      { warehouse: 'Branch C', capacity: 3000, used: 2700, utilization: 90 }
-    ],
-    reorderAlerts: [
-      { item: 'iPhone Cases', currentStock: 15, reorderPoint: 20, supplier: 'TechSupply Co.', urgency: 'high' },
-      { item: 'Coffee Filters', currentStock: 45, reorderPoint: 50, supplier: 'Kitchen Essentials', urgency: 'medium' },
-      { item: 'Tennis Balls', currentStock: 8, reorderPoint: 15, supplier: 'Sports Direct', urgency: 'high' },
-      { item: 'Plant Fertilizer', currentStock: 25, reorderPoint: 30, supplier: 'Garden Pro', urgency: 'low' }
-    ]
-  };
+// ---------- Safe mappers to normalize backend payloads ----------
+const mapCategories = (arr: any[] = []) =>
+  arr.map((c) => ({
+    category: c.category || c.name || c.label || "—",
+    stock: Number(c.stock ?? c.inStock ?? 0),
+    lowStock: Number(c.lowStock ?? c.low ?? 0),
+    outOfStock: Number(c.outOfStock ?? c.oos ?? 0),
+    value: Number(c.value ?? c.inventoryValue ?? 0),
+    turnover: Number(c.turnover ?? c.turnoverRate ?? 0),
+    trend: Number(c.trend ?? c.mom ?? 0),
+  }));
+
+const mapStockLevels = (obj: any = {}) => {
+  // Accept either array or object {inStock, lowStock, outOfStock, totals}
+  if (Array.isArray(obj)) return obj;
+  const inStock = Number(obj.inStock ?? obj.in_stock ?? 0);
+  const lowStock = Number(obj.lowStock ?? obj.low_stock ?? 0);
+  const outOfStock = Number(obj.outOfStock ?? obj.out_of_stock ?? 0);
+  const total = inStock + lowStock + outOfStock || 1;
+  return [
+    { name: "In Stock", value: Math.round((inStock / total) * 100), count: inStock, color: "#10B981" },
+    { name: "Low Stock", value: Math.round((lowStock / total) * 100), count: lowStock, color: "#F59E0B" },
+    { name: "Out of Stock", value: Math.round((outOfStock / total) * 100), count: outOfStock, color: "#EF4444" },
+  ];
 };
 
-export default function InventoryAnalytics() {
-  const [data, setData] = useState(generateInventoryData());
-  const [selectedPeriod, setSelectedPeriod] = useState('12m');
-  const [selectedWarehouse, setSelectedWarehouse] = useState('all');
-  const [loading, setLoading] = useState(false);
+const mapMovement = (arr: any[] = []) =>
+  arr.map((m) => ({
+    month: m.month || m.label || m.date || "",
+    inbound: Number(m.inbound ?? m.in ?? 0),
+    outbound: Number(m.outbound ?? m.out ?? 0),
+    net: Number(m.net ?? (m.inbound ?? 0) - (m.outbound ?? 0) ?? 0),
+  }));
 
-  const refreshData = async () => {
+const mapTopMoving = (arr: any[] = []) =>
+  arr.map((t) => ({
+    name: t.name || t.item || "—",
+    movement: Number(t.movement ?? t.units ?? t.qty ?? 0),
+    category: t.category || t.group || "—",
+    status: t.status || t.velocityBand || "Medium",
+    velocity: Number(t.velocity ?? t.rate ?? 0),
+  }));
+
+const mapWarehouses = (arr: any[] = []) =>
+  arr.map((w) => ({
+    warehouse: w.warehouse || w.name || "—",
+    capacity: Number(w.capacity ?? 0),
+    used: Number(w.used ?? w.utilized ?? 0),
+    utilization: Number(w.utilization ?? (w.capacity ? (w.used / w.capacity) * 100 : 0)),
+  }));
+
+const mapReorderAlerts = (arr: any[] = []) =>
+  arr.map((r) => ({
+    item: r.item || r.name || "—",
+    currentStock: Number(r.currentStock ?? r.stock ?? 0),
+    reorderPoint: Number(r.reorderPoint ?? r.threshold ?? 0),
+    supplier: r.supplier || r.vendor || "—",
+    urgency: (r.urgency || r.priority || "medium").toString().toLowerCase(),
+  }));
+
+// ---------- Component ----------
+export default function InventoryAnalytics() {
+  const [selectedPeriod, setSelectedPeriod] = useState<"3m" | "6m" | "12m">("12m");
+  const [selectedWarehouse, setSelectedWarehouse] = useState<"all" | "main" | "branch-a" | "branch-b">("all");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Data state
+  const [categoryOverview, setCategoryOverview] = useState<any[]>([]);
+  const [stockLevels, setStockLevels] = useState<any[]>([]);
+  const [monthlyMovement, setMonthlyMovement] = useState<any[]>([]);
+  const [topMovingItems, setTopMovingItems] = useState<any[]>([]);
+  const [warehouseUtilization, setWarehouseUtilization] = useState<any[]>([]);
+  const [reorderAlerts, setReorderAlerts] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState<any>({
+    totalValue: 0,
+    avgTurnover: 0,
+    totalStock: 0,
+    totalLowStock: 0,
+    totalOutOfStock: 0,
+  });
+
+  const branchId = selectedWarehouse === "all" ? undefined : selectedWarehouse;
+
+  const fetchAll = useCallback(async () => {
     setLoading(true);
-    setTimeout(() => {
-      setData(generateInventoryData());
+    setError("");
+    try {
+      const [
+        byCategoryRes,
+        stockLevelsRes,
+        movementRes,
+        topMovingRes,
+        warehouseRes,
+        reorderRes,
+        metricsRes,
+      ] = await Promise.allSettled([
+        inventoryAPI.getByCategory(branchId),                       // GET /api/inventory/by-category?branchId=
+        inventoryAPI.getStockLevels(branchId),                      // GET /api/inventory/stock-levels?branchId=
+        inventoryAPI.getMovement({ period: selectedPeriod, branchId }), // GET /api/inventory/movement?period=&branchId=
+        inventoryAPI.getTopMoving({ limit: 5, period: selectedPeriod, branchId }), // GET /api/inventory/top-moving
+        inventoryAPI.getWarehouseUtilization(branchId),             // GET /api/inventory/warehouse-utilization?branchId=
+        inventoryAPI.getReorderAlerts(branchId),                    // GET /api/inventory/reorder-alerts?branchId=
+        inventoryAPI.getMetrics(branchId),                          // GET /api/inventory/metrics?branchId=
+      ]);
+
+      if (byCategoryRes.status === "fulfilled") {
+        const items = Array.isArray(byCategoryRes.value?.data) ? byCategoryRes.value.data : byCategoryRes.value;
+        setCategoryOverview(mapCategories(items));
+      }
+
+      if (stockLevelsRes.status === "fulfilled") {
+        setStockLevels(mapStockLevels(stockLevelsRes.value?.data ?? stockLevelsRes.value));
+      }
+
+      if (movementRes.status === "fulfilled") {
+        const items = Array.isArray(movementRes.value?.data) ? movementRes.value.data : movementRes.value;
+        setMonthlyMovement(mapMovement(items));
+      }
+
+      if (topMovingRes.status === "fulfilled") {
+        const items = Array.isArray(topMovingRes.value?.data) ? topMovingRes.value.data : topMovingRes.value;
+        setTopMovingItems(mapTopMoving(items));
+      }
+
+      if (warehouseRes.status === "fulfilled") {
+        const items = Array.isArray(warehouseRes.value?.data) ? warehouseRes.value.data : warehouseRes.value;
+        setWarehouseUtilization(mapWarehouses(items));
+      }
+
+      if (reorderRes.status === "fulfilled") {
+        const items = Array.isArray(reorderRes.value?.data) ? reorderRes.value.data : reorderRes.value;
+        setReorderAlerts(mapReorderAlerts(items));
+      }
+
+      if (metricsRes.status === "fulfilled") {
+        const m = metricsRes.value || {};
+        setMetrics({
+          totalValue: Number(m.totalValue ?? m.inventoryValue ?? 0),
+          avgTurnover: Number(m.avgTurnover ?? m.turnover ?? 0),
+          totalStock: Number(m.totalStock ?? m.inStock ?? 0),
+          totalLowStock: Number(m.totalLowStock ?? m.lowStock ?? 0),
+          totalOutOfStock: Number(m.totalOutOfStock ?? m.outOfStock ?? 0),
+        });
+      }
+    } catch (e: any) {
+      setError(e?.message || "Failed to load inventory analytics");
+    } finally {
       setLoading(false);
-    }, 1000);
-  };
+    }
+  }, [selectedPeriod, branchId]);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
+  const refreshData = () => fetchAll();
 
   const inventoryMetrics = useMemo(() => {
-    const totalStock = data.categoryOverview.reduce((sum, cat) => sum + cat.stock, 0);
-    const totalLowStock = data.categoryOverview.reduce((sum, cat) => sum + cat.lowStock, 0);
-    const totalOutOfStock = data.categoryOverview.reduce((sum, cat) => sum + cat.outOfStock, 0);
-    const totalValue = data.categoryOverview.reduce((sum, cat) => sum + cat.value, 0);
-    const avgTurnover = data.categoryOverview.reduce((sum, cat) => sum + cat.turnover, 0) / data.categoryOverview.length;
-    const stockHealthScore = ((totalStock - totalLowStock - totalOutOfStock) / totalStock) * 100;
-    
-    return {
-      totalStock,
-      totalLowStock,
-      totalOutOfStock,
-      totalValue,
-      avgTurnover,
-      stockHealthScore,
-      criticalItems: totalOutOfStock + totalLowStock
+    const totals = {
+      totalStock:
+        metrics.totalStock ||
+        categoryOverview.reduce((sum, cat) => sum + Number(cat.stock || 0), 0),
+      totalLowStock:
+        metrics.totalLowStock ||
+        categoryOverview.reduce((sum, cat) => sum + Number(cat.lowStock || 0), 0),
+      totalOutOfStock:
+        metrics.totalOutOfStock ||
+        categoryOverview.reduce((sum, cat) => sum + Number(cat.outOfStock || 0), 0),
+      totalValue:
+        metrics.totalValue ||
+        categoryOverview.reduce((sum, cat) => sum + Number(cat.value || 0), 0),
+      avgTurnover:
+        metrics.avgTurnover ||
+        (categoryOverview.length
+          ? categoryOverview.reduce((sum, cat) => sum + Number(cat.turnover || 0), 0) /
+            categoryOverview.length
+          : 0),
     };
-  }, [data]);
+    const stockHealthScore =
+      totals.totalStock > 0
+        ? ((totals.totalStock - totals.totalLowStock - totals.totalOutOfStock) / totals.totalStock) * 100
+        : 0;
 
-  const MetricCard = ({ title, value, change, icon: Icon, color, format = 'number', status }) => {
-    const formattedValue = format === 'currency' ? `$${value.toLocaleString()}` : 
-                          format === 'percentage' ? `${value.toFixed(1)}%` : 
-                          format === 'decimal' ? value.toFixed(1) : value.toLocaleString();
-    
-    const statusColor = status === 'good' ? 'text-green-600' : status === 'warning' ? 'text-yellow-600' : 'text-red-600';
-    
+    return {
+      ...totals,
+      stockHealthScore,
+      criticalItems: totals.totalOutOfStock + totals.totalLowStock,
+    };
+  }, [metrics, categoryOverview]);
+
+  const MetricCard = ({
+    title,
+    value,
+    change,
+    icon: Icon,
+    color,
+    format = "number",
+    status,
+  }: any) => {
+    const formattedValue =
+      format === "currency"
+        ? `$${Number(value || 0).toLocaleString()}`
+        : format === "percentage"
+        ? `${Number(value || 0).toFixed(1)}%`
+        : format === "decimal"
+        ? Number(value || 0).toFixed(1)
+        : Number(value || 0).toLocaleString();
+
+    const statusColor =
+      status === "good" ? "text-green-600" : status === "warning" ? "text-yellow-600" : "text-red-600";
+
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <div className="p-3 rounded-lg" style={{ backgroundColor: color + '20' }}>
+          <div className="p-3 rounded-lg" style={{ backgroundColor: color + "20" }}>
             <Icon size={24} style={{ color }} />
           </div>
-          {status && (
-            <div className={`text-xs px-2 py-1 rounded-full bg-gray-100 ${statusColor}`}>
-              {status === 'good' ? 'Healthy' : status === 'warning' ? 'Attention' : 'Critical'}
-            </div>
-          )}
+          {status && <div className={`text-xs px-2 py-1 rounded-full bg-gray-100 ${statusColor}`}>
+            {status === "good" ? "Healthy" : status === "warning" ? "Attention" : "Critical"}
+          </div>}
         </div>
         <div>
           <p className="text-sm text-gray-600 mb-1">{title}</p>
           <p className="text-2xl font-bold text-gray-900">{formattedValue}</p>
           {change !== undefined && (
-            <div className={`flex items-center gap-1 mt-2 ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {change >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-              <span className="text-sm font-medium">
-                {Math.abs(change).toFixed(1)}% vs last month
-              </span>
+            <div className={`flex items-center gap-1 mt-2 ${Number(change) >= 0 ? "text-green-600" : "text-red-600"}`}>
+              {Number(change) >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+              <span className="text-sm font-medium">{Math.abs(Number(change)).toFixed(1)}% vs last month</span>
             </div>
           )}
         </div>
@@ -184,21 +264,29 @@ export default function InventoryAnalytics() {
     );
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'High': return '#10B981';
-      case 'Medium': return '#F59E0B';
-      case 'Low': return '#EF4444';
-      default: return '#6B7280';
+  const getStatusColor = (status: string) => {
+    switch ((status || "").toLowerCase()) {
+      case "high":
+        return "#10B981";
+      case "medium":
+        return "#F59E0B";
+      case "low":
+        return "#EF4444";
+      default:
+        return "#6B7280";
     }
   };
 
-  const getUrgencyColor = (urgency) => {
-    switch (urgency) {
-      case 'high': return '#EF4444';
-      case 'medium': return '#F59E0B';
-      case 'low': return '#10B981';
-      default: return '#6B7280';
+  const getUrgencyColor = (urgency: string) => {
+    switch ((urgency || "").toLowerCase()) {
+      case "high":
+        return "#EF4444";
+      case "medium":
+        return "#F59E0B";
+      case "low":
+        return "#10B981";
+      default:
+        return "#6B7280";
     }
   };
 
@@ -215,12 +303,13 @@ export default function InventoryAnalytics() {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Inventory Analytics</h1>
                 <p className="text-gray-600">Monitor stock levels, turnover rates, and inventory health</p>
+                {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <select 
+              <select
                 value={selectedWarehouse}
-                onChange={(e) => setSelectedWarehouse(e.target.value)}
+                onChange={(e) => setSelectedWarehouse(e.target.value as any)}
                 className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500"
               >
                 <option value="all">All Warehouses</option>
@@ -228,9 +317,9 @@ export default function InventoryAnalytics() {
                 <option value="branch-a">Branch A</option>
                 <option value="branch-b">Branch B</option>
               </select>
-              <select 
+              <select
                 value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value)}
+                onChange={(e) => setSelectedPeriod(e.target.value as any)}
                 className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500"
               >
                 <option value="3m">Last 3 Months</option>
@@ -242,8 +331,8 @@ export default function InventoryAnalytics() {
                 disabled={loading}
                 className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
               >
-                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                Refresh
+                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                {loading ? "Refreshing..." : "Refresh"}
               </button>
             </div>
           </div>
@@ -257,7 +346,7 @@ export default function InventoryAnalytics() {
             change={3.2}
             icon={Package}
             color="#8B5CF6"
-            status="good"
+            status={inventoryMetrics.totalStock > 0 ? "good" : "warning"}
           />
           <MetricCard
             title="Inventory Value"
@@ -275,7 +364,13 @@ export default function InventoryAnalytics() {
             icon={Activity}
             color="#F59E0B"
             format="percentage"
-            status={inventoryMetrics.stockHealthScore >= 80 ? "good" : inventoryMetrics.stockHealthScore >= 60 ? "warning" : "critical"}
+            status={
+              inventoryMetrics.stockHealthScore >= 80
+                ? "good"
+                : inventoryMetrics.stockHealthScore >= 60
+                ? "warning"
+                : "critical"
+            }
           />
           <MetricCard
             title="Avg Turnover Rate"
@@ -288,39 +383,28 @@ export default function InventoryAnalytics() {
           />
         </div>
 
-        {/* Stock Distribution and Movement Trend */}
+        {/* Stock Distribution + Movement */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Stock Level Distribution</h3>
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
-                <Pie
-                  data={data.stockLevels}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={90}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  {data.stockLevels.map((entry, index) => (
+                <Pie data={stockLevels} cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={3} dataKey="value">
+                  {stockLevels.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`${value}%`, 'Percentage']} />
+                <Tooltip formatter={(value: number) => [`${value}%`, "Percentage"]} />
               </PieChart>
             </ResponsiveContainer>
             <div className="space-y-2 mt-4">
-              {data.stockLevels.map((level, index) => (
+              {stockLevels.map((level, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: level.color }}
-                    ></div>
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: level.color }} />
                     <span className="text-sm text-gray-600">{level.name}</span>
                   </div>
-                  <span className="text-sm font-medium">{level.count} items</span>
+                  <span className="text-sm font-medium">{Number(level.count || 0).toLocaleString()} items</span>
                 </div>
               ))}
             </div>
@@ -329,40 +413,24 @@ export default function InventoryAnalytics() {
           <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Monthly Inventory Movement</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={data.monthlyMovement}>
+              <AreaChart data={monthlyMovement}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" stroke="#6b7280" />
                 <YAxis stroke="#6b7280" />
                 <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="inbound"
-                  stackId="1"
-                  stroke="#10B981"
-                  fill="#10B981"
-                  fillOpacity={0.8}
-                  name="Inbound"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="outbound"
-                  stackId="2"
-                  stroke="#EF4444"
-                  fill="#EF4444"
-                  fillOpacity={0.8}
-                  name="Outbound"
-                />
+                <Area type="monotone" dataKey="inbound" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.8} name="Inbound" />
+                <Area type="monotone" dataKey="outbound" stackId="2" stroke="#EF4444" fill="#EF4444" fillOpacity={0.8} name="Outbound" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Category Performance and Warehouse Utilization */}
+        {/* Category Performance + Warehouse Utilization */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Category Performance</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data.categoryOverview}>
+              <BarChart data={categoryOverview}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="category" stroke="#6b7280" angle={-45} textAnchor="end" height={80} />
                 <YAxis stroke="#6b7280" />
@@ -377,82 +445,85 @@ export default function InventoryAnalytics() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Warehouse Utilization</h3>
             <div className="space-y-4">
-              {data.warehouseUtilization.map((warehouse, index) => (
+              {warehouseUtilization.map((warehouse, index) => (
                 <div key={index} className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-gray-900">{warehouse.warehouse}</span>
-                    <span className="text-sm text-gray-600">{warehouse.utilization}%</span>
+                    <span className="text-sm text-gray-600">{Number(warehouse.utilization || 0)}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
+                    <div
                       className={`h-2 rounded-full transition-all duration-300 ${
-                        warehouse.utilization >= 90 ? 'bg-red-500' : 
-                        warehouse.utilization >= 80 ? 'bg-yellow-500' : 'bg-green-500'
+                        Number(warehouse.utilization) >= 90
+                          ? "bg-red-500"
+                          : Number(warehouse.utilization) >= 80
+                          ? "bg-yellow-500"
+                          : "bg-green-500"
                       }`}
-                      style={{ width: `${warehouse.utilization}%` }}
-                    ></div>
+                      style={{ width: `${Number(warehouse.utilization || 0)}%` }}
+                    />
                   </div>
                   <div className="flex justify-between text-xs text-gray-500">
-                    <span>Used: {warehouse.used.toLocaleString()}</span>
-                    <span>Capacity: {warehouse.capacity.toLocaleString()}</span>
+                    <span>Used: {Number(warehouse.used || 0).toLocaleString()}</span>
+                    <span>Capacity: {Number(warehouse.capacity || 0).toLocaleString()}</span>
                   </div>
                 </div>
               ))}
+              {warehouseUtilization.length === 0 && <p className="text-sm text-gray-500">No data.</p>}
             </div>
           </div>
         </div>
 
-        {/* Top Moving Items and Reorder Alerts */}
+        {/* Top Moving Items + Reorder Alerts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Top Moving Items</h3>
             <div className="space-y-4">
-              {data.topMovingItems.map((item, index) => (
+              {topMovingItems.map((item, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-medium text-gray-900">{item.name}</p>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
                       <span>{item.category}</span>
-                      <span>{item.movement} units/month</span>
+                      <span>{Number(item.movement || 0)} units/month</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div 
+                    <div
                       className="text-sm font-medium px-2 py-1 rounded-full text-white"
                       style={{ backgroundColor: getStatusColor(item.status) }}
                     >
                       {item.status}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Velocity: {item.velocity}%
-                    </div>
+                    <div className="text-xs text-gray-500 mt-1">Velocity: {Number(item.velocity || 0)}%</div>
                   </div>
                 </div>
               ))}
+              {topMovingItems.length === 0 && <p className="text-sm text-gray-500">No top moving items.</p>}
             </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Reorder Alerts</h3>
             <div className="space-y-4">
-              {data.reorderAlerts.map((alert, index) => (
+              {reorderAlerts.map((alert, index) => (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <p className="font-medium text-gray-900">{alert.item}</p>
                     <div className="text-sm text-gray-600">
-                      <span>Stock: {alert.currentStock} | </span>
-                      <span>Reorder: {alert.reorderPoint}</span>
+                      <span>Stock: {Number(alert.currentStock || 0)} | </span>
+                      <span>Reorder: {Number(alert.reorderPoint || 0)}</span>
                     </div>
                     <p className="text-xs text-gray-500">{alert.supplier}</p>
                   </div>
                   <div className="text-right">
-                    <div 
+                    <div
                       className="text-xs font-medium px-2 py-1 rounded-full text-white"
                       style={{ backgroundColor: getUrgencyColor(alert.urgency) }}
                     >
-                      {alert.urgency.charAt(0).toUpperCase() + alert.urgency.slice(1)}
+                      {`${alert.urgency}`.charAt(0).toUpperCase() + `${alert.urgency}`.slice(1)}
                     </div>
-                    {alert.urgency === 'high' && (
+                    {`${alert.urgency}`.toLowerCase() === "high" && (
                       <div className="flex items-center gap-1 mt-1">
                         <AlertTriangle size={12} className="text-red-500" />
                         <span className="text-xs text-red-600">Urgent</span>
@@ -461,6 +532,7 @@ export default function InventoryAnalytics() {
                   </div>
                 </div>
               ))}
+              {reorderAlerts.length === 0 && <p className="text-sm text-gray-500">No alerts 🎉</p>}
             </div>
           </div>
         </div>

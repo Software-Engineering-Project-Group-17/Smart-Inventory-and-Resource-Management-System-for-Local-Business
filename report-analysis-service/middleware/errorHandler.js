@@ -1,13 +1,18 @@
-export const notFound = (req, res, next) => {
-  res.status(404);
-  next(new Error(`Not Found - ${req.originalUrl}`));
+// middleware/errorHandler.js
+const errorHandler = (err, req, res, next) => {
+  // eslint-disable-next-line no-console
+  console.error('Error:', err);
+
+  const status = err.status || 500;
+  const message = err.message || 'Internal server error';
+
+  res.status(status).json({
+    error: {
+      message,
+      status,
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    }
+  });
 };
 
-export const errorHandler = (err, req, res, next) => {
-  const status = res.statusCode !== 200 ? res.statusCode : 500;
-  const payload = {
-    message: err.message || "Server Error",
-    ...(process.env.NODE_ENV !== "production" && { stack: err.stack })
-  };
-  res.status(status).json(payload);
-};
+export default errorHandler;
