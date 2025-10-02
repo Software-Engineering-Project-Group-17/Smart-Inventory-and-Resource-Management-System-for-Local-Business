@@ -123,17 +123,7 @@ const Navbar: React.FC = () => {
             label: "Inventory",
             href: "/inventory",
             icon: <Package size={20} />,
-          },
-          {
-            label: "Reports",
-            href: "/reports",
-            icon: <FileBarChart size={20} />,
-          },
-          {
-            label: "analytics",
-            href: "/analytics",
-            icon: <BarChart3 size={20} />,
-          },
+          },          
           {
             label: "Profile",
             href: "/profile",
@@ -147,16 +137,6 @@ const Navbar: React.FC = () => {
             label: "Inventory",
             href: "/inventory",
             icon: <Archive size={20} />,
-          },
-          {
-            label: "Reports",
-            href: "/reports",
-            icon: <FileBarChart size={20} />,
-          },
-          {
-            label: "analytics",
-            href: "/analytics",
-            icon: <BarChart3 size={20} />,
           },
           {
             label: "Profile",
