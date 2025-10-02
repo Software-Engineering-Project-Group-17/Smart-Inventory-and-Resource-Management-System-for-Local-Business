@@ -6,6 +6,7 @@ import Footer from "./components/Footer";
 import { CartProvider } from "@/hooks/useCart";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
+import AuthWrapper from "@/components/AuthWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,10 +35,12 @@ export default function RootLayout({
       >
         <AuthProvider>
           <CartProvider>
-            <Navbar />
-            {children}
-            <Toaster position="top-center" />
-            <Footer />
+            <AuthWrapper>
+              <Navbar />
+              {children}
+              <Toaster position="top-center" />
+              <Footer />
+            </AuthWrapper>
           </CartProvider>
         </AuthProvider>
       </body>

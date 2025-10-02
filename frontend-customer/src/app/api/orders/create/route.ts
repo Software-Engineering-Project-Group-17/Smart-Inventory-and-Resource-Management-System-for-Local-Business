@@ -67,6 +67,15 @@ export async function POST(request: NextRequest) {
 
       const customer = customerResult.rows[0];
 
+      // Get branch ID from environment variable
+      const branchId = process.env.BRANCH_ID;
+      if (!branchId) {
+        return NextResponse.json(
+          { error: "Branch ID not configured" },
+          { status: 500 }
+        );
+      }
+
       // Validate inventory and calculate total
       let totalAmount = 0;
       const validatedItems: OrderItem[] = [];
@@ -75,10 +84,11 @@ export async function POST(request: NextRequest) {
         const inventoryQuery = `
           SELECT inventory_id, inventory_name, unit_price, quantity
           FROM inventory_item
-          WHERE inventory_id = $1
+          WHERE inventory_id = $1 AND branch_id = $2
         `;
         const inventoryResult = await client.query(inventoryQuery, [
           item.inventory_id,
+          parseInt(branchId),
         ]);
 
         if (inventoryResult.rows.length === 0) {

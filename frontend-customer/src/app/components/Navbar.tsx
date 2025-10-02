@@ -101,12 +101,12 @@ const Navbar = () => {
           >
             <Tag size={18} /> ORDERS
           </Link>
-          <Link
+          {/* <Link
             href="/"
             className="flex items-center gap-2 text-sm font-semibold text-gray-700 active:scale-95 transition-all duration-200 hover:text-zeta hover:bg-gray-50 px-3 py-2 rounded-lg"
           >
             <Phone size={18} /> CONTACT
-          </Link>
+          </Link> */}
         </div>
 
         {/* RIGHT - Auth & Cart */}
