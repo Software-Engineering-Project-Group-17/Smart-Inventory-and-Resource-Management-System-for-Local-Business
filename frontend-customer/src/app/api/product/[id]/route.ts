@@ -21,9 +21,18 @@ export async function GET(
       );
     }
 
+    // Get branch ID from environment variable
+    const branchId = process.env.BRANCH_ID;
+    if (!branchId) {
+      return NextResponse.json(
+        { error: "Branch ID not configured" },
+        { status: 500 }
+      );
+    }
+
     const client = await pool.connect();
 
-    // Get product details with category information
+    // Get product details with category information, filtered by branch
     const result = await client.query(
       `
       SELECT 
@@ -41,9 +50,9 @@ export async function GET(
       FROM inventory_item ii
       LEFT JOIN category c ON ii.category_id = c.id
       LEFT JOIN branches b ON ii.branch_id = b.id
-      WHERE ii.inventory_id = $1
+      WHERE ii.inventory_id = $1 AND ii.branch_id = $2
       `,
-      [parseInt(productId)]
+      [parseInt(productId), parseInt(branchId)]
     );
 
     client.release();

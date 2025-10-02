@@ -13,6 +13,15 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get("limit");
     const search = searchParams.get("search");
 
+    // Get branch ID from environment variable
+    const branchId = process.env.BRANCH_ID;
+    if (!branchId) {
+      return NextResponse.json(
+        { error: "Branch ID not configured" },
+        { status: 500 }
+      );
+    }
+
     const client = await pool.connect();
 
     let query = `
@@ -25,11 +34,11 @@ export async function GET(request: NextRequest) {
         c.category_name
       FROM inventory_item ii
       LEFT JOIN category c ON ii.category_id = c.id
-      WHERE ii.quantity >= 0 AND ii.branch_id = 3
+      WHERE ii.quantity >= 0 AND ii.branch_id = $1
     `;
 
-    const queryParams: any[] = [];
-    let paramIndex = 1;
+    const queryParams: any[] = [parseInt(branchId)];
+    let paramIndex = 2;
 
     // Add category filter if provided (by ID)
     if (categoryId && categoryId !== "all") {
