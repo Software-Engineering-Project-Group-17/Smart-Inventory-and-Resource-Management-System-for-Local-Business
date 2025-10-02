@@ -84,8 +84,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log("Customer data found:", data);
         setCustomerData(data);
       } else if (response.status === 404) {
-        console.log("Customer not found, creating new customer...");
-        // Customer doesn't exist, create new customer
+        console.log(
+          "Customer not found, attempting to create/link customer..."
+        );
+        // Customer doesn't exist, try to create or link existing customer
         await createCustomer(user);
       } else {
         console.error(
@@ -119,11 +121,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Customer created successfully:", data);
+        console.log("Customer created/linked successfully:", data);
         setCustomerData(data);
+      } else if (response.status === 409) {
+        // Customer already exists with linked account
+        console.log("Customer already exists with linked account");
+        const errorData = await response.json();
+        console.error("Customer linking conflict:", errorData.error);
+        // Try to fetch existing customer data
+        await fetchCustomerData(user);
       } else {
         const errorData = await response.json();
-        console.error("Failed to create customer:", errorData);
+        console.error("Failed to create/link customer:", errorData);
       }
     } catch (error) {
       console.error("Error creating customer:", error);
