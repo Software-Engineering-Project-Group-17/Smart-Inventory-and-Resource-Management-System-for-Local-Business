@@ -8,7 +8,14 @@ import cors from "cors";
 
 import reportRoutes from "./routes/reportRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
-import { notFound, errorHandler } from "./middleware/errorHandler.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
+import salesRoutes from './routes/salesAnalyticsRoutes.js';
+import inventoryRoutes from './routes/inventoryAnalyticsRoutes.js';
+import customerRoutes from './routes/customerAnalyticsRotes.js';
+
+// ESM imports
+import errorHandler from './middleware/errorHandler.js';
+
 
 dotenv.config();
 
@@ -46,8 +53,13 @@ app.use(limiter);
 app.use("/api/health", healthRoutes);
 app.use("/api/reports", reportRoutes);
 
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/sales', salesRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/customers', customerRoutes);
+
+
 // 404 + error handler
-app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 4005;

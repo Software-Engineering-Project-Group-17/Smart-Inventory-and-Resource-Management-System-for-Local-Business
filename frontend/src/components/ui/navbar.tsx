@@ -10,6 +10,7 @@ import {
   Users,
   Truck,
   Settings,
+  BarChart3,
   User,
   ShoppingCart,
   Archive,
@@ -65,6 +66,11 @@ const Navbar: React.FC = () => {
             icon: <FileBarChart size={20} />,
           },
           {
+            label: "analytics",
+            href: "/analytics",
+            icon: <BarChart3 size={20} />,
+          },
+          {
             label: "Profile",
             href: "/profile",
             icon: <User size={20} />,
@@ -89,11 +95,11 @@ const Navbar: React.FC = () => {
             href: "/reports",
             icon: <FileBarChart size={20} />,
           },
-          // {
-          //   label: "Suppliers",
-          //   href: "/suppliers",
-          //   icon: <Truck size={20} />,
-          // },
+          {
+            label: "analytics",
+            href: "/analytics",
+            icon: <BarChart3 size={20} />,
+          },
           {
             label: "Resources",
             href: "/resources",
@@ -124,6 +130,11 @@ const Navbar: React.FC = () => {
             icon: <FileBarChart size={20} />,
           },
           {
+            label: "analytics",
+            href: "/analytics",
+            icon: <BarChart3 size={20} />,
+          },
+          {
             label: "Profile",
             href: "/profile",
             icon: <User size={20} />,
@@ -137,15 +148,15 @@ const Navbar: React.FC = () => {
             href: "/inventory",
             icon: <Archive size={20} />,
           },
-          // {
-          //   label: "Suppliers",
-          //   href: "/suppliers",
-          //   icon: <Truck size={20} />,
-          // },
           {
             label: "Reports",
             href: "/reports",
             icon: <FileBarChart size={20} />,
+          },
+          {
+            label: "analytics",
+            href: "/analytics",
+            icon: <BarChart3 size={20} />,
           },
           {
             label: "Profile",
