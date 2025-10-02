@@ -91,13 +91,13 @@ const Menu = () => {
           >
             <Tag size={20} /> ORDERS
           </Link>
-          <Link
+          {/* <Link
             href="/"
             className="flex items-center gap-3 hover:text-zeta transition-colors duration-200 active:scale-95"
             onClick={() => setOpen(false)}
           >
             <Phone size={20} /> CONTACT
-          </Link>
+          </Link> */}
 
           {/* Authentication Section */}
           {!loading && (
