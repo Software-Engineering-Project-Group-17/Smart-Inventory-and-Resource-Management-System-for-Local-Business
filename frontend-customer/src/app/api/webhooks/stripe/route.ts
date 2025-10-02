@@ -71,11 +71,12 @@ export async function POST(request: NextRequest) {
               const updateInventoryQuery = `
                 UPDATE inventory_item 
                 SET quantity = quantity - $1
-                WHERE inventory_id = $2 AND quantity >= $1
+                WHERE inventory_id = $2 AND quantity >= $1 AND branch_id = $3
               `;
               const updateResult = await client.query(updateInventoryQuery, [
                 item.quantity,
                 item.inventory_id,
+                parseInt(process.env.BRANCH_ID || "3"),
               ]);
 
               // Check if stock was sufficient
