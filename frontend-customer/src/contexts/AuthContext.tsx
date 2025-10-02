@@ -23,18 +23,27 @@ interface AuthContextType {
   user: User | null;
   customerData: CustomerData | null;
   loading: boolean;
+  showInfoModal: boolean;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   refreshCustomerData: () => Promise<void>;
+  updateCustomerInfo: (data: {
+    customer_tel: string;
+    address: string;
+  }) => Promise<void>;
+  setShowInfoModal: (show: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   customerData: null,
   loading: true,
+  showInfoModal: false,
   signInWithGoogle: async () => {},
   logout: async () => {},
   refreshCustomerData: async () => {},
+  updateCustomerInfo: async () => {},
+  setShowInfoModal: () => {},
 });
 
 export const useAuth = () => {
@@ -51,6 +60,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [customerData, setCustomerData] = useState<CustomerData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+
+  // Helper function to check if customer info is incomplete
+  const isCustomerInfoIncomplete = (customer: CustomerData | null) => {
+    if (!customer) return false;
+    return !customer.customer_tel || !customer.address;
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -83,6 +99,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const data = await response.json();
         console.log("Customer data found:", data);
         setCustomerData(data);
+
+        // Check if customer info is incomplete and show modal
+        if (isCustomerInfoIncomplete(data)) {
+          console.log("Customer info incomplete, showing modal...");
+          setShowInfoModal(true);
+        }
       } else if (response.status === 404) {
         console.log(
           "Customer not found, attempting to create/link customer..."
@@ -123,6 +145,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const data = await response.json();
         console.log("Customer created/linked successfully:", data);
         setCustomerData(data);
+
+        // Check if newly created/linked customer info is incomplete and show modal
+        if (isCustomerInfoIncomplete(data)) {
+          console.log("New customer info incomplete, showing modal...");
+          setShowInfoModal(true);
+        }
       } else if (response.status === 409) {
         // Customer already exists with linked account
         console.log("Customer already exists with linked account");
@@ -167,13 +195,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const updateCustomerInfo = async (data: {
+    customer_tel: string;
+    address: string;
+  }) => {
+    try {
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      console.log("Updating customer info:", data);
+      const token = await user.getIdToken();
+
+      const response = await fetch("/api/customer/update", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Customer info updated successfully:", result.customer);
+        setCustomerData(result.customer);
+        setShowInfoModal(false);
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to update customer info:", errorData);
+        throw new Error(
+          errorData.error || "Failed to update customer information"
+        );
+      }
+    } catch (error) {
+      console.error("Error updating customer info:", error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     customerData,
     loading,
+    showInfoModal,
     signInWithGoogle,
     logout,
     refreshCustomerData,
+    updateCustomerInfo,
+    setShowInfoModal,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
