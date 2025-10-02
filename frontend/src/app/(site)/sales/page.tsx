@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, ShoppingCart, Percent, DollarSign, User, Printer, Trash2, Plus, Minus, Scan, Receipt, Star, Clock, Edit3, Smartphone, Wifi, WifiOff, QrCode } from 'lucide-react';
 import { getUserProfile } from '@/lib/auth';
-import { useBarcodeWebSocket } from '@/hooks/useBarcodeWebSocket';
+import { useBarcodeSocket } from '@/hooks/useBarcodeSocket';
 import QRCode from 'qrcode';
 //import { generateInvoicePDF, downloadInvoicePDF, printInvoicePDF, previewInvoicePDF } from '@/lib/pdfInvoice';
 import { downloadSimplePDF, printSimplePDF, previewSimplePDF } from '@/lib/simplePdf';
@@ -51,6 +51,7 @@ function SalesPage() {
   const [discount, setDiscount] = useState<DiscountInfo>({ type: 'value', amount: 0 });
   const [customerPayment, setCustomerPayment] = useState<string>('');
   const [loyaltyPoints, setLoyaltyPoints] = useState<number>(0);
+  const [addToLoyaltyPoints, setAddToLoyaltyPoints] = useState<number>(0);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', phone: '', isRegistered: false });
   const [showCustomerForm, setShowCustomerForm] = useState<boolean>(false);
   const [editingItem, setEditingItem] = useState<number | null>(null);
@@ -72,7 +73,7 @@ function SalesPage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // WebSocket integration for barcode scanning
+  // Socket.IO integration for barcode scanning
   const { 
     isConnected: wsConnected, 
     lastScannedBarcode,
@@ -80,7 +81,7 @@ function SalesPage() {
     connectionStatus, 
     sendBarcode, 
     reconnect: wsReconnect 
-  } = useBarcodeWebSocket();
+  } = useBarcodeSocket();
 
   // Set client-side only values after component mounts
   useEffect(() => {
@@ -225,6 +226,7 @@ function SalesPage() {
   useEffect(() => {
     if (!customerInfo.isRegistered) {
       setLoyaltyPoints(0);
+      setAddToLoyaltyPoints(0);
     }
   }, [customerInfo.isRegistered]);
 
@@ -316,6 +318,7 @@ function SalesPage() {
         customerInfo: (customerInfo.name && customerInfo.phone) ? customerInfo : null,
         paymentAmount: payment,
         loyaltyPointsUsed: (customerInfo.isRegistered && loyaltyPoints > 0) ? loyaltyPoints : 0,
+        loyaltyPointsToAdd: loyaltyPointsToAdd,
         userEmail,
         total: finalTotal,
         subtotal,
@@ -357,6 +360,7 @@ function SalesPage() {
           total,
           paymentAmount: payment,
           loyaltyPointsUsed: (customerInfo.isRegistered && loyaltyPoints > 0) ? loyaltyPoints : 0,
+          loyaltyPointsToAdd: loyaltyPointsToAdd,
           finalTotal,
           change: finalBalance,
           company: {
@@ -377,6 +381,7 @@ function SalesPage() {
         setCartIdCounter(1);
         setCustomerPayment('');
         setLoyaltyPoints(0);
+        setAddToLoyaltyPoints(0);
         setCustomerInfo({ name: '', phone: '', isRegistered: false });
         setShowCustomerForm(false);
       } else {
@@ -396,7 +401,9 @@ function SalesPage() {
   const payment = parseFloat(customerPayment) || 0;
   const loyaltyPointsUsed = customerInfo.isRegistered ? Math.min(loyaltyPoints, total) : 0;
   const finalTotal = Math.max(0, total - loyaltyPointsUsed);
-  const finalBalance = payment - finalTotal;
+  const preliminaryBalance = payment - finalTotal;
+  const loyaltyPointsToAdd = customerInfo.isRegistered && preliminaryBalance > 0 ? Math.min(addToLoyaltyPoints, preliminaryBalance) : 0;
+  const finalBalance = preliminaryBalance - loyaltyPointsToAdd;
 
   const handlePrintInvoice = () => {
     window.print();
@@ -1113,8 +1120,8 @@ function SalesPage() {
                 </div>
               </div>
 
-              <div className="space-y-4 mb-6">
-                <div>
+              <div className={`space-y-4 mb-6 ${customerInfo.isRegistered ? 'sm:flex sm:flex-row sm:space-y-0 sm:space-x-4 justify-between' : ''}`}>
+                <div className={customerInfo.isRegistered ? 'flex-1' : ''}>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Customer Payment</label>
                   <input
                     type="number"
@@ -1127,9 +1134,9 @@ function SalesPage() {
                 </div>
                 
                 {customerInfo.isRegistered && (
-                  <div>
+                  <div className="flex-1">
                     <label className="flex text-sm font-bold text-gray-700 mb-2 items-center">
-                      <Star className="w-4 h-4 mr-2" style={{color: '#FADA7A'}} />
+                      
                       Use Loyalty Points
                     </label>
                     <input
@@ -1137,7 +1144,7 @@ function SalesPage() {
                       value={loyaltyPoints}
                       onChange={(e) => setLoyaltyPoints(Math.min(total, Math.max(0, parseFloat(e.target.value) || 0)))}
                       placeholder="0.00"
-                      className="w-full p-4 border-2 border-gray-200 rounded-lg text-lg font-bold"
+                      className="w-full p-2 border-2 border-gray-200 rounded-lg text-base font-bold"
                       step="0.01"
                       max={total}
                     />
@@ -1167,6 +1174,30 @@ function SalesPage() {
                       Need ${Math.abs(finalBalance).toFixed(2)} more to complete transaction
                     </p>
                   )}
+                  {loyaltyPointsToAdd > 0 && (
+                    <p className="text-sm text-blue-600 mt-2 font-medium">
+                      ${loyaltyPointsToAdd.toFixed(2)} will be added to loyalty points
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Add to Loyalty Points */}
+              {customerInfo.isRegistered && preliminaryBalance > 0 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Add to Loyalty Points</label>
+                  <input
+                    type="number"
+                    value={addToLoyaltyPoints}
+                    onChange={(e) => setAddToLoyaltyPoints(Math.min(preliminaryBalance, Math.max(0, parseFloat(e.target.value) || 0)))}
+                    placeholder="0.00"
+                    className="w-full p-2 border-2 border-gray-200 rounded-lg text-base font-bold"
+                    step="0.01"
+                    max={preliminaryBalance}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Max: ${preliminaryBalance.toFixed(2)} (from change)
+                  </p>
                 </div>
               )}
 
@@ -1197,6 +1228,7 @@ function SalesPage() {
                     setCartIdCounter(1);
                     setCustomerPayment('');
                     setLoyaltyPoints(0);
+                    setAddToLoyaltyPoints(0);
                     setCustomerInfo({ name: '', phone: '', isRegistered: false });
                     setShowCustomerForm(false);
                   }}
