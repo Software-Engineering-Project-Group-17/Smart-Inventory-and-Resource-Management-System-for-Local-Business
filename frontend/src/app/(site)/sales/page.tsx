@@ -1316,13 +1316,13 @@ function SalesPage() {
                         />
                         <input
                           type="email"
-                          placeholder="Email (optional)"
+                          placeholder="Email *"
                           value={customerInfo.email}
                           onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})}
                           className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                         />
                         <textarea
-                          placeholder="Address (optional)"
+                          placeholder="Address *"
                           value={customerInfo.address}
                           onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})}
                           className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
