@@ -91,74 +91,76 @@ export const generateSimplePDF = async (invoiceData: InvoiceData, userEmail?: st
   leftYPos += 6;
   doc.text(`Cashier: ${invoiceData.cashier}`, margin, leftYPos);
   
-  // Right column - Invoice details
+  // Right column - Customer information (if available)
   const rightColX = margin + columnWidth + 10;
   
-  doc.setTextColor(60, 60, 60);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text('INVOICE NUMBER:', rightColX, yPos);
-  
-  doc.setTextColor(30, 30, 30);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text(invoiceData.invoiceNumber, rightColX, yPos + 6);
-  
-  doc.setTextColor(60, 60, 60);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text('DATE:', rightColX, yPos + 15);
-  
-  doc.setTextColor(30, 30, 30);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(invoiceData.date, rightColX, yPos + 21);
-  
-  doc.setTextColor(60, 60, 60);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text('TIME:', rightColX, yPos + 29);
-  
-  doc.setTextColor(30, 30, 30);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(invoiceData.time, rightColX, yPos + 35);
-  
-  // Customer information (if available)
   if (invoiceData.customer && invoiceData.customer.name) {
-    const customerY = yPos + 45;
-    
     doc.setTextColor(60, 60, 60);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('BILL TO', rightColX, customerY);
+    doc.text('BILL TO', rightColX, yPos);
     
     doc.setTextColor(30, 30, 30);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text(invoiceData.customer.name, rightColX, customerY + 8);
+    doc.text(invoiceData.customer.name, rightColX, yPos + 8);
     
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(70, 70, 70);
-    doc.text(`Phone: ${invoiceData.customer.phone}`, rightColX, customerY + 15);
+    doc.text(`Phone: ${invoiceData.customer.phone}`, rightColX, yPos + 15);
     
     if (invoiceData.customer.email) {
-      doc.text(`Email: ${invoiceData.customer.email}`, rightColX, customerY + 21);
+      doc.text(`Email: ${invoiceData.customer.email}`, rightColX, yPos + 21);
     }
     
     if (invoiceData.customer.isRegistered && invoiceData.customer.loyaltyPoints !== undefined) {
-      const loyaltyY = invoiceData.customer.email ? customerY + 27 : customerY + 21;
+      const loyaltyY = invoiceData.customer.email ? yPos + 27 : yPos + 21;
       doc.setTextColor(30, 30, 30);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
-      doc.text(`★ ${invoiceData.customer.loyaltyPoints} Loyalty Points`, rightColX, loyaltyY);
+      
     }
-    
-    yPos = customerY + 35;
-  } else {
-    yPos += 45;
   }
+  
+  // Invoice details - horizontally underneath both addresses
+  const invoiceDetailsY = yPos + 45;
+  
+  // Invoice Number (left side)
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('INVOICE NUMBER:', margin, invoiceDetailsY);
+  
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(invoiceData.invoiceNumber, margin, invoiceDetailsY + 6);
+  
+  // Date (center)
+  const centerX = pageWidth / 2;
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('DATE:', centerX, invoiceDetailsY, { align: 'center' });
+  
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(invoiceData.date, centerX, invoiceDetailsY + 6, { align: 'center' });
+  
+  // Time (right side)
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('TIME:', pageWidth - margin, invoiceDetailsY, { align: 'right' });
+  
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(invoiceData.time, pageWidth - margin, invoiceDetailsY + 6, { align: 'right' });
+  
+  yPos = invoiceDetailsY + 15;
   
   // Separator line
   yPos += 5;
@@ -265,36 +267,41 @@ export const generateSimplePDF = async (invoiceData: InvoiceData, userEmail?: st
   
   yPos += 20;
   
-  // Show discount message if there's any discount
+  // Show discount and loyalty points message
   if (invoiceData.totalDiscount > 0 || invoiceData.loyaltyPointsUsed > 0) {
-    const totalSavings = invoiceData.totalDiscount + invoiceData.loyaltyPointsUsed;
-    
-    // Create a highlighted box for discount message
+    // Create a highlighted box for discount/loyalty message
     doc.setFillColor(245, 245, 245); // Light gray background
     doc.setDrawColor(100, 100, 100); // Dark gray border
     doc.setLineWidth(0.5);
     
-    const boxHeight = 25;
+    const boxHeight = invoiceData.totalDiscount > 0 && invoiceData.loyaltyPointsUsed > 0 ? 35 : 25;
     const boxY = yPos;
     
     doc.rect(margin, boxY, contentWidth, boxHeight, 'FD');
     
-    // Add discount message
-    doc.setTextColor(0, 0, 0); // Dark gray text
+    // Add congratulations header
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('Congratulations!', pageWidth / 2, boxY + 8, { align: 'center' });
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    let discountMessage = `You got a discount of $${totalSavings.toFixed(2)}`;
     
-    // Add breakdown if both types of discounts are applied
-    if (invoiceData.totalDiscount > 0 && invoiceData.loyaltyPointsUsed > 0) {
-      discountMessage = `You saved $${totalSavings.toFixed(2)} (Item discounts: $${invoiceData.totalDiscount.toFixed(2)} + Loyalty: $${invoiceData.loyaltyPointsUsed.toFixed(2)})`;
+    let messageY = boxY + 17;
+    
+    // Show discount message if there's any actual discount
+    if (invoiceData.totalDiscount > 0) {
+      const discountMessage = `You got a discount of $${invoiceData.totalDiscount.toFixed(2)}`;
+      doc.text(discountMessage, pageWidth / 2, messageY, { align: 'center' });
+      messageY += 8;
     }
     
-    doc.text(discountMessage, pageWidth / 2, boxY + 17, { align: 'center' });
+    // Show loyalty points used message if any loyalty points were used
+    if (invoiceData.loyaltyPointsUsed > 0) {
+      const loyaltyMessage = `You used ${invoiceData.loyaltyPointsUsed.toFixed(2)} loyalty points`;
+      doc.text(loyaltyMessage, pageWidth / 2, messageY, { align: 'center' });
+    }
     
     yPos = boxY + boxHeight + 10;
   }

@@ -126,6 +126,7 @@ export async function POST(request: NextRequest) {
       customerInfo,
       paymentAmount,
       loyaltyPointsUsed = 0,
+      loyaltyPointsToAdd = 0,
       userEmail,
       total,
       subtotal,
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
       // Check if customer exists
       const existingCustomer = await sql`
         SELECT id, loyalty_points FROM customer 
-        WHERE phone = ${customerInfo.phone}
+        WHERE customer_tel = ${customerInfo.phone}
       `;
 
       if (existingCustomer.length > 0) {
@@ -186,18 +187,19 @@ export async function POST(request: NextRequest) {
           `;
         }
         
-        // Add new loyalty points (1 point per dollar spent)
-        const pointsToAdd = Math.floor(total);
-        await sql`
-          UPDATE customer 
-          SET loyalty_points = loyalty_points + ${pointsToAdd}
-          WHERE id = ${customerId}
-        `;
+        // Add loyalty points if specified (from change)
+        if (loyaltyPointsToAdd > 0) {
+          await sql`
+            UPDATE customer 
+            SET loyalty_points = loyalty_points + ${loyaltyPointsToAdd}
+            WHERE id = ${customerId}
+          `;
+        }
       } else {
         // Create new customer only if they want to be registered
         const newCustomer = await sql`
-          INSERT INTO customer (name, phone, loyalty_points, created_at)
-          VALUES (${customerInfo.name}, ${customerInfo.phone}, ${Math.floor(total)}, NOW())
+          INSERT INTO customer (customer_name, customer_tel, loyalty_points, created_at)
+          VALUES (${customerInfo.name}, ${customerInfo.phone}, 0, NOW())
           RETURNING id
         `;
         customerId = newCustomer[0].id;
