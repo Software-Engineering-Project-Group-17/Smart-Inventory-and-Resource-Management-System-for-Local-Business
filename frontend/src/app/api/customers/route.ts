@@ -16,13 +16,14 @@ export async function GET(request: NextRequest) {
       const customer = await sql`
         SELECT 
           id,
-          name,
-          phone,
-          email,
+          customer_name,
+          customer_tel,
+          customer_email,
+          address,
           loyalty_points,
           created_at
         FROM customer 
-        WHERE phone = ${phone}
+        WHERE customer_tel = ${phone}
       `;
 
       if (customer.length === 0) {
@@ -36,10 +37,11 @@ export async function GET(request: NextRequest) {
         success: true,
         customer: {
           id: customer[0].id,
-          name: customer[0].name,
-          phone: customer[0].phone,
-          email: customer[0].email,
-          loyaltyPoints: parseInt(customer[0].loyalty_points) || 0,
+          name: customer[0].customer_name,
+          phone: customer[0].customer_tel,
+          email: customer[0].customer_email,
+          address: customer[0].address,
+          loyaltyPoints: parseFloat(customer[0].loyalty_points) || 0,
           isRegistered: true
         }
       });
@@ -50,9 +52,10 @@ export async function GET(request: NextRequest) {
       const customer = await sql`
         SELECT 
           c.id,
-          c.name,
-          c.phone,
-          c.email,
+          c.customer_name,
+          c.customer_tel,
+          c.customer_email,
+          c.address,
           c.loyalty_points,
           c.created_at,
           COUNT(co.id) as total_orders,
@@ -60,7 +63,7 @@ export async function GET(request: NextRequest) {
         FROM customer c
         LEFT JOIN customer_order co ON c.id = co.customer_id
         WHERE c.id = ${customerId}
-        GROUP BY c.id, c.name, c.phone, c.email, c.loyalty_points, c.created_at
+        GROUP BY c.id, c.customer_name, c.customer_tel, c.customer_email, c.address, c.loyalty_points, c.created_at
       `;
 
       if (customer.length === 0) {
@@ -74,10 +77,11 @@ export async function GET(request: NextRequest) {
         success: true,
         customer: {
           id: customer[0].id,
-          name: customer[0].name,
-          phone: customer[0].phone,
-          email: customer[0].email,
-          loyaltyPoints: parseInt(customer[0].loyalty_points) || 0,
+          name: customer[0].customer_name,
+          phone: customer[0].customer_tel,
+          email: customer[0].customer_email,
+          address: customer[0].address,
+          loyaltyPoints: parseFloat(customer[0].loyalty_points) || 0,
           totalOrders: parseInt(customer[0].total_orders) || 0,
           totalSpent: parseFloat(customer[0].total_spent) || 0,
           isRegistered: true
@@ -103,7 +107,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, phone, email } = body;
+    const { name, phone, email, address } = body;
 
     // Validate required fields
     if (!name || !phone) {
@@ -115,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     // Check if customer already exists
     const existingCustomer = await sql`
-      SELECT id FROM customer WHERE phone = ${phone}
+      SELECT id FROM customer WHERE customer_tel = ${phone}
     `;
 
     if (existingCustomer.length > 0) {
@@ -127,18 +131,19 @@ export async function POST(request: NextRequest) {
 
     // Create new customer
     const result = await sql`
-      INSERT INTO customer (name, phone, email, loyalty_points, created_at)
-      VALUES (${name}, ${phone}, ${email || null}, 0, NOW())
-      RETURNING id, name, phone, email, loyalty_points
+      INSERT INTO customer (customer_name, customer_tel, customer_email, address, loyalty_points, created_at)
+      VALUES (${name}, ${phone}, ${email || null}, ${address || null}, 0, NOW())
+      RETURNING id, customer_name, customer_tel, customer_email, address, loyalty_points
     `;
 
     return NextResponse.json({
       success: true,
       customer: {
         id: result[0].id,
-        name: result[0].name,
-        phone: result[0].phone,
-        email: result[0].email,
+        name: result[0].customer_name,
+        phone: result[0].customer_tel,
+        email: result[0].customer_email,
+        address: result[0].address,
         loyaltyPoints: 0,
         isRegistered: true
       }
@@ -157,7 +162,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, name, phone, email } = body;
+    const { id, name, phone, email, address } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -170,11 +175,12 @@ export async function PUT(request: NextRequest) {
     const result = await sql`
       UPDATE customer 
       SET 
-        name = ${name},
-        phone = ${phone},
-        email = ${email || null}
+        customer_name = ${name},
+        customer_tel = ${phone},
+        customer_email = ${email || null},
+        address = ${address || null}
       WHERE id = ${id}
-      RETURNING id, name, phone, email, loyalty_points
+      RETURNING id, customer_name, customer_tel, customer_email, address, loyalty_points
     `;
 
     if (result.length === 0) {
@@ -188,10 +194,11 @@ export async function PUT(request: NextRequest) {
       success: true,
       customer: {
         id: result[0].id,
-        name: result[0].name,
-        phone: result[0].phone,
-        email: result[0].email,
-        loyaltyPoints: parseInt(result[0].loyalty_points) || 0,
+        name: result[0].customer_name,
+        phone: result[0].customer_tel,
+        email: result[0].customer_email,
+        address: result[0].address,
+        loyaltyPoints: parseFloat(result[0].loyalty_points) || 0,
         isRegistered: true
       }
     });

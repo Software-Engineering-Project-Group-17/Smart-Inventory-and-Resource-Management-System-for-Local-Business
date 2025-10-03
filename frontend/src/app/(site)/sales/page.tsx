@@ -32,6 +32,7 @@ interface CustomerInfo {
   name: string;
   phone: string;
   email?: string;
+  address?: string;
   isRegistered: boolean;
   loyaltyPoints?: number;
 }
@@ -52,8 +53,11 @@ function SalesPage() {
   const [customerPayment, setCustomerPayment] = useState<string>('');
   const [loyaltyPoints, setLoyaltyPoints] = useState<number>(0);
   const [addToLoyaltyPoints, setAddToLoyaltyPoints] = useState<number>(0);
-  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', phone: '', isRegistered: false });
+  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({ name: '', phone: '', email: '', address: '', isRegistered: false });
   const [showCustomerForm, setShowCustomerForm] = useState<boolean>(false);
+  const [showCustomerRegistration, setShowCustomerRegistration] = useState<boolean>(false);
+  const [customerSearchResult, setCustomerSearchResult] = useState<CustomerInfo | null>(null);
+  const [isSearchingCustomer, setIsSearchingCustomer] = useState<boolean>(false);
   const [editingItem, setEditingItem] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
@@ -185,21 +189,145 @@ function SalesPage() {
 
   // Search customer by phone
   const searchCustomer = async (phone: string) => {
-    if (!phone.trim()) return;
+    if (!phone.trim()) {
+      setCustomerSearchResult(null);
+      return;
+    }
 
+    setIsSearchingCustomer(true);
     try {
       const response = await fetch(`/api/customers?phone=${encodeURIComponent(phone)}`);
       const data = await response.json();
       
       if (data.success) {
+        const customer = data.customer;
         setCustomerInfo({
-          ...data.customer,
-          isRegistered: true
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          email: customer.email || '',
+          address: customer.address || '',
+          isRegistered: true,
+          loyaltyPoints: customer.loyaltyPoints
         });
-        setLoyaltyPoints(data.customer.loyaltyPoints || 0);
+        setCustomerSearchResult(customer);
+        setLoyaltyPoints(customer.loyaltyPoints || 0);
+        setShowCustomerRegistration(false);
+        setSuccess(`Customer found: ${customer.name}`);
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setCustomerInfo({ 
+          name: '', 
+          phone: phone, 
+          email: '', 
+          address: '', 
+          isRegistered: false 
+        });
+        setCustomerSearchResult(null);
+        setLoyaltyPoints(0);
+        setShowCustomerRegistration(true);
       }
     } catch (error) {
       console.error('Error searching customer:', error);
+      setError('Failed to search customer');
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setIsSearchingCustomer(false);
+    }
+  };
+
+  // Register new customer
+  const registerCustomer = async () => {
+    if (!customerInfo.name.trim() || !customerInfo.phone.trim()) {
+      setError('Name and phone are required');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: customerInfo.name,
+          phone: customerInfo.phone,
+          email: customerInfo.email || null,
+          address: customerInfo.address || null
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const customer = data.customer;
+        setCustomerInfo({
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          email: customer.email || '',
+          address: customer.address || '',
+          isRegistered: true,
+          loyaltyPoints: 0
+        });
+        setCustomerSearchResult(customer);
+        setLoyaltyPoints(0);
+        setShowCustomerRegistration(false);
+        setSuccess(`Customer registered successfully: ${customer.name}`);
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(data.error || 'Failed to register customer');
+        setTimeout(() => setError(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error registering customer:', error);
+      setError('Failed to register customer');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  // Update loyalty points
+  const updateLoyaltyPoints = async (operation: 'add' | 'deduct', points: number, description?: string) => {
+    if (!customerInfo.id || !customerInfo.isRegistered) {
+      setError('Customer must be registered to manage loyalty points');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/customers/loyalty', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerId: customerInfo.id,
+          pointsChange: points,
+          operation: operation,
+          description: description || `Points ${operation}ed manually`
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const updatedCustomer = data.customer;
+        setCustomerInfo(prev => ({
+          ...prev,
+          loyaltyPoints: updatedCustomer.loyaltyPoints
+        }));
+        setLoyaltyPoints(updatedCustomer.loyaltyPoints);
+        setSuccess(`Loyalty points ${operation}ed: ${points} points. New balance: ${updatedCustomer.loyaltyPoints}`);
+        setTimeout(() => setSuccess(''), 5000);
+      } else {
+        setError(data.error || 'Failed to update loyalty points');
+        setTimeout(() => setError(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error updating loyalty points:', error);
+      setError('Failed to update loyalty points');
+      setTimeout(() => setError(''), 3000);
     }
   };
 
@@ -218,7 +346,14 @@ function SalesPage() {
   // Search customer when phone number is entered
   useEffect(() => {
     if (customerInfo.phone.length >= 10) {
-      searchCustomer(customerInfo.phone);
+      const timeoutId = setTimeout(() => {
+        searchCustomer(customerInfo.phone);
+      }, 500); // Debounce search
+
+      return () => clearTimeout(timeoutId);
+    } else {
+      setCustomerSearchResult(null);
+      setShowCustomerRegistration(false);
     }
   }, [customerInfo.phone]);
 
@@ -227,6 +362,7 @@ function SalesPage() {
     if (!customerInfo.isRegistered) {
       setLoyaltyPoints(0);
       setAddToLoyaltyPoints(0);
+      setCustomerSearchResult(null);
     }
   }, [customerInfo.isRegistered]);
 
@@ -1065,35 +1201,169 @@ function SalesPage() {
                   className="text-sm px-4 py-2 rounded-lg font-semibold transition-all duration-200 hover:shadow"
                   style={{backgroundColor: '#FADA7A', color: '#3674B5'}}
                 >
-                  {showCustomerForm ? 'Hide' : 'Add'}
+                  {showCustomerForm ? 'Hide' : 'Add/Search'}
                 </button>
               </div>
 
               {showCustomerForm && (
                 <div className="space-y-4">
-                  <input
-                    type="text"
-                    placeholder="Customer Name"
-                    value={customerInfo.name}
-                    onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
-                    className="w-full p-3 border-2 border-gray-200 rounded-lg"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Phone Number"
-                    value={customerInfo.phone}
-                    onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
-                    className="w-full p-3 border-2 border-gray-200 rounded-lg"
-                  />
-                  <label className="flex items-center space-x-3 p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={customerInfo.isRegistered}
-                      onChange={(e) => setCustomerInfo({...customerInfo, isRegistered: e.target.checked})}
-                      className="rounded"
-                    />
-                    <span className="text-sm font-medium">Registered Member</span>
-                  </label>
+                  {/* Phone Number Search */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone Number (Search existing customer)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Enter phone number to search..."
+                        value={customerInfo.phone}
+                        onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                        className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                      />
+                      {isSearchingCustomer && (
+                        <div className="absolute right-3 top-3">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Enter 10+ digits to automatically search for existing customer
+                    </p>
+                  </div>
+
+                  {/* Customer Found Display */}
+                  {customerSearchResult && customerInfo.isRegistered && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold text-green-800 flex items-center">
+                          <span className="text-green-600 mr-2">✓</span>
+                          Customer Found
+                        </h3>
+                        <div className="flex items-center space-x-2">
+                          <Star className="w-4 h-4 text-yellow-500" />
+                          <span className="text-sm font-medium text-gray-700">
+                            {customerInfo.loyaltyPoints || 0} points
+                          </span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-600">Name:</span>
+                          <span className="font-medium ml-2">{customerInfo.name}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Phone:</span>
+                          <span className="font-medium ml-2">{customerInfo.phone}</span>
+                        </div>
+                        {customerInfo.email && (
+                          <div>
+                            <span className="text-gray-600">Email:</span>
+                            <span className="font-medium ml-2">{customerInfo.email}</span>
+                          </div>
+                        )}
+                        {customerInfo.address && (
+                          <div className="sm:col-span-2">
+                            <span className="text-gray-600">Address:</span>
+                            <span className="font-medium ml-2">{customerInfo.address}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Loyalty Points Management */}
+                      <div className="mt-4 pt-3 border-t border-green-200">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Loyalty Points Management</h4>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => {
+                              const points = prompt('Enter points to add:');
+                              if (points && !isNaN(Number(points))) {
+                                updateLoyaltyPoints('add', Number(points), 'Manual points addition');
+                              }
+                            }}
+                            className="px-3 py-1 bg-green-100 text-green-700 rounded text-xs font-medium hover:bg-green-200"
+                          >
+                            + Add Points
+                          </button>
+                          <button
+                            onClick={() => {
+                              const points = prompt('Enter points to deduct:');
+                              if (points && !isNaN(Number(points))) {
+                                updateLoyaltyPoints('deduct', Number(points), 'Manual points deduction');
+                              }
+                            }}
+                            className="px-3 py-1 bg-red-100 text-red-700 rounded text-xs font-medium hover:bg-red-200"
+                          >
+                            - Deduct Points
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Customer Registration Form */}
+                  {showCustomerRegistration && !customerInfo.isRegistered && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h3 className="font-semibold text-blue-800 mb-3">
+                        Register New Customer
+                      </h3>
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          placeholder="Customer Name *"
+                          value={customerInfo.name}
+                          onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
+                          className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                        />
+                        <input
+                          type="email"
+                          placeholder="Email *"
+                          value={customerInfo.email}
+                          onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})}
+                          className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                        />
+                        <textarea
+                          placeholder="Address *"
+                          value={customerInfo.address}
+                          onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})}
+                          className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                          rows={2}
+                        />
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={registerCustomer}
+                            className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                          >
+                            Register Customer
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowCustomerRegistration(false);
+                              setCustomerInfo({ name: '', phone: '', email: '', address: '', isRegistered: false });
+                            }}
+                            className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-400 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Manual Customer Entry (if no phone search) */}
+                  {!customerInfo.phone && !showCustomerRegistration && (
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        placeholder="Customer Name (optional)"
+                        value={customerInfo.name}
+                        onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
+                        className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                      />
+                      <p className="text-xs text-gray-500">
+                        For registered customers with loyalty points, enter phone number above
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1229,8 +1499,10 @@ function SalesPage() {
                     setCustomerPayment('');
                     setLoyaltyPoints(0);
                     setAddToLoyaltyPoints(0);
-                    setCustomerInfo({ name: '', phone: '', isRegistered: false });
+                    setCustomerInfo({ name: '', phone: '', email: '', address: '', isRegistered: false });
+                    setCustomerSearchResult(null);
                     setShowCustomerForm(false);
+                    setShowCustomerRegistration(false);
                   }}
                   className="py-2 px-4 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
                 >
