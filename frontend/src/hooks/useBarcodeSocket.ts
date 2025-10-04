@@ -56,14 +56,26 @@ interface UseBarcodeSocketOptions {
 
 // Get Socket.IO server URL based on environment
 const getSocketUrl = () => {
+  // Always use the environment variable if provided
+  if (process.env.NEXT_PUBLIC_SOCKET_URL) {
+    console.log('Using Socket.IO URL from environment:', process.env.NEXT_PUBLIC_SOCKET_URL);
+    return process.env.NEXT_PUBLIC_SOCKET_URL;
+  }
+  
+  // Fallback to automatic detection
   if (typeof window !== 'undefined') {
     const isSecure = window.location.protocol === 'https:';
     const host = window.location.hostname;
     const port = isSecure ? '8443' : '8080';
     const protocol = isSecure ? 'https:' : 'http:';
-    return process.env.NEXT_PUBLIC_SOCKET_URL || `${protocol}//${host}:${port}`;
+    const fallbackUrl = `${protocol}//${host}:${port}`;
+    console.log('Using fallback Socket.IO URL:', fallbackUrl);
+    return fallbackUrl;
   }
-  return process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8080';
+  
+  const defaultUrl = 'http://localhost:8080';
+  console.log('Using default Socket.IO URL:', defaultUrl);
+  return defaultUrl;
 };
 
 const RECONNECT_DELAY = 5000; // 5 seconds
