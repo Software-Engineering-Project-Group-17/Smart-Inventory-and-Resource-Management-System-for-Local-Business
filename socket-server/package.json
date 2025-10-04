@@ -1,5 +1,5 @@
 {
-  "name": "barcode-socket-server",
+  "name": "inventory-socket-server",
   "version": "1.0.0",
   "description": "Socket.IO server for barcode scanning - Smart Inventory Management System",
   "main": "server.js",
