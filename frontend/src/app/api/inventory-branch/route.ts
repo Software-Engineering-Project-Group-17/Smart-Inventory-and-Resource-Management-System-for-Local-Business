@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
       SELECT 
         i.inventory_id,
         i.inventory_name as item_name,
+        i.barcode,
         i.quantity as current_stock,
         i.low_stock_threshold as reorder_level,
         i.unit_price,
@@ -99,6 +100,7 @@ export async function GET(request: NextRequest) {
     const inventory = inventoryResult.map((item: any) => ({
       inventoryId: item.inventory_id,
       itemName: item.item_name,
+      barcode: item.barcode,
       description: null, // Not available in current schema
       categoryName: item.category_name || "Uncategorized",
       currentStock: item.current_stock,
