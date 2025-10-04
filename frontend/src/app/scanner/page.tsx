@@ -437,7 +437,7 @@ export default function MobileScannerPage() {
               💡 <strong>Expected URL format:</strong>
             </p>
             <code className="text-xs bg-blue-100 p-1 rounded mt-1 block">
-              https://192.168.50.154:3443/scanner?user=your-email@example.com
+              https://{process.env.NEXT_PUBLIC_SERVER_IP}:{process.env.NEXT_PUBLIC_SERVER_PORT}/scanner?user=your-email@example.com
             </code>
             <p className="text-xs text-blue-600 mt-2">
               Use HTTPS (port 3443) for mobile camera access
@@ -654,7 +654,7 @@ export default function MobileScannerPage() {
               For camera access, use HTTPS on your mobile device:
             </p>
             <div className="bg-blue-700 p-2 rounded font-mono text-xs break-all">
-              https://192.168.50.154:3443/scanner?user={userEmail}
+              https://{process.env.NEXT_PUBLIC_SERVER_IP}:{process.env.NEXT_PUBLIC_SERVER_PORT}/scanner?user={userEmail}
             </div>
             <p className="text-xs text-blue-200 mt-2">
               ⚠️ <strong>Security Warning:</strong> Click "Advanced" → "Proceed to site" when prompted.
