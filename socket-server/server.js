@@ -28,8 +28,38 @@ class BarcodeSocketIOServer {
   init() {
     console.log('🚀 Initializing Barcode Socket.IO Server...');
     
-    // Create HTTP server (HTTPS is handled by the deployment platform)
-    this.httpServer = http.createServer();
+    // Create HTTP server with health check endpoints
+    this.httpServer = http.createServer((req, res) => {
+      // Health check endpoint for Railway
+      if (req.url === '/health' || req.url === '/') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          status: 'healthy',
+          timestamp: new Date().toISOString(),
+          uptime: process.uptime(),
+          activeConnections: this.userSessions.size,
+          connectedUsers: this.connectedUsers.size
+        }));
+        return;
+      }
+      
+      // Status endpoint
+      if (req.url === '/status') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          server: 'Barcode Socket.IO Server',
+          version: '1.0.0',
+          status: 'running',
+          connections: this.userSessions.size,
+          users: Array.from(this.connectedUsers)
+        }));
+        return;
+      }
+      
+      // Default response
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Socket.IO Server - Use WebSocket connection');
+    });
     
     // Initialize Socket.IO with CORS settings for production
     this.io = new Server(this.httpServer, {
