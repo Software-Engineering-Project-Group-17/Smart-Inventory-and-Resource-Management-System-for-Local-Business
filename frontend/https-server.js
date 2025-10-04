@@ -5,10 +5,14 @@ const next = require('next');
 const fs = require('fs');
 const path = require('path');
 
+// Load environment variables
+require('dotenv').config();
+
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = '0.0.0.0';
 const port = 3000;
 const httpsPort = 3443;
+const serverIP = process.env.NEXT_PUBLIC_SERVER_IP;
 
 // Create Next.js app
 const app = next({ dev, hostname, port });
@@ -45,7 +49,7 @@ app.prepare().then(() => {
   httpServer.listen(port, hostname, (err) => {
     if (err) throw err;
     console.log(`🌐 HTTP Server ready on http://${hostname}:${port}`);
-    console.log(`🌐 Network: http://192.168.50.154:${port}`);
+    console.log(`🌐 Network: http://${serverIP}:${port}`);
   });
 
   // Create HTTPS server if certificates are available
@@ -58,8 +62,8 @@ app.prepare().then(() => {
     httpsServer.listen(httpsPort, hostname, (err) => {
       if (err) throw err;
       console.log(`🔐 HTTPS Server ready on https://${hostname}:${httpsPort}`);
-      console.log(`🔐 Network: https://192.168.50.154:${httpsPort}`);
-      console.log(`📱 Mobile Scanner: https://192.168.50.154:${httpsPort}/scanner?user=<email>`);
+      console.log(`🔐 Network: https://${serverIP}:${httpsPort}`);
+      console.log(`📱 Mobile Scanner: https://${serverIP}:${httpsPort}/scanner?user=<email>`);
     });
   } else {
     console.log('❌ HTTPS server not started - certificates not available');
