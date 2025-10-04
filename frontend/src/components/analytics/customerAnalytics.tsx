@@ -35,10 +35,81 @@ import {
 import { customerAPI } from "@/lib/api/analyticsApi";
 
 // --- Color helpers (consistent with your design palette) ---
-const SEGMENT_COLORS = ["#8B5CF6", "#3674B5", "#10B981", "#F59E0B", "#EF4444", "#0EA5E9"];
+const SEGMENT_COLORS = [
+  "#8B5CF6",
+  "#3674B5",
+  "#10B981",
+  "#F59E0B",
+  "#EF4444",
+  "#0EA5E9",
+];
+
+// Type definitions for data mapping
+interface RawSegment {
+  segment?: string;
+  name?: string;
+  count?: number;
+  customers?: number;
+  revenue?: number;
+  avgOrderValue?: number;
+  aov?: number;
+}
+
+interface RawAcquisition {
+  month?: string;
+  label?: string;
+  date?: string;
+  newCustomers?: number;
+  new?: number;
+  returningCustomers?: number;
+  returning?: number;
+  churnedCustomers?: number;
+  churned?: number;
+}
+
+interface RawDemographic {
+  ageGroup?: string;
+  group?: string;
+  label?: string;
+  customers?: number;
+  count?: number;
+  percentage?: number;
+  percent?: number;
+  spending?: number;
+}
+
+interface RawBehavior {
+  behavior?: string;
+  metric?: string;
+  name?: string;
+  score?: number;
+  value?: number;
+}
+
+interface RawCustomer {
+  name?: string;
+  customerName?: string;
+  totalSpent?: number;
+  revenue?: number;
+  orders?: number;
+  totalOrders?: number;
+  avgOrder?: number;
+  avgOrderValue?: number;
+  lastPurchase?: string;
+  lastSeen?: string;
+  segment?: string;
+  tier?: string;
+}
+
+interface RawRetention {
+  cohort?: string;
+  label?: string;
+  retention?: number;
+  rate?: number;
+}
 
 // --- Safe mappers (tolerate minor shape differences from backend) ---
-const mapSegments = (arr = []) =>
+const mapSegments = (arr: RawSegment[] = []) =>
   arr.map((s, idx) => ({
     segment: s.segment || s.name || `Segment ${idx + 1}`,
     count: Number(s.count ?? s.customers ?? 0),
@@ -47,7 +118,7 @@ const mapSegments = (arr = []) =>
     color: SEGMENT_COLORS[idx % SEGMENT_COLORS.length],
   }));
 
-const mapAcquisition = (arr = []) =>
+const mapAcquisition = (arr: RawAcquisition[] = []) =>
   arr.map((m) => ({
     month: m.month || m.label || m.date || "",
     newCustomers: Number(m.newCustomers ?? m.new ?? 0),
@@ -55,7 +126,7 @@ const mapAcquisition = (arr = []) =>
     churnedCustomers: Number(m.churnedCustomers ?? m.churned ?? 0),
   }));
 
-const mapDemographics = (arr = []) =>
+const mapDemographics = (arr: RawDemographic[] = []) =>
   arr.map((d) => ({
     ageGroup: d.ageGroup || d.group || d.label || "",
     customers: Number(d.customers ?? d.count ?? 0),
@@ -63,13 +134,13 @@ const mapDemographics = (arr = []) =>
     spending: Number(d.spending ?? 0),
   }));
 
-const mapBehavior = (arr = []) =>
+const mapBehavior = (arr: RawBehavior[] = []) =>
   arr.map((b) => ({
     behavior: b.behavior || b.metric || b.name || "",
     score: Number(b.score ?? b.value ?? 0),
   }));
 
-const mapTopCustomers = (arr = []) =>
+const mapTopCustomers = (arr: RawCustomer[] = []) =>
   arr.map((c) => ({
     name: c.name || c.customerName || "—",
     totalSpent: Number(c.totalSpent ?? c.revenue ?? 0),
@@ -79,7 +150,7 @@ const mapTopCustomers = (arr = []) =>
     segment: c.segment || c.tier || "—",
   }));
 
-const mapRetention = (arr = []) =>
+const mapRetention = (arr: RawRetention[] = []) =>
   arr.map((r, idx) => ({
     cohort: r.cohort || r.label || `Month ${idx + 1}`,
     retention: Number(r.retention ?? r.rate ?? 0),
@@ -113,27 +184,50 @@ export default function CustomerAnalytics() {
     setLoading(true);
     setError("");
     try {
-      const [segmentsRes, acquisitionRes, demographicsRes, behaviorRes, topRes, retentionRes, metricsRes] =
-        await Promise.allSettled([
-          customerAPI.getSegments(), // GET /api/customers/segments
-          customerAPI.getAcquisition({ period: selectedPeriod }), // GET /api/customers/acquisition?period=12m
-          customerAPI.getDemographics(), // GET /api/customers/demographics
-          customerAPI.getBehavior(), // GET /api/customers/behavior
-          customerAPI.getTopCustomers({ limit: 5 }), // GET /api/customers/top-customers?limit=5
-          customerAPI.getRetention(), // GET /api/customers/retention
-          customerAPI.getMetrics(), // GET /api/customers/metrics
-        ]);
+      const [
+        segmentsRes,
+        acquisitionRes,
+        demographicsRes,
+        behaviorRes,
+        topRes,
+        retentionRes,
+        metricsRes,
+      ] = await Promise.allSettled([
+        customerAPI.getSegments(), // GET /api/customers/segments
+        customerAPI.getAcquisition({ period: selectedPeriod }), // GET /api/customers/acquisition?period=12m
+        customerAPI.getDemographics(), // GET /api/customers/demographics
+        customerAPI.getBehavior(), // GET /api/customers/behavior
+        customerAPI.getTopCustomers({ limit: 5 }), // GET /api/customers/top-customers?limit=5
+        customerAPI.getRetention(), // GET /api/customers/retention
+        customerAPI.getMetrics(), // GET /api/customers/metrics
+      ]);
 
-      if (segmentsRes.status === "fulfilled") setSegments(mapSegments(segmentsRes.value?.segments || segmentsRes.value));
+      if (segmentsRes.status === "fulfilled")
+        setSegments(
+          mapSegments(segmentsRes.value?.segments || segmentsRes.value)
+        );
       if (acquisitionRes.status === "fulfilled")
-        setAcquisition(mapAcquisition(acquisitionRes.value?.data || acquisitionRes.value));
+        setAcquisition(
+          mapAcquisition(acquisitionRes.value?.data || acquisitionRes.value)
+        );
       if (demographicsRes.status === "fulfilled")
-        setDemographics(mapDemographics(demographicsRes.value?.ageDistribution || demographicsRes.value));
+        setDemographics(
+          mapDemographics(
+            demographicsRes.value?.ageDistribution || demographicsRes.value
+          )
+        );
       if (behaviorRes.status === "fulfilled")
-        setBehavior(mapBehavior(behaviorRes.value?.profile || behaviorRes.value));
-      if (topRes.status === "fulfilled") setTopCustomers(mapTopCustomers(topRes.value?.customers || topRes.value));
+        setBehavior(
+          mapBehavior(behaviorRes.value?.profile || behaviorRes.value)
+        );
+      if (topRes.status === "fulfilled")
+        setTopCustomers(
+          mapTopCustomers(topRes.value?.customers || topRes.value)
+        );
       if (retentionRes.status === "fulfilled")
-        setRetention(mapRetention(retentionRes.value?.cohorts || retentionRes.value));
+        setRetention(
+          mapRetention(retentionRes.value?.cohorts || retentionRes.value)
+        );
       if (metricsRes.status === "fulfilled") {
         const m = metricsRes.value || {};
         setMetrics({
@@ -156,14 +250,21 @@ export default function CustomerAnalytics() {
           },
           { customers: 0, revenue: 0 }
         );
-        const churned = acquisition.reduce((a, m) => a + Number(m.churnedCustomers ?? 0), 0);
+        const churned = acquisition.reduce(
+          (a, m) => a + Number(m.churnedCustomers ?? 0),
+          0
+        );
         const retentionRate =
-          totals.customers > 0 ? ((totals.customers - churned) / totals.customers) * 100 : 0;
+          totals.customers > 0
+            ? ((totals.customers - churned) / totals.customers) * 100
+            : 0;
         setMetrics((prev: any) => ({
           ...prev,
           totalCustomers: totals.customers,
           totalRevenue: totals.revenue,
-          avgCustomerValue: totals.customers ? totals.revenue / totals.customers : 0,
+          avgCustomerValue: totals.customers
+            ? totals.revenue / totals.customers
+            : 0,
           retentionRate,
         }));
       }
@@ -184,20 +285,43 @@ export default function CustomerAnalytics() {
   // Derived metric cards (use backend metrics when available)
   const customerMetrics = useMemo(() => {
     return {
-      totalCustomers: metrics.totalCustomers || segments.reduce((s, seg) => s + (seg.count || 0), 0),
+      totalCustomers:
+        metrics.totalCustomers ||
+        segments.reduce((s, seg) => s + (seg.count || 0), 0),
       totalRevenue:
         metrics.totalRevenue ||
         segments.reduce((s, seg) => s + (seg.revenue || 0), 0),
       avgCustomerValue:
         metrics.avgCustomerValue ||
-        (segments.reduce((s, seg) => s + (seg.revenue || 0), 0) /
-          Math.max(1, segments.reduce((s, seg) => s + (seg.count || 0), 0))),
+        segments.reduce((s, seg) => s + (seg.revenue || 0), 0) /
+          Math.max(
+            1,
+            segments.reduce((s, seg) => s + (seg.count || 0), 0)
+          ),
       retentionRate: metrics.retentionRate || 0,
       customerGrowth: metrics.customerGrowth ?? 0,
     };
   }, [metrics, segments]);
 
-  const MetricCard = ({ title, value, change, icon: Icon, color, format = "number", subtitle }) => {
+  interface MetricCardProps {
+    title: string;
+    value: number | string;
+    change?: number;
+    icon: React.ComponentType<any>;
+    color: string;
+    format?: "number" | "currency" | "percentage";
+    subtitle?: string;
+  }
+
+  const MetricCard = ({
+    title,
+    value,
+    change,
+    icon: Icon,
+    color,
+    format = "number",
+    subtitle,
+  }: MetricCardProps) => {
     const isPositive = (change ?? 0) >= 0;
     const formattedValue =
       format === "currency"
@@ -209,13 +333,26 @@ export default function CustomerAnalytics() {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <div className="p-3 rounded-lg" style={{ backgroundColor: color + "20" }}>
+          <div
+            className="p-3 rounded-lg"
+            style={{ backgroundColor: color + "20" }}
+          >
             <Icon size={24} style={{ color }} />
           </div>
           {change !== undefined && (
-            <div className={`flex items-center gap-1 ${isPositive ? "text-green-600" : "text-red-600"}`}>
-              {isPositive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-              <span className="text-sm font-medium">{Math.abs(Number(change || 0)).toFixed(1)}%</span>
+            <div
+              className={`flex items-center gap-1 ${
+                isPositive ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {isPositive ? (
+                <TrendingUp size={16} />
+              ) : (
+                <TrendingDown size={16} />
+              )}
+              <span className="text-sm font-medium">
+                {Math.abs(Number(change || 0)).toFixed(1)}%
+              </span>
             </div>
           )}
         </div>
@@ -235,12 +372,19 @@ export default function CustomerAnalytics() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl text-white" style={{ backgroundColor: "#F59E0B" }}>
+              <div
+                className="p-3 rounded-xl text-white"
+                style={{ backgroundColor: "#F59E0B" }}
+              >
                 <Users size={24} />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Customer Analytics</h1>
-                <p className="text-gray-600">Understand customer behavior, segments, and lifetime value</p>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Customer Analytics
+                </h1>
+                <p className="text-gray-600">
+                  Understand customer behavior, segments, and lifetime value
+                </p>
                 {error && <p className="text-red-600 mt-2 text-sm">{error}</p>}
               </div>
             </div>
@@ -269,7 +413,10 @@ export default function CustomerAnalytics() {
                 disabled={loading}
                 className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50"
               >
-                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                <RefreshCw
+                  size={16}
+                  className={loading ? "animate-spin" : ""}
+                />
                 {loading ? "Refreshing..." : "Refresh"}
               </button>
             </div>
@@ -318,12 +465,27 @@ export default function CustomerAnalytics() {
         {/* Customer Segments + Acquisition */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Customer Segments</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">
+              Customer Segments
+            </h3>
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
-                <Pie data={segments} cx="50%" cy="50%" outerRadius={80} paddingAngle={3} dataKey="count">
+                <Pie
+                  data={segments}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  paddingAngle={3}
+                  dataKey="count"
+                >
                   {segments.map((entry, index) => (
-                    <Cell key={index} fill={entry.color || SEGMENT_COLORS[index % SEGMENT_COLORS.length]} />
+                    <Cell
+                      key={index}
+                      fill={
+                        entry.color ||
+                        SEGMENT_COLORS[index % SEGMENT_COLORS.length]
+                      }
+                    />
                   ))}
                 </Pie>
                 <Tooltip formatter={(value) => [value as any, "Customers"]} />
@@ -335,26 +497,52 @@ export default function CustomerAnalytics() {
                   <div className="flex items-center gap-2">
                     <div
                       className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: segment.color || SEGMENT_COLORS[index % SEGMENT_COLORS.length] }}
+                      style={{
+                        backgroundColor:
+                          segment.color ||
+                          SEGMENT_COLORS[index % SEGMENT_COLORS.length],
+                      }}
                     ></div>
-                    <span className="text-sm text-gray-600">{segment.segment}</span>
+                    <span className="text-sm text-gray-600">
+                      {segment.segment}
+                    </span>
                   </div>
-                  <span className="text-sm font-medium">{segment.count?.toLocaleString?.() ?? segment.count}</span>
+                  <span className="text-sm font-medium">
+                    {segment.count?.toLocaleString?.() ?? segment.count}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
 
           <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Customer Acquisition Trend</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">
+              Customer Acquisition Trend
+            </h3>
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={acquisition}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" stroke="#6b7280" />
                 <YAxis stroke="#6b7280" />
                 <Tooltip />
-                <Area type="monotone" dataKey="newCustomers" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.8} name="New Customers" />
-                <Area type="monotone" dataKey="returningCustomers" stackId="1" stroke="#3674B5" fill="#3674B5" fillOpacity={0.8} name="Returning Customers" />
+                <Area
+                  type="monotone"
+                  dataKey="newCustomers"
+                  stackId="1"
+                  stroke="#10B981"
+                  fill="#10B981"
+                  fillOpacity={0.8}
+                  name="New Customers"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="returningCustomers"
+                  stackId="1"
+                  stroke="#3674B5"
+                  fill="#3674B5"
+                  fillOpacity={0.8}
+                  name="Returning Customers"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -363,7 +551,9 @@ export default function CustomerAnalytics() {
         {/* Demographics + Behavior */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Customer Demographics</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">
+              Customer Demographics
+            </h3>
             <ResponsiveContainer width="100%" height={300}>
               <RBarChart data={demographics} layout="horizontal">
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -376,13 +566,22 @@ export default function CustomerAnalytics() {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Customer Behavior Profile</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">
+              Customer Behavior Profile
+            </h3>
             <ResponsiveContainer width="100%" height={300}>
               <RadarChart data={behavior}>
                 <PolarGrid />
                 <PolarAngleAxis dataKey="behavior" className="text-xs" />
                 <PolarRadiusAxis angle={60} domain={[0, 100]} />
-                <Radar name="Score" dataKey="score" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.3} strokeWidth={2} />
+                <Radar
+                  name="Score"
+                  dataKey="score"
+                  stroke="#8B5CF6"
+                  fill="#8B5CF6"
+                  fillOpacity={0.3}
+                  strokeWidth={2}
+                />
                 <Tooltip />
               </RadarChart>
             </ResponsiveContainer>
@@ -392,10 +591,15 @@ export default function CustomerAnalytics() {
         {/* Top Customers + Retention */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Top Customers</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">
+              Top Customers
+            </h3>
             <div className="space-y-4">
               {topCustomers.map((customer, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center">
                       <span className="text-white font-bold text-sm">
@@ -407,35 +611,57 @@ export default function CustomerAnalytics() {
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{customer.name}</p>
+                      <p className="font-medium text-gray-900">
+                        {customer.name}
+                      </p>
                       <div className="flex items-center gap-4 text-sm text-gray-600">
                         <span>{customer.orders} orders</span>
-                        <span>Avg: ${Number(customer.avgOrder || 0).toLocaleString()}</span>
+                        <span>
+                          Avg: $
+                          {Number(customer.avgOrder || 0).toLocaleString()}
+                        </span>
                         <span>Last: {customer.lastPurchase}</span>
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-gray-900">${Number(customer.totalSpent || 0).toLocaleString()}</p>
+                    <p className="font-semibold text-gray-900">
+                      ${Number(customer.totalSpent || 0).toLocaleString()}
+                    </p>
                     <div className="flex items-center gap-1">
                       <Award size={12} className="text-purple-600" />
-                      <span className="text-xs text-purple-600">{customer.segment}</span>
+                      <span className="text-xs text-purple-600">
+                        {customer.segment}
+                      </span>
                     </div>
                   </div>
                 </div>
               ))}
-              {topCustomers.length === 0 && <p className="text-sm text-gray-500">No top customers found.</p>}
+              {topCustomers.length === 0 && (
+                <p className="text-sm text-gray-500">No top customers found.</p>
+              )}
             </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Retention Cohort</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">
+              Retention Cohort
+            </h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={retention}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="cohort" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
-                <Tooltip formatter={(value: any) => [`${Number(value).toFixed(1)}%`, "Retention Rate"]} />
+                <YAxis
+                  stroke="#6b7280"
+                  domain={[0, 100]}
+                  tickFormatter={(value) => `${value}%`}
+                />
+                <Tooltip
+                  formatter={(value: any) => [
+                    `${Number(value).toFixed(1)}%`,
+                    "Retention Rate",
+                  ]}
+                />
                 <Line
                   type="monotone"
                   dataKey="retention"
@@ -451,7 +677,9 @@ export default function CustomerAnalytics() {
                 <div key={i} className="flex justify-between text-sm">
                   <span className="text-gray-600">1-Month Retention</span>
                   <span className="font-medium">
-                    {typeof r.retention === "number" ? `${r.retention.toFixed(1)}%` : "—"}
+                    {typeof r.retention === "number"
+                      ? `${r.retention.toFixed(1)}%`
+                      : "—"}
                   </span>
                 </div>
               ))}
@@ -459,7 +687,9 @@ export default function CustomerAnalytics() {
                 <div key={i} className="flex justify-between text-sm">
                   <span className="text-gray-600">6-Month Retention</span>
                   <span className="font-medium">
-                    {typeof r.retention === "number" ? `${r.retention.toFixed(1)}%` : "—"}
+                    {typeof r.retention === "number"
+                      ? `${r.retention.toFixed(1)}%`
+                      : "—"}
                   </span>
                 </div>
               ))}
@@ -467,7 +697,8 @@ export default function CustomerAnalytics() {
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">12-Month Retention</span>
                 <span className="font-medium">
-                  {retention.length >= 12 && typeof retention[11].retention === "number"
+                  {retention.length >= 12 &&
+                  typeof retention[11].retention === "number"
                     ? `${retention[11].retention.toFixed(1)}%`
                     : "—"}
                 </span>

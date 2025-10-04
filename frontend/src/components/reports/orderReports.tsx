@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { 
-  FileText, 
-  RefreshCw, 
-  Download, 
-  Printer, 
+import {
+  FileText,
+  RefreshCw,
+  Download,
+  Printer,
   Search,
   ShoppingCart,
   DollarSign,
@@ -13,8 +13,8 @@ import {
   Filter,
   TrendingUp,
   CheckCircle,
-  Clock
-} from 'lucide-react';
+  Clock,
+} from "lucide-react";
 
 // Types and helpers
 type Row = Record<string, string | number | boolean | null | undefined>;
@@ -26,7 +26,8 @@ interface Filters {
   status?: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4005';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4005";
 
 function toCSV(rows: Row[]): string {
   if (!rows.length) return "";
@@ -38,7 +39,9 @@ function toCSV(rows: Row[]): string {
     return s;
   };
   const headerLine = headers.map(escape).join(",");
-  const bodyLines = rows.map((r) => headers.map((h) => escape((r as any)[h])).join(","));
+  const bodyLines = rows.map((r) =>
+    headers.map((h) => escape((r as any)[h])).join(",")
+  );
   return [headerLine, ...bodyLines].join("\n");
 }
 
@@ -58,25 +61,29 @@ function downloadCSV(filename: string, rows: Row[]) {
 async function getData(report: string, filters: Filters): Promise<Row[]> {
   try {
     const queryParams = new URLSearchParams();
-    if (filters.start) queryParams.append('start', filters.start);
-    if (filters.end) queryParams.append('end', filters.end);
-    if (filters.branch) queryParams.append('branch', filters.branch);
-    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.start) queryParams.append("start", filters.start);
+    if (filters.end) queryParams.append("end", filters.end);
+    if (filters.branch) queryParams.append("branch", filters.branch);
+    if (filters.status) queryParams.append("status", filters.status);
 
     const queryString = queryParams.toString();
-    const url = `${API_BASE_URL}/api/reports/${report}${queryString ? `?${queryString}` : ''}`;
+    const url = `${API_BASE_URL}/api/reports/${report}${
+      queryString ? `?${queryString}` : ""
+    }`;
 
     const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch data: ${response.status} ${response.statusText}`
+      );
     }
 
     const data = await response.json();
-    
+
     if (Array.isArray(data)) return data;
     else if (data.data && Array.isArray(data.data)) return data.data;
     else if (data.success && Array.isArray(data.result)) return data.result;
@@ -107,13 +114,14 @@ export default function OrdersReportsPage() {
     "orders-summary": {
       label: "Orders Summary",
       icon: ShoppingCart,
-      description: "Complete overview of all orders with status and payment details"
-    }
+      description:
+        "Complete overview of all orders with status and payment details",
+    },
   };
 
   // Update URL in browser (if needed)
   useEffect(() => {
-    console.log('Report changed to:', report, 'with filters:', filters);
+    console.log("Report changed to:", report, "with filters:", filters);
   }, [report, filters]);
 
   useEffect(() => {
@@ -127,8 +135,8 @@ export default function OrdersReportsPage() {
       } catch (err) {
         if (active) {
           setError(
-            err instanceof Error 
-              ? `Failed to load report data: ${err.message}` 
+            err instanceof Error
+              ? `Failed to load report data: ${err.message}`
               : "Failed to load report data. Please try again."
           );
         }
@@ -136,14 +144,20 @@ export default function OrdersReportsPage() {
         if (active) setLoading(false);
       }
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [report, filters]);
 
   const filteredRows = useMemo(() => {
     if (!searchQuery) return rows;
     const q = searchQuery.toLowerCase();
     return rows.filter((r) =>
-      Object.values(r).some((v) => String(v ?? "").toLowerCase().includes(q))
+      Object.values(r).some((v) =>
+        String(v ?? "")
+          .toLowerCase()
+          .includes(q)
+      )
     );
   }, [rows, searchQuery]);
 
@@ -154,19 +168,21 @@ export default function OrdersReportsPage() {
   const orderStats = useMemo(() => {
     const totalOrders = filteredRows.length;
     const totalValue = filteredRows.reduce((sum, row) => {
-      const value = parseFloat(String(row.total_value || row.total_amount || 0));
+      const value = parseFloat(
+        String(row.total_value || row.total_amount || 0)
+      );
       return sum + (isNaN(value) ? 0 : value);
     }, 0);
-    
+
     const statusCounts = filteredRows.reduce((acc, row) => {
-      const status = String(row.status || '').toLowerCase();
-      acc[status] = (acc[status] || 0) + 1;
+      const status = String(row.status || "").toLowerCase();
+      acc[status] = (Number(acc[status]) || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     const paymentStatusCounts = filteredRows.reduce((acc, row) => {
-      const paymentStatus = String(row.payment_status || '').toLowerCase();
-      acc[paymentStatus] = (acc[paymentStatus] || 0) + 1;
+      const paymentStatus = String(row.payment_status || "").toLowerCase();
+      acc[paymentStatus] = (Number(acc[paymentStatus]) || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -176,56 +192,57 @@ export default function OrdersReportsPage() {
       completedOrders: statusCounts.completed || 0,
       pendingOrders: statusCounts.pending || 0,
       paidOrders: paymentStatusCounts.paid || 0,
-      avgOrderValue: totalOrders > 0 ? totalValue / totalOrders : 0
+      avgOrderValue: totalOrders > 0 ? totalValue / totalOrders : 0,
     };
   }, [filteredRows]);
 
   const handleDownloadPDF = async () => {
-  if (!filteredRows.length) return;
+    if (!filteredRows.length) return;
 
-  const [{ jsPDF }, autoTableModule] = await Promise.all([
-    import('jspdf'),
-    import('jspdf-autotable')
-  ]);
+    const [{ jsPDF }, autoTableModule] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
 
-  const autoTable = autoTableModule.default;
-  const doc = new jsPDF({ orientation: 'l', unit: 'pt' }); // landscape for wide tables
+    const autoTable = autoTableModule.default;
+    const doc = new jsPDF({ orientation: "l", unit: "pt" }); // landscape for wide tables
 
-  const headers = Object.keys(filteredRows[0]);
-  const head = [headers.map(h => h.replace(/_/g, ' '))];
-  const body = filteredRows.map(r => headers.map(h => String((r as any)[h] ?? '')));
+    const headers = Object.keys(filteredRows[0]);
+    const head = [headers.map((h) => h.replace(/_/g, " "))];
+    const body = filteredRows.map((r) =>
+      headers.map((h) => String((r as any)[h] ?? ""))
+    );
 
-  // Header
-  doc.setFontSize(16);
-  doc.text(currentReport.label, 40, 32);
-  doc.setFontSize(10);
-  doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 48);
+    // Header
+    doc.setFontSize(16);
+    doc.text(currentReport.label, 40, 32);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 48);
 
-  // Table
-  autoTable(doc, {
-    head,
-    body,
-    startY: 60,
-    margin: { left: 40, right: 40 },
-    styles: { fontSize: 8, cellPadding: 4, overflow: 'linebreak' },
-    headStyles: { fillColor: [54, 116, 181], textColor: 255 },
-    didDrawPage: (data) => {
-      // optional footer
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      doc.setFontSize(9);
-      doc.text(
-        `${report} • ${filteredRows.length} rows`,
-        pageWidth - 40,
-        pageHeight - 20,
-        { align: 'right' }
-      );
-    }
-  });
+    // Table
+    autoTable(doc, {
+      head,
+      body,
+      startY: 60,
+      margin: { left: 40, right: 40 },
+      styles: { fontSize: 8, cellPadding: 4, overflow: "linebreak" },
+      headStyles: { fillColor: [54, 116, 181], textColor: 255 },
+      didDrawPage: (data) => {
+        // optional footer
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        doc.setFontSize(9);
+        doc.text(
+          `${report} • ${filteredRows.length} rows`,
+          pageWidth - 40,
+          pageHeight - 20,
+          { align: "right" }
+        );
+      },
+    });
 
-  doc.save(`${report}-${new Date().toISOString().split('T')[0]}.pdf`);
-};
-
+    doc.save(`${report}-${new Date().toISOString().split("T")[0]}.pdf`);
+  };
 
   const handleRetry = () => {
     setError(null);
@@ -238,12 +255,19 @@ export default function OrdersReportsPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 rounded-xl text-white" style={{ backgroundColor: "#3674B5" }}>
+            <div
+              className="p-3 rounded-xl text-white"
+              style={{ backgroundColor: "#3674B5" }}
+            >
               <ShoppingCart size={24} />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Orders Reports</h1>
-              <p className="text-gray-600">Track order performance and payment status</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Orders Reports
+              </h1>
+              <p className="text-gray-600">
+                Track order performance and payment status
+              </p>
             </div>
           </div>
         </div>
@@ -258,19 +282,27 @@ export default function OrdersReportsPage() {
                 key={key}
                 onClick={() => setReport(key)}
                 className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                  isSelected 
-                    ? 'border-[#3674B5] bg-blue-50' 
-                    : 'border-gray-200 bg-white hover:border-gray-300'
+                  isSelected
+                    ? "border-[#3674B5] bg-blue-50"
+                    : "border-gray-200 bg-white hover:border-gray-300"
                 }`}
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-3 rounded-lg ${
-                    isSelected ? 'bg-[#3674B5] text-white' : 'bg-gray-100 text-gray-600'
-                  }`}>
+                  <div
+                    className={`p-3 rounded-lg ${
+                      isSelected
+                        ? "bg-[#3674B5] text-white"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
                     <IconComponent size={24} />
                   </div>
                   <div>
-                    <h3 className={`font-semibold ${isSelected ? 'text-[#3674B5]' : 'text-gray-900'}`}>
+                    <h3
+                      className={`font-semibold ${
+                        isSelected ? "text-[#3674B5]" : "text-gray-900"
+                      }`}
+                    >
                       {config.label}
                     </h3>
                   </div>
@@ -285,38 +317,53 @@ export default function OrdersReportsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#3674B5" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#3674B5" }}
+              >
                 <ShoppingCart size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Orders</p>
-                <p className="text-2xl font-bold text-gray-900">{orderStats.totalOrders}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {orderStats.totalOrders}
+                </p>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">All orders</p>
           </div>
-          
+
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#10B981" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#10B981" }}
+              >
                 <DollarSign size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Value</p>
-                <p className="text-2xl font-bold text-gray-900">${orderStats.totalValue.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  ${orderStats.totalValue.toFixed(2)}
+                </p>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">Order revenue</p>
           </div>
-          
+
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#F59E0B" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#F59E0B" }}
+              >
                 <CheckCircle size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Completed</p>
-                <p className="text-2xl font-bold text-gray-900">{orderStats.completedOrders}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {orderStats.completedOrders}
+                </p>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">Completed orders</p>
@@ -324,12 +371,17 @@ export default function OrdersReportsPage() {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#EF4444" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#EF4444" }}
+              >
                 <Clock size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-gray-900">{orderStats.pendingOrders}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {orderStats.pendingOrders}
+                </p>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">Pending orders</p>
@@ -341,7 +393,11 @@ export default function OrdersReportsPage() {
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="bg-red-100 p-1 rounded">
-                <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-4 h-4 text-red-600"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M13,13H11V7H13M11,15H13V17H11M15.73,3H8.27L3,8.27V15.73L8.27,21H15.73L21,15.73V8.27L15.73,3Z" />
                 </svg>
               </div>
@@ -364,49 +420,70 @@ export default function OrdersReportsPage() {
           {/* Filters */}
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg text-white" style={{ backgroundColor: "#F59E0B" }}>
+              <div
+                className="p-2 rounded-lg text-white"
+                style={{ backgroundColor: "#F59E0B" }}
+              >
                 <Filter size={20} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800">Filters & Options</h3>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Filters & Options
+              </h3>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Start Date
+                </label>
                 <input
                   type="date"
                   value={filters.start || ""}
-                  onChange={(e) => setFilters((f) => ({ ...f, start: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, start: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  End Date
+                </label>
                 <input
                   type="date"
                   value={filters.end || ""}
-                  onChange={(e) => setFilters((f) => ({ ...f, end: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, end: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Branch
+                </label>
                 <input
                   type="text"
                   placeholder="e.g., HQ"
                   value={filters.branch || ""}
-                  onChange={(e) => setFilters((f) => ({ ...f, branch: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, branch: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Order Status</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Order Status
+                </label>
                 <select
                   value={filters.status || ""}
-                  onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, status: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 >
                   <option value="">All Statuses</option>
@@ -434,14 +511,17 @@ export default function OrdersReportsPage() {
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 />
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleRetry}
                   disabled={loading}
                   className="flex items-center gap-2 px-4 py-3 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-[#3674B5] disabled:opacity-50 transition-colors"
                 >
-                  <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                  <RefreshCw
+                    size={16}
+                    className={loading ? "animate-spin" : ""}
+                  />
                   Refresh
                 </button>
                 <button
@@ -452,7 +532,13 @@ export default function OrdersReportsPage() {
                   Print
                 </button>
                 <button
-                  onClick={() => canExport && downloadCSV(`${report}-${new Date().toISOString().split('T')[0]}.csv`, filteredRows)}
+                  onClick={() =>
+                    canExport &&
+                    downloadCSV(
+                      `${report}-${new Date().toISOString().split("T")[0]}.csv`,
+                      filteredRows
+                    )
+                  }
                   disabled={!canExport}
                   className="flex items-center gap-2 px-4 py-3 text-white rounded-lg hover:opacity-90 focus:ring-2 focus:ring-[#3674B5] disabled:opacity-50 transition-colors"
                   style={{ backgroundColor: "#10B981" }}
@@ -478,21 +564,27 @@ export default function OrdersReportsPage() {
             {loading ? (
               <div className="p-8 text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#3674B5] mb-4"></div>
-                <p className="text-gray-500 text-lg font-medium">Loading orders data...</p>
-                <p className="text-gray-400 text-sm mt-1">Please wait while we fetch your data</p>
+                <p className="text-gray-500 text-lg font-medium">
+                  Loading orders data...
+                </p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Please wait while we fetch your data
+                </p>
               </div>
             ) : filteredRows.length === 0 ? (
               <div className="p-8 text-center">
-                <div 
+                <div
                   className="p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center"
                   style={{ backgroundColor: "#F3F4F6" }}
                 >
                   <ShoppingCart size={32} className="text-gray-400" />
                 </div>
-                <p className="text-gray-500 text-lg font-medium">No Orders Data</p>
+                <p className="text-gray-500 text-lg font-medium">
+                  No Orders Data
+                </p>
                 <p className="text-gray-400 text-sm mt-1">
-                  {rows.length === 0 
-                    ? "No orders found for the selected filters." 
+                  {rows.length === 0
+                    ? "No orders found for the selected filters."
                     : "No orders match your search criteria."}
                 </p>
               </div>
@@ -502,17 +594,26 @@ export default function OrdersReportsPage() {
                   <thead>
                     <tr style={{ backgroundColor: "#3674B5" }}>
                       {Object.keys(filteredRows[0]).map((header) => (
-                        <th key={header} className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider">
-                          {header.replace(/_/g, ' ')}
+                        <th
+                          key={header}
+                          className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider"
+                        >
+                          {header.replace(/_/g, " ")}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {filteredRows.map((row, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50 transition-colors duration-150">
+                      <tr
+                        key={idx}
+                        className="hover:bg-gray-50 transition-colors duration-150"
+                      >
                         {Object.keys(filteredRows[0]).map((key) => (
-                          <td key={key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td
+                            key={key}
+                            className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                          >
                             {String(row[key] ?? "")}
                           </td>
                         ))}
@@ -528,10 +629,22 @@ export default function OrdersReportsPage() {
 
       <style jsx global>{`
         @media print {
-          body * { visibility: hidden; }
-          .print\\:visible, .print\\:visible * { visibility: visible; }
-          .print\\:visible { position: absolute; left: 0; top: 0; width: 100%; }
-          @page { margin: 0.5in; }
+          body * {
+            visibility: hidden;
+          }
+          .print\\:visible,
+          .print\\:visible * {
+            visibility: visible;
+          }
+          .print\\:visible {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          @page {
+            margin: 0.5in;
+          }
         }
       `}</style>
     </div>

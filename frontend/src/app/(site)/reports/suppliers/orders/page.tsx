@@ -2,5 +2,5 @@
 "use client";
 import SupplierReports from "@/components/reports/supplierReports";
 export default function Page() {
-  return <SupplierReports defaultTab="orders" />;
+  return <SupplierReports />;
 }
