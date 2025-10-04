@@ -137,10 +137,10 @@ function SalesPage() {
   // Generate QR code for mobile scanner URL
   const generateQRCode = async () => {
     try {
-      // const scannerUrl = `https://192.168.50.154:3443/scanner?user=${encodeURIComponent(userEmail)}`;
-      const scannerUrl = `https://192.168.1.20:3443/scanner?user=${encodeURIComponent(
+      const scannerUrl = `https://192.168.50.154:3443/scanner?user=${encodeURIComponent(
         userEmail
       )}`;
+
       const qrCodeDataUrl = await QRCode.toDataURL(scannerUrl, {
         width: 200,
         margin: 2,
