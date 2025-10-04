@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
       SELECT 
         ii.inventory_id,
         ii.inventory_name,
+        ii.barcode,
         ii.quantity,
         ii.category_id,
         ii.low_stock_threshold,

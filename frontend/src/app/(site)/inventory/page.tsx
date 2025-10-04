@@ -101,6 +101,14 @@ const InventoryPage = () => {
                   <span className="hidden sm:inline">Restock Request</span>
                   <span className="sm:hidden">Restock</span>
                 </Link>
+                <Link
+                  href="/barcode-generator"
+                  className="inline-flex items-center justify-center px-3 md:px-4 py-2 border border-transparent text-xs md:text-sm font-medium rounded-md text-white bg-[#3674B5] hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Barcode Generator</span>
+                  <span className="sm:hidden">Barcode Generator</span>
+                </Link>
                 <button
                   onClick={refreshInventory}
                   disabled={isLoading}

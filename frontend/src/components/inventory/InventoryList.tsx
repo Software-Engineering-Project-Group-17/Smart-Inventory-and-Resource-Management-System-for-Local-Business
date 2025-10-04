@@ -82,6 +82,11 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                       <div className="text-sm font-medium text-gray-900">
                         {item.itemName}
                       </div>
+                      {item.barcode && (
+                        <div className="text-xs text-gray-500">
+                          Barcode: {item.barcode}
+                        </div>
+                      )}
                       {item.description && (
                         <div className="text-sm text-gray-500">
                           {item.description}

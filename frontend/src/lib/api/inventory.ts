@@ -2,6 +2,7 @@
 export interface InventoryItem {
   inventoryId: number;
   itemName: string;
+  barcode?: string;
   description?: string;
   categoryName: string;
   currentStock: number;
