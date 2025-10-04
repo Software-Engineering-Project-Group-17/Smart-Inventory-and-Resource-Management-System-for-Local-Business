@@ -56,14 +56,25 @@ interface UseBarcodeSocketOptions {
 
 // Get Socket.IO server URL based on environment
 const getSocketUrl = () => {
+  // Check if we have a custom socket URL (for external WebSocket server)
+  if (process.env.NEXT_PUBLIC_SOCKET_URL && process.env.NEXT_PUBLIC_SOCKET_URL !== 'https://smart-inventory-and-resource-manage.vercel.app') {
+    return process.env.NEXT_PUBLIC_SOCKET_URL;
+  }
+  
   if (typeof window !== 'undefined') {
     const isSecure = window.location.protocol === 'https:';
     const host = window.location.hostname;
+    
+    // For Vercel deployment, return null to disable Socket.IO
+    if (host.includes('vercel.app')) {
+      return null;
+    }
+    
     const port = isSecure ? '8443' : '8080';
     const protocol = isSecure ? 'https:' : 'http:';
-    return process.env.NEXT_PUBLIC_SOCKET_URL || `${protocol}//${host}:${port}`;
+    return `${protocol}//${host}:${port}`;
   }
-  return process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8080';
+  return 'http://localhost:8080';
 };
 
 const RECONNECT_DELAY = 5000; // 5 seconds
@@ -145,6 +156,15 @@ export function useBarcodeSocket(options: UseBarcodeSocketOptions = {}): UseBarc
       setConnectionStatus('Connecting...');
       
       const socketUrl = getSocketUrl();
+      
+      // Check if Socket.IO is disabled (e.g., on Vercel without external server)
+      if (!socketUrl) {
+        console.log('⚠️ Socket.IO disabled - WebSocket server not available');
+        setConnectionStatus('WebSocket server not configured. Deploy Socket.IO server separately for real-time scanning.');
+        isConnectingRef.current = false;
+        return;
+      }
+      
       console.log('🔌 Connecting to Socket.IO server:', socketUrl);
       
       const io = await loadSocketIO();
