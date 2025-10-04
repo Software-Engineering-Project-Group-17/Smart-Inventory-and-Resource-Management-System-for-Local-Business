@@ -244,7 +244,38 @@ class SecureBarcodeSocketIOServer {
       // Auto-authenticate if user email is provided in handshake
       const initialEmail = socket.handshake.query.user || socket.handshake.auth?.userEmail;
       if (initialEmail) {
-        socket.emit('user_auth', { email: initialEmail });
+        console.log('Auto-authenticating user from handshake:', initialEmail);
+        // Trigger authentication by directly handling the auth data
+        userEmail = initialEmail;
+        
+        // Get or create user session
+        userSession = this.userSessions.get(userEmail);
+        if (!userSession) {
+          userSession = new UserSession(userEmail);
+          this.userSessions.set(userEmail, userSession);
+          console.log(`Created new session for user: ${userEmail}`);
+        }
+
+        // Add socket to user session
+        userSession.addSocket(socket);
+
+        // Join user-specific room
+        socket.join(`user_${userEmail}`);
+
+        // Send authentication success
+        socket.emit('auth_success', {
+          message: 'Auto-authentication successful',
+          user: userEmail,
+          activeConnections: userSession.getConnectionCount(),
+          timestamp: new Date().toISOString()
+        });
+
+        // Notify all user's sockets about connection count update
+        io.to(`user_${userEmail}`).emit('connection_update', {
+          activeConnections: userSession.getConnectionCount()
+        });
+
+        console.log(`User ${userEmail} auto-authenticated successfully`);
       }
     });
 
