@@ -90,8 +90,8 @@ const RestockRequestsTable: React.FC<RestockRequestsTableProps> = ({
             No restock requests found
           </h3>
           <p className="text-gray-600 mb-4">
-            No requests match your current filters or you haven't created any
-            yet.
+            No requests match your current filters or you haven&apos;t created
+            any yet.
           </p>
           <button
             onClick={onCreateRequest}

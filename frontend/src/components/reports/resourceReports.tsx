@@ -24,7 +24,8 @@ interface Filters {
   status?: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4005";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4005";
 
 function toCSV(rows: Row[]): string {
   if (!rows.length) return "";
@@ -36,7 +37,9 @@ function toCSV(rows: Row[]): string {
     return s;
   };
   const headerLine = headers.map(escape).join(",");
-  const bodyLines = rows.map((r) => headers.map((h) => escape((r as any)[h])).join(","));
+  const bodyLines = rows.map((r) =>
+    headers.map((h) => escape((r as any)[h])).join(",")
+  );
   return [headerLine, ...bodyLines].join("\n");
 }
 
@@ -62,7 +65,9 @@ async function getData(report: string, filters: Filters): Promise<Row[]> {
     if (filters.status) queryParams.append("status", filters.status);
 
     const queryString = queryParams.toString();
-    const url = `${API_BASE_URL}/api/reports/${report}${queryString ? `?${queryString}` : ""}`;
+    const url = `${API_BASE_URL}/api/reports/${report}${
+      queryString ? `?${queryString}` : ""
+    }`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -70,7 +75,9 @@ async function getData(report: string, filters: Filters): Promise<Row[]> {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch data: ${response.status} ${response.statusText}`
+      );
     }
 
     const data = await response.json();
@@ -89,7 +96,12 @@ export default function ResourcesReportsPage() {
   const printRef = useRef<HTMLDivElement | null>(null);
 
   const [report, setReport] = useState("resources-assignments");
-  const [filters, setFilters] = useState<Filters>({ start: "", end: "", branch: "", status: "" });
+  const [filters, setFilters] = useState<Filters>({
+    start: "",
+    end: "",
+    branch: "",
+    status: "",
+  });
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,17 +144,26 @@ export default function ResourcesReportsPage() {
   const filteredRows = useMemo(() => {
     if (!searchQuery) return rows;
     const q = searchQuery.toLowerCase();
-    return rows.filter((r) => Object.values(r).some((v) => String(v ?? "").toLowerCase().includes(q)));
+    return rows.filter((r) =>
+      Object.values(r).some((v) =>
+        String(v ?? "")
+          .toLowerCase()
+          .includes(q)
+      )
+    );
   }, [rows, searchQuery]);
 
   const canExport = filteredRows.length > 0;
-  const currentReport = RESOURCES_REPORTS[report as keyof typeof RESOURCES_REPORTS];
+  const currentReport =
+    RESOURCES_REPORTS[report as keyof typeof RESOURCES_REPORTS];
 
   // Calculate resource statistics
   const resourceStats = useMemo(() => {
     const totalResources = filteredRows.length;
     const assignedResources = filteredRows.filter(
-      (row) => row.assigned_to && String(row.assigned_to).toLowerCase() !== "unassigned"
+      (row) =>
+        row.assigned_to &&
+        String(row.assigned_to).toLowerCase() !== "unassigned"
     ).length;
     const availableResources = filteredRows.filter(
       (row) => String(row.status || "").toLowerCase() === "available"
@@ -153,7 +174,7 @@ export default function ResourcesReportsPage() {
 
     const resourceTypes = filteredRows.reduce((acc, row) => {
       const type = String(row.resource_type || "Unknown");
-      acc[type] = (acc[type] || 0) + 1;
+      acc[type] = (Number(acc[type]) || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -168,51 +189,52 @@ export default function ResourcesReportsPage() {
   }, [filteredRows]);
 
   const handleDownloadPDF = async () => {
-  if (!filteredRows.length) return;
+    if (!filteredRows.length) return;
 
-  const [{ jsPDF }, autoTableModule] = await Promise.all([
-    import('jspdf'),
-    import('jspdf-autotable')
-  ]);
+    const [{ jsPDF }, autoTableModule] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
 
-  const autoTable = autoTableModule.default;
-  const doc = new jsPDF({ orientation: 'l', unit: 'pt' }); // landscape for wide tables
+    const autoTable = autoTableModule.default;
+    const doc = new jsPDF({ orientation: "l", unit: "pt" }); // landscape for wide tables
 
-  const headers = Object.keys(filteredRows[0]);
-  const head = [headers.map(h => h.replace(/_/g, ' '))];
-  const body = filteredRows.map(r => headers.map(h => String((r as any)[h] ?? '')));
+    const headers = Object.keys(filteredRows[0]);
+    const head = [headers.map((h) => h.replace(/_/g, " "))];
+    const body = filteredRows.map((r) =>
+      headers.map((h) => String((r as any)[h] ?? ""))
+    );
 
-  // Header
-  doc.setFontSize(16);
-  doc.text(currentReport.label, 40, 32);
-  doc.setFontSize(10);
-  doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 48);
+    // Header
+    doc.setFontSize(16);
+    doc.text(currentReport.label, 40, 32);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 48);
 
-  // Table
-  autoTable(doc, {
-    head,
-    body,
-    startY: 60,
-    margin: { left: 40, right: 40 },
-    styles: { fontSize: 8, cellPadding: 4, overflow: 'linebreak' },
-    headStyles: { fillColor: [54, 116, 181], textColor: 255 },
-    didDrawPage: (data) => {
-      // optional footer
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      doc.setFontSize(9);
-      doc.text(
-        `${report} • ${filteredRows.length} rows`,
-        pageWidth - 40,
-        pageHeight - 20,
-        { align: 'right' }
-      );
-    }
-  });
+    // Table
+    autoTable(doc, {
+      head,
+      body,
+      startY: 60,
+      margin: { left: 40, right: 40 },
+      styles: { fontSize: 8, cellPadding: 4, overflow: "linebreak" },
+      headStyles: { fillColor: [54, 116, 181], textColor: 255 },
+      didDrawPage: (data) => {
+        // optional footer
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        doc.setFontSize(9);
+        doc.text(
+          `${report} • ${filteredRows.length} rows`,
+          pageWidth - 40,
+          pageHeight - 20,
+          { align: "right" }
+        );
+      },
+    });
 
-  doc.save(`${report}-${new Date().toISOString().split('T')[0]}.pdf`);
-};
-
+    doc.save(`${report}-${new Date().toISOString().split("T")[0]}.pdf`);
+  };
 
   const handleRetry = () => {
     setError(null);
@@ -225,12 +247,19 @@ export default function ResourcesReportsPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 rounded-xl text-white" style={{ backgroundColor: "#3674B5" }}>
+            <div
+              className="p-3 rounded-xl text-white"
+              style={{ backgroundColor: "#3674B5" }}
+            >
               <Settings size={24} />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Resources Reports</h1>
-              <p className="text-gray-600">Monitor resource assignments and utilization</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Resources Reports
+              </h1>
+              <p className="text-gray-600">
+                Monitor resource assignments and utilization
+              </p>
             </div>
           </div>
         </div>
@@ -245,15 +274,29 @@ export default function ResourcesReportsPage() {
                 key={key}
                 onClick={() => setReport(key)}
                 className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                  isSelected ? "border-[#3674B5] bg-blue-50" : "border-gray-200 bg-white hover:border-gray-300"
+                  isSelected
+                    ? "border-[#3674B5] bg-blue-50"
+                    : "border-gray-200 bg-white hover:border-gray-300"
                 }`}
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-3 rounded-lg ${isSelected ? "bg-[#3674B5] text-white" : "bg-gray-100 text-gray-600"}`}>
+                  <div
+                    className={`p-3 rounded-lg ${
+                      isSelected
+                        ? "bg-[#3674B5] text-white"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
                     <IconComponent size={24} />
                   </div>
                   <div>
-                    <h3 className={`font-semibold ${isSelected ? "text-[#3674B5]" : "text-gray-900"}`}>{config.label}</h3>
+                    <h3
+                      className={`font-semibold ${
+                        isSelected ? "text-[#3674B5]" : "text-gray-900"
+                      }`}
+                    >
+                      {config.label}
+                    </h3>
                   </div>
                 </div>
                 <p className="text-sm text-gray-600">{config.description}</p>
@@ -266,12 +309,17 @@ export default function ResourcesReportsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#3674B5" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#3674B5" }}
+              >
                 <Truck size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Resources</p>
-                <p className="text-2xl font-bold text-gray-900">{resourceStats.totalResources}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {resourceStats.totalResources}
+                </p>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">All resources</p>
@@ -279,12 +327,17 @@ export default function ResourcesReportsPage() {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#10B981" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#10B981" }}
+              >
                 <Users size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Assigned</p>
-                <p className="text-2xl font-bold text-gray-900">{resourceStats.assignedResources}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {resourceStats.assignedResources}
+                </p>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">Assigned to staff</p>
@@ -292,12 +345,17 @@ export default function ResourcesReportsPage() {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#F59E0B" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#F59E0B" }}
+              >
                 <CheckCircle size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Available</p>
-                <p className="text-2xl font-bold text-gray-900">{resourceStats.availableResources}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {resourceStats.availableResources}
+                </p>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">Ready for use</p>
@@ -305,12 +363,17 @@ export default function ResourcesReportsPage() {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#EF4444" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#EF4444" }}
+              >
                 <AlertCircle size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">In Use</p>
-                <p className="text-2xl font-bold text-gray-900">{resourceStats.inUseResources}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {resourceStats.inUseResources}
+                </p>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">Currently in use</p>
@@ -329,7 +392,10 @@ export default function ResourcesReportsPage() {
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
             </div>
-            <button onClick={handleRetry} className="text-red-600 hover:text-red-800 font-medium text-sm">
+            <button
+              onClick={handleRetry}
+              className="text-red-600 hover:text-red-800 font-medium text-sm"
+            >
               Retry
             </button>
           </div>
@@ -340,49 +406,70 @@ export default function ResourcesReportsPage() {
           {/* Filters */}
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg text-white" style={{ backgroundColor: "#F59E0B" }}>
+              <div
+                className="p-2 rounded-lg text-white"
+                style={{ backgroundColor: "#F59E0B" }}
+              >
                 <Filter size={20} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800">Filters & Options</h3>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Filters & Options
+              </h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Start Date
+                </label>
                 <input
                   type="date"
                   value={filters.start || ""}
-                  onChange={(e) => setFilters((f) => ({ ...f, start: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, start: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  End Date
+                </label>
                 <input
                   type="date"
                   value={filters.end || ""}
-                  onChange={(e) => setFilters((f) => ({ ...f, end: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, end: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Branch
+                </label>
                 <input
                   type="text"
                   placeholder="e.g., HQ"
                   value={filters.branch || ""}
-                  onChange={(e) => setFilters((f) => ({ ...f, branch: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, branch: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
                 <select
                   value={filters.status || ""}
-                  onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, status: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 >
                   <option value="">All Statuses</option>
@@ -416,7 +503,10 @@ export default function ResourcesReportsPage() {
                   disabled={loading}
                   className="flex items-center gap-2 px-4 py-3 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-[#3674B5] disabled:opacity-50 transition-colors"
                 >
-                  <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                  <RefreshCw
+                    size={16}
+                    className={loading ? "animate-spin" : ""}
+                  />
                   Refresh
                 </button>
                 <button
@@ -459,15 +549,24 @@ export default function ResourcesReportsPage() {
             {loading ? (
               <div className="p-8 text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#3674B5] mb-4"></div>
-                <p className="text-gray-500 text-lg font-medium">Loading resources data...</p>
-                <p className="text-gray-400 text-sm mt-1">Please wait while we fetch your data</p>
+                <p className="text-gray-500 text-lg font-medium">
+                  Loading resources data...
+                </p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Please wait while we fetch your data
+                </p>
               </div>
             ) : filteredRows.length === 0 ? (
               <div className="p-8 text-center">
-                <div className="p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: "#F3F4F6" }}>
+                <div
+                  className="p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center"
+                  style={{ backgroundColor: "#F3F4F6" }}
+                >
                   <Settings size={32} className="text-gray-400" />
                 </div>
-                <p className="text-gray-500 text-lg font-medium">No Resources Data</p>
+                <p className="text-gray-500 text-lg font-medium">
+                  No Resources Data
+                </p>
                 <p className="text-gray-400 text-sm mt-1">
                   {rows.length === 0
                     ? "No resources found for the selected filters."
@@ -491,9 +590,15 @@ export default function ResourcesReportsPage() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {filteredRows.map((row, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50 transition-colors duration-150">
+                      <tr
+                        key={idx}
+                        className="hover:bg-gray-50 transition-colors duration-150"
+                      >
                         {Object.keys(filteredRows[0]).map((key) => (
-                          <td key={key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td
+                            key={key}
+                            className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                          >
                             {String(row[key] ?? "")}
                           </td>
                         ))}
@@ -509,13 +614,24 @@ export default function ResourcesReportsPage() {
 
       <style jsx global>{`
         @media print {
-          body * { visibility: hidden; }
-          .print\\:visible, .print\\:visible * { visibility: visible; }
-          .print\\:visible { position: absolute; left: 0; top: 0; width: 100%; }
-          @page { margin: 0.5in; }
+          body * {
+            visibility: hidden;
+          }
+          .print\\:visible,
+          .print\\:visible * {
+            visibility: visible;
+          }
+          .print\\:visible {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          @page {
+            margin: 0.5in;
+          }
         }
       `}</style>
     </div>
   );
 }
-        

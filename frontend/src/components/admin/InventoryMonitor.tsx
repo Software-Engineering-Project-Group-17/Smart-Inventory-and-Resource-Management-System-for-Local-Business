@@ -105,7 +105,7 @@ const InventoryMonitorComponent: React.FC<InventoryMonitorProps> = ({
         clearInterval(interval);
       }
     };
-  }, [isAutoRefreshEnabled, currentBranchId, refreshInterval]);
+  }, [isAutoRefreshEnabled, currentBranchId, refreshInterval, handleRefresh]);
 
   // Format time since last check
   const formatTimeSince = (date: Date) => {
@@ -129,7 +129,7 @@ const InventoryMonitorComponent: React.FC<InventoryMonitorProps> = ({
           <Package size={48} className="mx-auto mb-4 text-gray-300" />
           <p>No branch information available</p>
           <p className="text-sm">
-            Please ensure you're logged in as a staff member
+            Please ensure you&apos;re logged in as a staff member
           </p>
         </div>
       </div>
