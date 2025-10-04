@@ -273,7 +273,7 @@ export default function AddItemPage() {
             Add New Inventory Item
           </h1>
           <p className="text-gray-600 mt-2">
-            Add a new item to your branch's inventory with all the necessary
+            Add a new item to your branch inventory with all the necessary
             details.
           </p>
         </div>

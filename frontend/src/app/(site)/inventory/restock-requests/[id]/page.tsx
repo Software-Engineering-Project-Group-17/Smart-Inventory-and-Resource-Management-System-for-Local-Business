@@ -323,7 +323,7 @@ const RestockRequestDetailsPage = () => {
                   No Supplier Orders Yet
                 </h3>
                 <p className="text-gray-600">
-                  Suppliers haven't created orders for this request yet. Check
+                  Suppliers have not created orders for this request yet. Check
                   back later.
                 </p>
               </div>

@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
-import JsBarcode from 'jsbarcode';
-import { Download, Copy, Check } from 'lucide-react';
+import { useEffect, useRef, useState } from "react";
+import JsBarcode from "jsbarcode";
+import { Download, Copy, Check } from "lucide-react";
 
 export default function BarcodeGeneratorPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [barcodeText, setBarcodeText] = useState('b2#1212');
-  const [barcodeFormat, setBarcodeFormat] = useState('CODE128');
+  const [barcodeText, setBarcodeText] = useState("b2#1212");
+  const [barcodeFormat, setBarcodeFormat] = useState("CODE128");
   const [copied, setCopied] = useState(false);
   const [generated, setGenerated] = useState(false);
 
@@ -17,7 +17,7 @@ export default function BarcodeGeneratorPage() {
     try {
       // Clear the canvas first
       const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
@@ -30,15 +30,19 @@ export default function BarcodeGeneratorPage() {
         displayValue: true,
         fontSize: 20,
         margin: 10,
-        background: '#ffffff',
-        lineColor: '#000000'
+        background: "#ffffff",
+        lineColor: "#000000",
       });
 
       setGenerated(true);
-      console.log(`Generated barcode: ${barcodeText} in format: ${barcodeFormat}`);
+      console.log(
+        `Generated barcode: ${barcodeText} in format: ${barcodeFormat}`
+      );
     } catch (error) {
-      console.error('Error generating barcode:', error);
-      alert('Error generating barcode. Please check the input text and format.');
+      console.error("Error generating barcode:", error);
+      alert(
+        "Error generating barcode. Please check the input text and format."
+      );
     }
   };
 
@@ -46,7 +50,7 @@ export default function BarcodeGeneratorPage() {
     if (!canvasRef.current || !generated) return;
 
     const canvas = canvasRef.current;
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.download = `barcode_${barcodeText}.png`;
     link.href = canvas.toDataURL();
     link.click();
@@ -58,19 +62,19 @@ export default function BarcodeGeneratorPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy text:', error);
+      console.error("Failed to copy text:", error);
     }
   };
 
   const barcodeFormats = [
-    { value: 'CODE128', label: 'CODE128 (Recommended)' },
-    { value: 'CODE39', label: 'CODE39' },
-    { value: 'EAN13', label: 'EAN13' },
-    { value: 'EAN8', label: 'EAN8' },
-    { value: 'UPC', label: 'UPC' },
-    { value: 'ITF14', label: 'ITF14' },
-    { value: 'MSI', label: 'MSI' },
-    { value: 'pharmacode', label: 'Pharmacode' }
+    { value: "CODE128", label: "CODE128 (Recommended)" },
+    { value: "CODE39", label: "CODE39" },
+    { value: "EAN13", label: "EAN13" },
+    { value: "EAN8", label: "EAN8" },
+    { value: "UPC", label: "UPC" },
+    { value: "ITF14", label: "ITF14" },
+    { value: "MSI", label: "MSI" },
+    { value: "pharmacode", label: "Pharmacode" },
   ];
 
   // Generate barcode on component mount and when inputs change
@@ -78,14 +82,18 @@ export default function BarcodeGeneratorPage() {
     if (barcodeText.trim()) {
       generateBarcode();
     }
-  }, [barcodeText, barcodeFormat]);
+  }, [barcodeText, barcodeFormat, generateBarcode]);
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Barcode Generator</h1>
-          <p className="text-gray-600 mb-6">Generate barcodes for testing your scanner application</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            Barcode Generator
+          </h1>
+          <p className="text-gray-600 mb-6">
+            Generate barcodes for testing your scanner application
+          </p>
 
           {/* Input Controls */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -122,20 +130,23 @@ export default function BarcodeGeneratorPage() {
 
           {/* Generated Barcode Display */}
           <div className="bg-gray-50 rounded-xl p-8 mb-6 text-center">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Generated Barcode</h2>
-            
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+              Generated Barcode
+            </h2>
+
             <div className="inline-block bg-white p-6 rounded-lg shadow-md">
               <canvas
                 ref={canvasRef}
                 className="max-w-full h-auto"
-                style={{ maxWidth: '100%' }}
+                style={{ maxWidth: "100%" }}
               />
             </div>
 
             {generated && (
               <div className="mt-4">
                 <p className="text-sm text-gray-600 mb-4">
-                  Barcode text: <span className="font-mono font-semibold">{barcodeText}</span>
+                  Barcode text:{" "}
+                  <span className="font-mono font-semibold">{barcodeText}</span>
                 </p>
                 <p className="text-sm text-gray-600 mb-4">
                   Format: <span className="font-semibold">{barcodeFormat}</span>
@@ -166,41 +177,80 @@ export default function BarcodeGeneratorPage() {
               onClick={copyBarcodeText}
               className="px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition-colors duration-200 flex items-center justify-center space-x-2"
             >
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              <span>{copied ? 'Copied!' : 'Copy Text'}</span>
+              {copied ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Copy className="w-4 h-4" />
+              )}
+              <span>{copied ? "Copied!" : "Copy Text"}</span>
             </button>
           </div>
         </div>
 
         {/* Instructions */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">How to Use</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            How to Use
+          </h2>
           <div className="space-y-3 text-gray-600">
-            <p><strong>1. Enter Text:</strong> Type the text you want to encode (e.g., "b2#1212")</p>
-            <p><strong>2. Choose Format:</strong> Select the barcode format (CODE128 works well for text with special characters)</p>
-            <p><strong>3. Generate:</strong> The barcode will be generated automatically</p>
-            <p><strong>4. Download:</strong> Click "Download PNG" to save the barcode image</p>
-            <p><strong>5. Test:</strong> Use your mobile scanner to test if it reads correctly</p>
+            <p>
+              <strong>1. Enter Text:</strong> Type the text you want to encode
+              (e.g., &ldquo;b2#1212&rdquo;)
+            </p>
+            <p>
+              <strong>2. Choose Format:</strong> Select the barcode format
+              (CODE128 works well for text with special characters)
+            </p>
+            <p>
+              <strong>3. Generate:</strong> The barcode will be generated
+              automatically
+            </p>
+            <p>
+              <strong>4. Download:</strong> Click &ldquo;Download PNG&rdquo; to
+              save the barcode image
+            </p>
+            <p>
+              <strong>5. Test:</strong> Use your mobile scanner to test if it
+              reads correctly
+            </p>
           </div>
 
           <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <h3 className="font-semibold text-blue-800 mb-2">Testing with Your Scanner</h3>
+            <h3 className="font-semibold text-blue-800 mb-2">
+              Testing with Your Scanner
+            </h3>
             <ol className="list-decimal list-inside space-y-1 text-blue-700">
               <li>Download the generated barcode image</li>
               <li>Display it on another device or print it out</li>
-              <li>Open your mobile scanner: <code className="bg-blue-100 px-1 rounded">http://localhost:3000/scanner?user=thivinu%40gmail.com</code></li>
+              <li>
+                Open your mobile scanner:{" "}
+                <code className="bg-blue-100 px-1 rounded">
+                  http://localhost:3000/scanner?user=thivinu%40gmail.com
+                </code>
+              </li>
               <li>Point the scanner at the barcode</li>
-              <li>Verify it reads "b2#1212" correctly</li>
+              <li>Verify it reads &ldquo;b2#1212&rdquo; correctly</li>
             </ol>
           </div>
 
           <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
             <h3 className="font-semibold text-yellow-800 mb-2">Format Notes</h3>
             <ul className="list-disc list-inside space-y-1 text-yellow-700">
-              <li><strong>CODE128:</strong> Best for alphanumeric text with special characters like "#"</li>
-              <li><strong>CODE39:</strong> Simple format, limited character set</li>
-              <li><strong>EAN13/EAN8:</strong> Numeric only, used for retail products</li>
-              <li>For "b2#1212", CODE128 is recommended as it supports all characters</li>
+              <li>
+                <strong>CODE128:</strong> Best for alphanumeric text with
+                special characters like &ldquo;#&rdquo;
+              </li>
+              <li>
+                <strong>CODE39:</strong> Simple format, limited character set
+              </li>
+              <li>
+                <strong>EAN13/EAN8:</strong> Numeric only, used for retail
+                products
+              </li>
+              <li>
+                For &ldquo;b2#1212&rdquo;, CODE128 is recommended as it supports
+                all characters
+              </li>
             </ul>
           </div>
         </div>

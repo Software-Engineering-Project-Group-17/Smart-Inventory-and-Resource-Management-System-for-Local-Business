@@ -2,5 +2,5 @@
 "use client";
 import ResourceReports from "@/components/reports/resourceReports";
 export default function Page() {
-  return <ResourceReports defaultTab="assignments" />;
+  return <ResourceReports />;
 }
