@@ -7,7 +7,11 @@ const sql = neon(process.env.DATABASE_URL!);
 // GET - Fetch user profile with branch information
 export async function GET(request: NextRequest) {
   // Require authentication - All authenticated users can view their own profile
-  const authResult = await requireAuth(request, ["OWNER", "BRANCH_MANAGER", "STAFF", "CUSTOMER", "SUPPLIER"]);
+  const authResult = await requireAuth(request, [
+    "OWNER",
+    "BRANCH_MANAGER",
+    "STAFF",
+  ]);
   const authResponse = createAuthResponse(authResult);
   if (authResponse) return authResponse;
 
