@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import AWS from "aws-sdk";
 import { neon } from "@neondatabase/serverless";
+import { requireAuth, createAuthResponse } from "@/lib/requireAuth";
 
 // Configure AWS S3
 const s3 = new AWS.S3({
@@ -14,7 +15,16 @@ const BUCKET_NAME = process.env.AWS_S3_BUCKET;
 // Database connection using Neon
 const sql = neon(process.env.DATABASE_URL!);
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Require authentication - Allow OWNER, BRANCH_MANAGER, and STAFF to view categories
+  const authResult = await requireAuth(request, [
+    "OWNER",
+    "BRANCH_MANAGER",
+    "STAFF",
+  ]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
+
   try {
     const result = await sql`
       SELECT 
@@ -39,6 +49,11 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  // Require authentication - Only OWNER and BRANCH_MANAGER can create categories
+  const authResult = await requireAuth(request, ["OWNER", "BRANCH_MANAGER"]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
+
   try {
     const formData = await request.formData();
     const categoryName = formData.get("categoryName") as string;
@@ -153,6 +168,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const authResult = await requireAuth(request, ["OWNER", "BRANCH_MANAGER"]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
   try {
     const formData = await request.formData();
     const categoryId = formData.get("categoryId") as string;
@@ -319,6 +337,9 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const authResult = await requireAuth(request, ["OWNER", "BRANCH_MANAGER"]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
   try {
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get("id");
