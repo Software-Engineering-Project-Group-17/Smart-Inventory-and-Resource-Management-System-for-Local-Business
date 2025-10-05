@@ -69,7 +69,7 @@ export default function AuthTestPage() {
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
         <h2 className="text-lg font-semibold mb-2">How to Test:</h2>
         <ol className="list-decimal list-inside space-y-1 text-sm">
-          <li>Make sure you're logged in with a Firebase account</li>
+          <li>Make sure you&apos;re logged in with a Firebase account</li>
           <li>
             Your user must exist in the database with a role (OWNER,
             BRANCH_MANAGER, or STAFF)
@@ -124,7 +124,7 @@ export default function AuthTestPage() {
           Test Categories API
         </button>
 
-        <button
+        {/* <button
           onClick={() => {
             testEndpoint("GET", "/api/debug-auth", []);
           }}
@@ -132,7 +132,7 @@ export default function AuthTestPage() {
           className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded disabled:opacity-50"
         >
           🐛 Debug User Role
-        </button>
+        </button> */}
 
         <button
           onClick={clearResults}
@@ -239,7 +239,9 @@ export default function AuthTestPage() {
           </li>
           <li>
             • API routes use{" "}
-            <code>requireAuth(request, ["ROLE1", "ROLE2"])</code>
+            <code>
+              requireAuth(request, [&quot;ROLE1&quot;, &quot;ROLE2&quot;])
+            </code>
           </li>
           <li>• Firebase tokens are verified server-side</li>
           <li>• User roles are fetched from your database</li>
