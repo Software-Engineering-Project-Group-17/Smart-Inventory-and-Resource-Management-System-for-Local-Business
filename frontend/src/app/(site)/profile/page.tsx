@@ -160,7 +160,7 @@ const ProfilePage = () => {
 
       const currentUser = JSON.parse(userProfileJson);
 
-      const response = await fetch("/api/profile", {
+      const response = await authenticatedFetch("/api/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
