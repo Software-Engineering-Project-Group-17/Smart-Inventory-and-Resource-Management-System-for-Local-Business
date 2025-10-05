@@ -16,6 +16,7 @@ import {
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toastUtils } from "@/lib/toast-utils";
 import { showRoleAccessNotification } from "@/lib/auth";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 interface UserProfile {
   id: string;
@@ -57,7 +58,7 @@ const ProfilePage = () => {
       const currentUser = JSON.parse(userProfileJson);
       console.log("Current user from localStorage:", currentUser);
 
-      const response = await fetch("/api/profile", {
+      const response = await authenticatedFetch("/api/profile", {
         headers: {
           "x-user-id": currentUser.id.toString(),
           "Content-Type": "application/json",

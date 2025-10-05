@@ -1,22 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
+import { requireAuth, createAuthResponse } from "@/lib/requireAuth";
 
 const sql = neon(process.env.DATABASE_URL!);
 
 // GET - Fetch user profile with branch information
 export async function GET(request: NextRequest) {
+  // Require authentication - All authenticated users can view their own profile
+  const authResult = await requireAuth(request, ["OWNER", "BRANCH_MANAGER", "STAFF", "CUSTOMER", "SUPPLIER"]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
+
   try {
-    // Get user ID from headers (passed by client)
-    const userId = request.headers.get("x-user-id");
+    const userId = authResult.user!.userId;
 
-    console.log("Profile API GET - User ID from headers:", userId);
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 401 }
-      );
-    }
+    console.log("Profile API GET - User ID from auth:", userId);
 
     // Get user details with branch information (if applicable)
     const result = await sql`
