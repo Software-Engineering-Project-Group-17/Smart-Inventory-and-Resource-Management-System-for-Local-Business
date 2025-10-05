@@ -11,7 +11,7 @@ import { showRoleAccessNotification } from "@/lib/auth";
 
 const InventoryPage = () => {
   useEffect(() => {
-    showRoleAccessNotification("Inventory Management");
+    // showRoleAccessNotification("Inventory Management");
   }, []);
 
   const {

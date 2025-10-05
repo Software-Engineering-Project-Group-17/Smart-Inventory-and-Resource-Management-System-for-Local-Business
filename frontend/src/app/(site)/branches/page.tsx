@@ -54,10 +54,10 @@ const BranchesPage = () => {
     handleDeleteBranch,
   } = useBranchesManagement();
 
-  // Show role access notification on page load
-  useEffect(() => {
-    showRoleAccessNotification("Branch Management");
-  }, []);
+  // // Show role access notification on page load
+  // useEffect(() => {
+  //   showRoleAccessNotification("Branch Management");
+  // }, []);
 
   const handleRemoveManagerClick = (branch: any) => {
     setSelectedBranch(branch);

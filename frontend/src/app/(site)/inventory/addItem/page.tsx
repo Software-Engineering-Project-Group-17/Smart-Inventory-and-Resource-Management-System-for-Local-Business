@@ -43,7 +43,7 @@ export default function AddItemPage() {
 
   // Get user profile and show role access notification
   useEffect(() => {
-    showRoleAccessNotification("Add Inventory Item");
+    // showRoleAccessNotification("Add Inventory Item");
     const profile = getUserProfile();
     setUserProfile(profile);
   }, []);

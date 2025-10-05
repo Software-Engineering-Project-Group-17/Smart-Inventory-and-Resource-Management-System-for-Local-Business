@@ -36,7 +36,7 @@ export default function AddCategoryPage() {
 
   // Show role access notification on page load
   useEffect(() => {
-    showRoleAccessNotification("Category Management");
+    // showRoleAccessNotification("Category Management");
     loadCategories();
   }, []);
 

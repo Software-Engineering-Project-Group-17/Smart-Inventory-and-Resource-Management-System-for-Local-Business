@@ -107,7 +107,7 @@ const ProfilePage = () => {
 
   // Debug logging
   useEffect(() => {
-    showRoleAccessNotification("Profile Management");
+    // showRoleAccessNotification("Profile Management");
     console.log("ProfilePage Debug:", {
       authLoading,
       isLoading,

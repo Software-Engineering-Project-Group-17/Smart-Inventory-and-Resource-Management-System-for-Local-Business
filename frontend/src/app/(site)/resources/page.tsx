@@ -49,7 +49,7 @@ const ResourceTrackingPage = () => {
 
   // Show role access notification on page load
   useEffect(() => {
-    showRoleAccessNotification("Resource Management");
+    // showRoleAccessNotification("Resource Management");
   }, []);
 
   return (
