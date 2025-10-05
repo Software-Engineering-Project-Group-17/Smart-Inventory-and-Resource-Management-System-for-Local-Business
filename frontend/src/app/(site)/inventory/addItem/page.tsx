@@ -15,6 +15,7 @@ import {
 import { toastUtils } from "@/lib/toast-utils";
 import { showRoleAccessNotification } from "@/lib/auth";
 import { getUserProfile } from "@/lib/auth";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 interface Category {
   id: string;
@@ -42,7 +43,7 @@ export default function AddItemPage() {
 
   // Get user profile and show role access notification
   useEffect(() => {
-    showRoleAccessNotification("Add Inventory Item");
+    // showRoleAccessNotification("Add Inventory Item");
     const profile = getUserProfile();
     setUserProfile(profile);
   }, []);
@@ -51,7 +52,7 @@ export default function AddItemPage() {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const response = await fetch("/api/categories");
+        const response = await authenticatedFetch("/api/categories");
         if (response.ok) {
           const data = await response.json();
           setCategories(data.categories || []);
@@ -211,7 +212,7 @@ export default function AddItemPage() {
         submitFormData.append("image", selectedImage);
       }
 
-      const response = await fetch("/api/inventory", {
+      const response = await authenticatedFetch("/api/inventory", {
         method: "POST",
         body: submitFormData,
       });

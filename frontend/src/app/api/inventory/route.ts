@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import AWS from "aws-sdk";
 import { neon } from "@neondatabase/serverless";
 import { NotificationService } from "@/lib/notification-service";
+import { requireAuth, createAuthResponse } from "@/lib/requireAuth";
 
 // Configure AWS S3
 const s3 = new AWS.S3({
@@ -16,18 +17,42 @@ const BUCKET_NAME = process.env.AWS_S3_BUCKET;
 const sql = neon(process.env.DATABASE_URL!);
 
 export async function GET(request: NextRequest) {
+  // Require authentication - Allow OWNER, BRANCH_MANAGER, and STAFF to view inventory
+  const authResult = await requireAuth(request, [
+    "OWNER",
+    "BRANCH_MANAGER",
+    "STAFF",
+  ]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
+
   try {
     const { searchParams } = new URL(request.url);
     const userEmail = searchParams.get("userEmail");
 
-    if (!userEmail) {
+    // Use the authenticated user's branch if no userEmail provided or if not owner
+    let branchId = authResult.user?.branchId;
+
+    // If userEmail is provided and user is OWNER, allow checking other branches
+    if (userEmail && authResult.user?.role === "OWNER") {
+      const userResult = await sql`
+        SELECT s.branch_id 
+        FROM staff s 
+        JOIN app_user u ON s.user_id = u.user_id 
+        WHERE u.email = ${userEmail} AND s.is_active = true
+      `;
+
+      if (userResult.length > 0) {
+        branchId = userResult[0].branch_id;
+      }
+    }
+
+    if (!branchId) {
       return NextResponse.json(
-        { error: "User email is required" },
+        { error: "Branch not found for user" },
         { status: 400 }
       );
     }
-
-    // Get user's branch_id from staff table
     const staffResult = await sql`
       SELECT s.branch_id, b.name as branch_name 
       FROM staff s 
@@ -78,6 +103,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // Require authentication - Only OWNER and BRANCH_MANAGER can create inventory items
+  const authResult = await requireAuth(request, [
+    "OWNER",
+    "BRANCH_MANAGER",
+    "STAFF",
+  ]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
+
   try {
     const formData = await request.formData();
     const inventoryName = formData.get("inventoryName") as string;
@@ -91,11 +125,19 @@ export async function POST(request: NextRequest) {
     const userEmail = formData.get("userEmail") as string;
     const imageFile = formData.get("image") as File | null;
 
+    // Use authenticated user's branch ID
+    const branchId = authResult.user?.branchId;
+    if (!branchId) {
+      return NextResponse.json(
+        { error: "Branch not found for authenticated user" },
+        { status: 400 }
+      );
+    }
+
     // Validate required fields
     if (
       !inventoryName ||
       !barcode ||
-      !userEmail ||
       isNaN(quantity) ||
       isNaN(categoryId) ||
       isNaN(unitPrice)
@@ -112,29 +154,6 @@ export async function POST(request: NextRequest) {
           error:
             "Quantity, unit price, and low stock threshold must be non-negative",
         },
-        { status: 400 }
-      );
-    }
-
-    // Get user's branch_id from staff table
-    const staffResult = await sql`
-      SELECT branch_id 
-      FROM staff 
-      WHERE email = ${userEmail} AND is_active = true
-    `;
-
-    if (staffResult.length === 0) {
-      return NextResponse.json(
-        { error: "Staff record not found for this user" },
-        { status: 404 }
-      );
-    }
-
-    const branchId = staffResult[0].branch_id;
-
-    if (!branchId) {
-      return NextResponse.json(
-        { error: "User is not assigned to any branch" },
         { status: 400 }
       );
     }

@@ -109,7 +109,7 @@ const RestockRequestsPage = () => {
   };
 
   useEffect(() => {
-    showRoleAccessNotification("Restock Requests");
+    // showRoleAccessNotification("Restock Requests");
     loadRequests();
     loadInventory();
   }, [statusFilter, priorityFilter, searchTerm]);
