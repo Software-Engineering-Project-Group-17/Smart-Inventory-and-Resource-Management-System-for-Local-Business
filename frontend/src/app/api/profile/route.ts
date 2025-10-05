@@ -74,6 +74,13 @@ export async function GET(request: NextRequest) {
 
 // PUT - Update user profile (only editable fields)
 export async function PUT(request: NextRequest) {
+  const authResult = await requireAuth(request, [
+    "OWNER",
+    "BRANCH_MANAGER",
+    "STAFF",
+  ]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
   try {
     // Get user ID from headers (passed by client)
     const userId = request.headers.get("x-user-id");
