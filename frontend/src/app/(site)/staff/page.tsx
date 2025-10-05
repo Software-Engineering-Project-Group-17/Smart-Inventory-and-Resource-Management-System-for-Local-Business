@@ -152,7 +152,7 @@ const StaffManagementPage = () => {
 
   // Load staff data when component mounts
   useEffect(() => {
-    showRoleAccessNotification("Staff Management");
+    // showRoleAccessNotification("Staff Management");
     fetchStaff();
   }, []);
 

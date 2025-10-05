@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { showRoleAccessNotification } from "@/lib/auth";
 import { toastUtils } from "@/lib/toast-utils";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 interface Category {
   id: number;
@@ -35,14 +36,14 @@ export default function AddCategoryPage() {
 
   // Show role access notification on page load
   useEffect(() => {
-    showRoleAccessNotification("Category Management");
+    // showRoleAccessNotification("Category Management");
     loadCategories();
   }, []);
 
   const loadCategories = async () => {
     try {
       setIsLoadingCategories(true);
-      const response = await fetch("/api/categories");
+      const response = await authenticatedFetch("/api/categories");
 
       if (response.ok) {
         const data = await response.json();
@@ -136,7 +137,7 @@ export default function AddCategoryPage() {
         submitFormData.append("image", selectedImage);
       }
 
-      const response = await fetch("/api/categories", {
+      const response = await authenticatedFetch("/api/categories", {
         method: "POST",
         body: submitFormData,
       });
@@ -192,9 +193,12 @@ export default function AddCategoryPage() {
     setCategories((prev) => prev.filter((cat) => cat.id !== categoryId));
 
     try {
-      const response = await fetch(`/api/categories?id=${categoryId}`, {
-        method: "DELETE",
-      });
+      const response = await authenticatedFetch(
+        `/api/categories?id=${categoryId}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       const result = await response.json();
 
@@ -215,10 +219,13 @@ export default function AddCategoryPage() {
 
                 // If the category had an image, we'll need to handle this differently
                 // For now, we'll recreate without the image as we can't restore S3 files
-                const restoreResponse = await fetch("/api/categories", {
-                  method: "POST",
-                  body: restoreFormData,
-                });
+                const restoreResponse = await authenticatedFetch(
+                  "/api/categories",
+                  {
+                    method: "POST",
+                    body: restoreFormData,
+                  }
+                );
 
                 if (restoreResponse.ok) {
                   await loadCategories();
