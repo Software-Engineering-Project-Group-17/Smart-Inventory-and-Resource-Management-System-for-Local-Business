@@ -13,7 +13,7 @@ import healthRoutes from "./routes/healthRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import salesRoutes from './routes/salesAnalyticsRoutes.js';
 import inventoryRoutes from './routes/inventoryAnalyticsRoutes.js';
-import customerRoutes from './routes/customerAnalyticsRotes.js';
+import customerRoutes from './routes/customerAnalyticsRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -146,8 +146,9 @@ setInterval(() => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 4005;
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(`report-analysis-service with WebSocket running on :${PORT}`);
 });
+
 
 export { io };
