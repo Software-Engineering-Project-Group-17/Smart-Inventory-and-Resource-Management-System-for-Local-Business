@@ -165,7 +165,11 @@ const InventoryPage = () => {
           />
 
           {/* Inventory Table */}
-          <InventoryTable inventory={inventory} isLoading={isLoading} />
+          <InventoryTable
+            inventory={inventory}
+            isLoading={isLoading}
+            onInventoryUpdate={refreshInventory}
+          />
         </div>
       </div>
     </div>

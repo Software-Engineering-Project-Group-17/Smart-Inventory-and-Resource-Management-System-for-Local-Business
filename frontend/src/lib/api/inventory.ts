@@ -72,4 +72,38 @@ export const inventoryApi = {
       throw error;
     }
   },
+
+  async updateStockAndPrice(
+    inventoryId: number,
+    quantity: number,
+    unitPrice: number
+  ): Promise<any> {
+    try {
+      const headers = getUserHeaders();
+      const response = await fetch("/api/inventory", {
+        method: "PATCH",
+        headers: {
+          ...headers,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inventoryId,
+          quantity,
+          unitPrice,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(
+          errorData?.error || `HTTP ${response.status}: ${response.statusText}`
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Update stock and price API error:", error);
+      throw error;
+    }
+  },
 };

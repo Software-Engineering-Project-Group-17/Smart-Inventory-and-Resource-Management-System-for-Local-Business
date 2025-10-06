@@ -327,6 +327,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  // Require authentication - Only OWNER and BRANCH_MANAGER can edit inventory items
+  const authResult = await requireAuth(request, ["OWNER", "BRANCH_MANAGER"]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
+
   try {
     const formData = await request.formData();
     const inventoryId = formData.get("inventoryId") as string;
@@ -338,7 +343,6 @@ export async function PUT(request: NextRequest) {
       formData.get("lowStockThreshold") as string
     );
     const unitPrice = parseFloat(formData.get("unitPrice") as string);
-    const userEmail = formData.get("userEmail") as string;
     const imageFile = formData.get("image") as File | null;
     const removeImage = formData.get("removeImage") === "true";
 
@@ -346,7 +350,6 @@ export async function PUT(request: NextRequest) {
       !inventoryId ||
       !barcode ||
       !inventoryName ||
-      !userEmail ||
       isNaN(quantity) ||
       isNaN(categoryId) ||
       isNaN(unitPrice)
@@ -367,21 +370,14 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Get user's branch_id and verify ownership
-    const staffResult = await sql`
-      SELECT branch_id 
-      FROM staff 
-      WHERE email = ${userEmail} AND is_active = true
-    `;
-
-    if (staffResult.length === 0) {
+    // Use authenticated user's branch ID
+    const branchId = authResult.user?.branchId;
+    if (!branchId) {
       return NextResponse.json(
-        { error: "Staff record not found for this user" },
-        { status: 404 }
+        { error: "Branch not found for authenticated user" },
+        { status: 400 }
       );
     }
-
-    const branchId = staffResult[0].branch_id;
 
     // Check if inventory item exists and belongs to user's branch
     const existingItem = await sql`
@@ -604,33 +600,30 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  // Require authentication - Only OWNER and BRANCH_MANAGER can delete inventory items
+  const authResult = await requireAuth(request, ["OWNER", "BRANCH_MANAGER"]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
+
   try {
     const { searchParams } = new URL(request.url);
     const inventoryId = searchParams.get("id");
-    const userEmail = searchParams.get("userEmail");
 
-    if (!inventoryId || !userEmail) {
+    if (!inventoryId) {
       return NextResponse.json(
-        { error: "Inventory ID and user email are required" },
+        { error: "Inventory ID is required" },
         { status: 400 }
       );
     }
 
-    // Get user's branch_id
-    const staffResult = await sql`
-      SELECT branch_id 
-      FROM staff 
-      WHERE email = ${userEmail} AND is_active = true
-    `;
-
-    if (staffResult.length === 0) {
+    // Use authenticated user's branch ID
+    const branchId = authResult.user?.branchId;
+    if (!branchId) {
       return NextResponse.json(
-        { error: "Staff record not found for this user" },
-        { status: 404 }
+        { error: "Branch not found for authenticated user" },
+        { status: 400 }
       );
     }
-
-    const branchId = staffResult[0].branch_id;
 
     // Check if inventory item exists and belongs to user's branch
     const existingItem = await sql`
@@ -685,6 +678,109 @@ export async function DELETE(request: NextRequest) {
     console.error("Error deleting inventory item:", error);
     return NextResponse.json(
       { error: "Failed to delete inventory item. Please try again." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  // Require authentication - Only OWNER and BRANCH_MANAGER can edit stock and price
+  const authResult = await requireAuth(request, ["OWNER", "BRANCH_MANAGER"]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
+
+  try {
+    const body = await request.json();
+    const { inventoryId, quantity, unitPrice } = body;
+
+    if (!inventoryId || quantity == null || unitPrice == null) {
+      return NextResponse.json(
+        { error: "Inventory ID, quantity, and unit price are required" },
+        { status: 400 }
+      );
+    }
+
+    if (quantity < 0 || unitPrice < 0) {
+      return NextResponse.json(
+        {
+          error: "Quantity and unit price must be non-negative",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Use authenticated user's branch ID
+    const branchId = authResult.user?.branchId;
+    if (!branchId) {
+      return NextResponse.json(
+        { error: "Branch not found for authenticated user" },
+        { status: 400 }
+      );
+    }
+
+    // Check if inventory item exists and belongs to user's branch
+    const existingItem = await sql`
+      SELECT inventory_id, inventory_name, quantity, branch_id 
+      FROM inventory_item 
+      WHERE inventory_id = ${inventoryId}
+    `;
+
+    if (existingItem.length === 0) {
+      return NextResponse.json(
+        { error: "Inventory item not found" },
+        { status: 404 }
+      );
+    }
+
+    if (existingItem[0].branch_id !== branchId) {
+      return NextResponse.json(
+        { error: "You can only update inventory items in your branch" },
+        { status: 403 }
+      );
+    }
+
+    const previousQuantity = existingItem[0].quantity;
+    const wasRestocked = quantity > previousQuantity;
+
+    // Update only stock and price
+    const updateResult = await sql`
+      UPDATE inventory_item 
+      SET 
+        quantity = ${quantity}, 
+        unit_price = ${unitPrice}
+      WHERE inventory_id = ${inventoryId} 
+      RETURNING inventory_id, inventory_name, quantity, unit_price, low_stock_threshold
+    `;
+
+    const updatedItem = updateResult[0];
+
+    // Handle notifications
+    try {
+      // Check for low stock notification (always check after update)
+      await NotificationService.checkAndCreateLowStockNotification(inventoryId);
+
+      // Create restock completion notification if quantity increased significantly
+      if (wasRestocked && quantity - previousQuantity >= 5) {
+        await NotificationService.createRestockCompletionNotification(
+          inventoryId,
+          previousQuantity,
+          quantity
+        );
+      }
+    } catch (notificationError) {
+      // Don't fail the update if notifications fail
+      console.error("Error creating notifications:", notificationError);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Stock and price updated successfully",
+      item: updatedItem,
+    });
+  } catch (error) {
+    console.error("Error updating stock and price:", error);
+    return NextResponse.json(
+      { error: "Failed to update stock and price. Please try again." },
       { status: 500 }
     );
   }

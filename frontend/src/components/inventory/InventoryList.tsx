@@ -1,16 +1,89 @@
-import React from "react";
-import { Package, AlertTriangle } from "lucide-react";
+import React, { useState } from "react";
+import { Package, AlertTriangle, Edit2, Check, X } from "lucide-react";
 import { InventoryItem } from "@/lib/api/inventory";
+import { getUserProfile, hasAnyRole } from "@/lib/auth";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { toastUtils } from "@/lib/toast-utils";
 
 interface InventoryTableProps {
   inventory: InventoryItem[];
   isLoading: boolean;
+  onInventoryUpdate?: () => void;
+}
+
+interface EditingState {
+  inventoryId: number | null;
+  quantity: string;
+  unitPrice: string;
 }
 
 export const InventoryTable: React.FC<InventoryTableProps> = ({
   inventory,
   isLoading,
+  onInventoryUpdate,
 }) => {
+  const [editing, setEditing] = useState<EditingState>({
+    inventoryId: null,
+    quantity: "",
+    unitPrice: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  // Check if user can edit (OWNER or BRANCH_MANAGER)
+  const canEdit = hasAnyRole(["OWNER", "BRANCH_MANAGER"]);
+
+  const startEditing = (item: InventoryItem) => {
+    setEditing({
+      inventoryId: item.inventoryId,
+      quantity: item.currentStock.toString(),
+      unitPrice: item.unitPrice.toString(),
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditing({
+      inventoryId: null,
+      quantity: "",
+      unitPrice: "",
+    });
+  };
+
+  const saveChanges = async () => {
+    if (!editing.inventoryId) return;
+
+    setSaving(true);
+    try {
+      const response = await authenticatedFetch("/api/inventory", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inventoryId: editing.inventoryId,
+          quantity: parseInt(editing.quantity),
+          unitPrice: parseFloat(editing.unitPrice),
+        }),
+      });
+
+      if (response.ok) {
+        toastUtils.formSuccess("Stock and price updated successfully!");
+        cancelEditing();
+        onInventoryUpdate?.();
+      } else {
+        const errorData = await response.json();
+        toastUtils.error(
+          "Update Failed",
+          errorData.error || "Failed to update inventory"
+        );
+      }
+    } catch (error) {
+      console.error("Error updating inventory:", error);
+      toastUtils.networkError();
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow">
@@ -68,12 +141,18 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
+              {canEdit && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {inventory.map((item) => {
               const isLowStock = item.currentStock <= item.reorderLevel;
               const totalValue = item.currentStock * item.unitPrice;
+              const isEditing = editing.inventoryId === item.inventoryId;
 
               return (
                 <tr key={item.inventoryId} className="hover:bg-gray-50">
@@ -100,15 +179,44 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {item.currentStock}
-                    </div>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        min="0"
+                        value={editing.quantity}
+                        onChange={(e) =>
+                          setEditing({ ...editing, quantity: e.target.value })
+                        }
+                        className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#3674B5] focus:border-[#3674B5]"
+                        disabled={saving}
+                      />
+                    ) : (
+                      <div className="text-sm text-gray-900">
+                        {item.currentStock}
+                      </div>
+                    )}
                     <div className="text-xs text-gray-500">
                       Reorder at: {item.reorderLevel}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${Number(item.unitPrice).toFixed(2)}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={editing.unitPrice}
+                        onChange={(e) =>
+                          setEditing({ ...editing, unitPrice: e.target.value })
+                        }
+                        className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#3674B5] focus:border-[#3674B5]"
+                        disabled={saving}
+                      />
+                    ) : (
+                      <div className="text-sm text-gray-900">
+                        ${Number(item.unitPrice).toFixed(2)}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     ${Number(totalValue).toFixed(2)}
@@ -125,6 +233,38 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                       </span>
                     )}
                   </td>
+                  {canEdit && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {isEditing ? (
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={saveChanges}
+                            disabled={saving}
+                            className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50"
+                            title="Save changes"
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            disabled={saving}
+                            className="p-1 text-red-600 hover:text-red-700 disabled:opacity-50"
+                            title="Cancel editing"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEditing(item)}
+                          className="p-1 text-[#3674B5] hover:text-blue-700"
+                          title="Edit stock and price"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}
