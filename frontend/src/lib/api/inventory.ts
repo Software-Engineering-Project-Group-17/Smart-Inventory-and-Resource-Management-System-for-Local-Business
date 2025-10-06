@@ -76,21 +76,28 @@ export const inventoryApi = {
   async updateStockAndPrice(
     inventoryId: number,
     quantity: number,
-    unitPrice: number
+    unitPrice: number,
+    lowStockThreshold?: number
   ): Promise<any> {
     try {
       const headers = getUserHeaders();
+      const body: any = {
+        inventoryId,
+        quantity,
+        unitPrice,
+      };
+
+      if (lowStockThreshold !== undefined) {
+        body.lowStockThreshold = lowStockThreshold;
+      }
+
       const response = await fetch("/api/inventory", {
         method: "PATCH",
         headers: {
           ...headers,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          inventoryId,
-          quantity,
-          unitPrice,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {

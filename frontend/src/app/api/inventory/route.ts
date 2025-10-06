@@ -691,7 +691,7 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { inventoryId, quantity, unitPrice } = body;
+    const { inventoryId, quantity, unitPrice, lowStockThreshold } = body;
 
     if (!inventoryId || quantity == null || unitPrice == null) {
       return NextResponse.json(
@@ -700,10 +700,15 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    if (quantity < 0 || unitPrice < 0) {
+    if (
+      quantity < 0 ||
+      unitPrice < 0 ||
+      (lowStockThreshold != null && lowStockThreshold < 0)
+    ) {
       return NextResponse.json(
         {
-          error: "Quantity and unit price must be non-negative",
+          error:
+            "Quantity, unit price, and low stock threshold must be non-negative",
         },
         { status: 400 }
       );
@@ -742,15 +747,26 @@ export async function PATCH(request: NextRequest) {
     const previousQuantity = existingItem[0].quantity;
     const wasRestocked = quantity > previousQuantity;
 
-    // Update only stock and price
-    const updateResult = await sql`
-      UPDATE inventory_item 
-      SET 
-        quantity = ${quantity}, 
-        unit_price = ${unitPrice}
-      WHERE inventory_id = ${inventoryId} 
-      RETURNING inventory_id, inventory_name, quantity, unit_price, low_stock_threshold
-    `;
+    // Update stock, price, and optionally low stock threshold
+    const updateResult =
+      lowStockThreshold != null
+        ? await sql`
+          UPDATE inventory_item 
+          SET 
+            quantity = ${quantity}, 
+            unit_price = ${unitPrice},
+            low_stock_threshold = ${lowStockThreshold}
+          WHERE inventory_id = ${inventoryId} 
+          RETURNING inventory_id, inventory_name, quantity, unit_price, low_stock_threshold
+        `
+        : await sql`
+          UPDATE inventory_item 
+          SET 
+            quantity = ${quantity}, 
+            unit_price = ${unitPrice}
+          WHERE inventory_id = ${inventoryId} 
+          RETURNING inventory_id, inventory_name, quantity, unit_price, low_stock_threshold
+        `;
 
     const updatedItem = updateResult[0];
 

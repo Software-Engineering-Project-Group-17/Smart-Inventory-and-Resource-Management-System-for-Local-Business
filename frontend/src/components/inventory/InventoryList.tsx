@@ -15,6 +15,7 @@ interface EditingState {
   inventoryId: number | null;
   quantity: string;
   unitPrice: string;
+  lowStockThreshold: string;
 }
 
 export const InventoryTable: React.FC<InventoryTableProps> = ({
@@ -26,6 +27,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
     inventoryId: null,
     quantity: "",
     unitPrice: "",
+    lowStockThreshold: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -37,6 +39,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
       inventoryId: item.inventoryId,
       quantity: item.currentStock.toString(),
       unitPrice: item.unitPrice.toString(),
+      lowStockThreshold: item.reorderLevel.toString(),
     });
   };
 
@@ -45,6 +48,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
       inventoryId: null,
       quantity: "",
       unitPrice: "",
+      lowStockThreshold: "",
     });
   };
 
@@ -53,20 +57,26 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
 
     setSaving(true);
     try {
+      const body: any = {
+        inventoryId: editing.inventoryId,
+        quantity: parseInt(editing.quantity),
+        unitPrice: parseFloat(editing.unitPrice),
+      };
+
+      if (editing.lowStockThreshold !== "") {
+        body.lowStockThreshold = parseInt(editing.lowStockThreshold);
+      }
+
       const response = await authenticatedFetch("/api/inventory", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          inventoryId: editing.inventoryId,
-          quantity: parseInt(editing.quantity),
-          unitPrice: parseFloat(editing.unitPrice),
-        }),
+        body: JSON.stringify(body),
       });
 
       if (response.ok) {
-        toastUtils.formSuccess("Stock and price updated successfully!");
+        toastUtils.formSuccess("Inventory updated successfully!");
         cancelEditing();
         onInventoryUpdate?.();
       } else {
@@ -136,6 +146,9 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                 Unit Price
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Low Stock Threshold
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Total Value
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -195,9 +208,6 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                         {item.currentStock}
                       </div>
                     )}
-                    <div className="text-xs text-gray-500">
-                      Reorder at: {item.reorderLevel}
-                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {isEditing ? (
@@ -215,6 +225,27 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                     ) : (
                       <div className="text-sm text-gray-900">
                         ${Number(item.unitPrice).toFixed(2)}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        min="0"
+                        value={editing.lowStockThreshold}
+                        onChange={(e) =>
+                          setEditing({
+                            ...editing,
+                            lowStockThreshold: e.target.value,
+                          })
+                        }
+                        className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#3674B5] focus:border-[#3674B5]"
+                        disabled={saving}
+                      />
+                    ) : (
+                      <div className="text-sm text-gray-900">
+                        {item.reorderLevel}
                       </div>
                     )}
                   </td>
