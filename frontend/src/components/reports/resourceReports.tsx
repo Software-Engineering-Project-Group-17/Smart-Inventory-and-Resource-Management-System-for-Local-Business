@@ -25,7 +25,7 @@ interface Filters {
 }
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4005";
+  process.env.NEXT_PUBLIC_REPORTS_ANALYTICS_API_URL || "http://localhost:4005";
 
 function toCSV(rows: Row[]): string {
   if (!rows.length) return "";
