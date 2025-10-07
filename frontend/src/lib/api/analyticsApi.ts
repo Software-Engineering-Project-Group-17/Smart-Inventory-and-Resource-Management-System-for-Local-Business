@@ -2,7 +2,11 @@
 // Works with your Express mounts:
 //   /api/analytics, /api/sales, /api/inventory, /api/customers, /api/health
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_ANALYTICS_API_URL || "http://localhost:4005/api").replace(/\/+$/, "");
+// Always add `/api` once
+const raw = process.env.NEXT_PUBLIC_REPORTS_ANALYTICS_API_URL ?? "http://localhost:4005";
+const base = raw.replace(/\/+$/, "");           // strip trailing slashes
+const API_BASE_URL = base.endsWith("/api") ? base : `${base}/api`;
+
 const INCLUDE_CREDS = String(process.env.NEXT_PUBLIC_INCLUDE_CREDENTIALS || "").toLowerCase() === "true";
 
 // ---------- Core fetch with strong errors ----------
