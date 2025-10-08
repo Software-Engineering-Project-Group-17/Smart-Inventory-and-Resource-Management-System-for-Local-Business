@@ -17,6 +17,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toastUtils } from "@/lib/toast-utils";
 import { showRoleAccessNotification } from "@/lib/auth";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { withAuth } from "@/hooks/useAuth";
 
 interface UserProfile {
   id: string;
@@ -471,4 +472,6 @@ const ProfilePage = () => {
   );
 };
 
-export default ProfilePage;
+export default withAuth(ProfilePage, {
+  requiredRoles: ["OWNER", "BRANCH_MANAGER", "STAFF"],
+});
