@@ -82,11 +82,16 @@ const mapWarehouses = (arr: any[] = []) =>
 const mapReorderAlerts = (arr: any[] = []) =>
   arr.map((r) => ({
     item: r.item || r.name || "—",
-    currentStock: Number(r.currentStock ?? r.stock ?? 0),
-    reorderPoint: Number(r.reorderPoint ?? r.threshold ?? 0),
+    currentStock: Number(
+      r.currentStock ?? r.current_stock ?? r.stock ?? r.current ?? 0
+    ),
+    reorderPoint: Number(
+      r.reorderPoint ?? r.reorder_point ?? r.threshold ?? r.reorder ?? 0
+    ),
     supplier: r.supplier || r.vendor || "—",
-    urgency: (r.urgency || r.priority || "medium").toString().toLowerCase(),
+    urgency: String(r.urgency ?? r.priority ?? "medium").toLowerCase(),
   }));
+
 
 // ---------- Component ----------
 export default function InventoryAnalytics() {
