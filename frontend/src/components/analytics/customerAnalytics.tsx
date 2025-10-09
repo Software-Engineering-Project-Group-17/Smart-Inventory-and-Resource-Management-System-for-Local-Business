@@ -155,6 +155,39 @@ const mapRetention = (arr: RawRetention[] = []) =>
     cohort: r.cohort || r.label || `Month ${idx + 1}`,
     retention: Number(r.retention ?? r.rate ?? 0),
   }));
+  
+  const AcquisitionTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  const row = payload[0].payload || {};
+  const newC = Number(row.newCustomers ?? row.new ?? 0);
+  const retC = Number(row.returningCustomers ?? row.returning ?? 0);
+  return (
+    <div className="bg-white border rounded-md p-2 shadow-sm">
+      <div className="font-medium text-gray-900">{label}</div>
+      <div className="text-sm text-green-600">New Customers : {newC}</div>
+      <div className="text-sm text-blue-600">Returning Customers : {retC}</div>
+    </div>
+  );
+};
+
+
+const DemographicsTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  const row = payload[0].payload || {};
+  return (
+    <div className="bg-white border rounded-md p-2 shadow-sm">
+      <div className="font-medium text-gray-900">{label}</div>
+      <div className="text-sm text-gray-700">Customers: {Number(row.customers || 0)}</div>
+      <div className="text-sm text-gray-700">Share: {Number(row.percentage || 0)}%</div>
+      <div className="text-sm text-gray-700">
+        Spending: ${Number(row.spending || 0).toLocaleString()}
+      </div>
+    </div>
+  );
+};
+
+
+
 
 export default function CustomerAnalytics() {
   // Filters (extend with branchId when you have multi-branch UI)
@@ -520,31 +553,34 @@ export default function CustomerAnalytics() {
               Customer Acquisition Trend
             </h3>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={acquisition}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="newCustomers"
-                  stackId="1"
-                  stroke="#10B981"
-                  fill="#10B981"
-                  fillOpacity={0.8}
-                  name="New Customers"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="returningCustomers"
-                  stackId="1"
-                  stroke="#3674B5"
-                  fill="#3674B5"
-                  fillOpacity={0.8}
-                  name="Returning Customers"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+  <AreaChart data={acquisition}>
+    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+    
+    <YAxis stroke="#6b7280" />
+    <Tooltip content={<AcquisitionTooltip />} />
+    <Area
+      type="monotone"
+      dataKey="newCustomers"
+      stackId="1"
+      stroke="#10B981"
+      fill="#10B981"
+      fillOpacity={0.8}
+      name="New Customers"
+      isAnimationActive={false}
+    />
+    <Area
+      type="monotone"
+      dataKey="returningCustomers"
+      stackId="1"
+      stroke="#3674B5"
+      fill="#3674B5"
+      fillOpacity={0.8}
+      name="Returning Customers"
+      isAnimationActive={false}
+    />
+  </AreaChart>
+</ResponsiveContainer>
+
           </div>
         </div>
 
@@ -555,14 +591,15 @@ export default function CustomerAnalytics() {
               Customer Demographics
             </h3>
             <ResponsiveContainer width="100%" height={300}>
-              <RBarChart data={demographics} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis type="number" stroke="#6b7280" />
-                <YAxis dataKey="ageGroup" type="category" stroke="#6b7280" />
-                <Tooltip />
-                <Bar dataKey="customers" fill="#F59E0B" name="Customers" />
-              </RBarChart>
-            </ResponsiveContainer>
+  <RBarChart data={demographics} layout="vertical">
+    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+    <XAxis type="number" stroke="#6b7280" domain={[0, 'dataMax + 1']} />
+    <YAxis dataKey="ageGroup" type="category" stroke="#6b7280" width={60} />
+    <Tooltip />
+    <Bar dataKey="customers" fill="#F59E0B" name="Customers" barSize={18} />
+  </RBarChart>
+</ResponsiveContainer>
+
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
