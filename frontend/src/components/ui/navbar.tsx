@@ -34,13 +34,11 @@ const Navbar: React.FC = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const router = useRouter();
 
-  // Get user profile on component mount and when it changes
   useEffect(() => {
     const profile = getUserProfile();
     setUserProfile(profile);
   }, []);
 
-  // Handle logout functionality
   const handleLogout = () => {
     clearAuthData();
     toastUtils.logoutSuccess();
@@ -55,221 +53,81 @@ const Navbar: React.FC = () => {
     switch (role) {
       case "OWNER":
         return [
-          {
-            label: "Branches",
-            href: "/branches",
-            icon: <Building2 size={20} />,
-          },
-          {
-            label: "Reports",
-            href: "/reports",
-            icon: <FileBarChart size={20} />,
-          },
-          {
-            label: "analytics",
-            href: "/analytics",
-            icon: <BarChart3 size={20} />,
-          },
-          {
-            label: "Profile",
-            href: "/profile",
-            icon: <User size={20} />,
-          },
+          { label: "Branches", href: "/branches", icon: <Building2 size={20} /> },
+          { label: "Reports", href: "/reports", icon: <FileBarChart size={20} /> },
+          { label: "analytics", href: "/analytics", icon: <BarChart3 size={20} /> },
+          { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
       case "MANAGER":
       case "BRANCH_MANAGER":
         return [
-          {
-            label: "Inventory",
-            href: "/inventory",
-            icon: <Package size={20} />,
-          },
-          {
-            label: "Staff",
-            href: "/staff",
-            icon: <Users size={20} />,
-          },
-          {
-            label: "Reports",
-            href: "/reports",
-            icon: <FileBarChart size={20} />,
-          },
-          {
-            label: "analytics",
-            href: "/analytics",
-            icon: <BarChart3 size={20} />,
-          },
-          {
-            label: "Resources",
-            href: "/resources",
-            icon: <Settings size={20} />,
-          },
-          {
-            label: "Profile",
-            href: "/profile",
-            icon: <User size={20} />,
-          },
+          { label: "Inventory", href: "/inventory", icon: <Package size={20} /> },
+          { label: "Staff", href: "/staff", icon: <Users size={20} /> },
+          { label: "Reports", href: "/reports", icon: <FileBarChart size={20} /> },
+          { label: "analytics", href: "/analytics", icon: <BarChart3 size={20} /> },
+          { label: "Resources", href: "/resources", icon: <Settings size={20} /> },
+          { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
       case "SALES_MANAGER":
         return [
-          {
-            label: "Sales",
-            href: "/sales",
-            icon: <ShoppingCart size={20} />,
-          },
-          {
-            label: "Inventory",
-            href: "/inventory",
-            icon: <Package size={20} />,
-          },
-          {
-            label: "Reports",
-            href: "/reports",
-            icon: <FileBarChart size={20} />,
-          },
-          {
-            label: "analytics",
-            href: "/analytics",
-            icon: <BarChart3 size={20} />,
-          },
-          {
-            label: "Profile",
-            href: "/profile",
-            icon: <User size={20} />,
-          },
+          { label: "Sales", href: "/sales", icon: <ShoppingCart size={20} /> },
+          { label: "Inventory", href: "/inventory", icon: <Package size={20} /> },
+          { label: "Reports", href: "/reports", icon: <FileBarChart size={20} /> },
+          { label: "analytics", href: "/analytics", icon: <BarChart3 size={20} /> },
+          { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
       case "INVENTORY_MANAGER":
         return [
-          {
-            label: "Inventory",
-            href: "/inventory",
-            icon: <Archive size={20} />,
-          },
-          {
-            label: "Reports",
-            href: "/reports",
-            icon: <FileBarChart size={20} />,
-          },
-          {
-            label: "analytics",
-            href: "/analytics",
-            icon: <BarChart3 size={20} />,
-          },
-          {
-            label: "Profile",
-            href: "/profile",
-            icon: <User size={20} />,
-          },
+          { label: "Inventory", href: "/inventory", icon: <Archive size={20} /> },
+          { label: "Reports", href: "/reports", icon: <FileBarChart size={20} /> },
+          { label: "analytics", href: "/analytics", icon: <BarChart3 size={20} /> },
+          { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
       case "RESOURCE_MANAGER":
         return [
-          {
-            label: "Resources",
-            href: "/resources",
-            icon: <Settings size={20} />,
-          },
-          {
-            label: "Inventory",
-            href: "/inventory",
-            icon: <Package size={20} />,
-          },
-          {
-            label: "Profile",
-            href: "/profile",
-            icon: <User size={20} />,
-          },
+          { label: "Resources", href: "/resources", icon: <Settings size={20} /> },
+          { label: "Inventory", href: "/inventory", icon: <Package size={20} /> },
+          { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
       case "STAFF":
         return [
-          {
-            label: "Sales",
-            href: "/sales",
-            icon: <Receipt size={20}/>,
-          },
-          {
-            label: "Inventory",
-            href: "/inventory",
-            icon: <Archive size={20} />,
-          },
-          {
-            label: "Resources",
-            href: "/resources",
-            icon: <Settings size={20} />,
-          },
-          {
-            label: "Profile",
-            href: "/profile",
-            icon: <User size={20} />,
-          },
+          { label: "Sales", href: "/sales", icon: <Receipt size={20} /> },
+          { label: "Inventory", href: "/inventory", icon: <Archive size={20} /> },
+          { label: "Resources", href: "/resources", icon: <Settings size={20} /> },
+          { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
       case "SUPPLIER":
         return [
-          {
-            label: "Products",
-            href: "/products",
-            icon: <Package size={20} />,
-          },
-          {
-            label: "Orders",
-            href: "/orders",
-            icon: <ShoppingCart size={20} />,
-          },
-          {
-            label: "Profile",
-            href: "/profile",
-            icon: <User size={20} />,
-          },
+          { label: "Products", href: "/products", icon: <Package size={20} /> },
+          { label: "Orders", href: "/orders", icon: <ShoppingCart size={20} /> },
+          { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
       case "CUSTOMER":
         return [
-          {
-            label: "Shop",
-            href: "/shop",
-            icon: <ShoppingCart size={20} />,
-          },
-          {
-            label: "Orders",
-            href: "/orders",
-            icon: <Package size={20} />,
-          },
-          {
-            label: "Profile",
-            href: "/profile",
-            icon: <User size={20} />,
-          },
+          { label: "Shop", href: "/shop", icon: <ShoppingCart size={20} /> },
+          { label: "Orders", href: "/orders", icon: <Package size={20} /> },
+          { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
       default:
-        return [
-          {
-            label: "Profile",
-            href: "/profile",
-            icon: <User size={20} />,
-          },
-        ];
+        return [{ label: "Profile", href: "/profile", icon: <User size={20} /> }];
     }
   };
 
   const navItems = getNavItems();
-
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
+  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
   return (
     <>
       {/* Desktop Navbar */}
-      <nav
-        className="bg-white shadow-lg sticky top-0"
-        style={{ borderBottom: `2px solid #3674B5` }}
-      >
+      <nav className="bg-white shadow-lg sticky top-0 z-50 border-b-2 border-[#3674B5]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
@@ -286,12 +144,12 @@ const Navbar: React.FC = () => {
             </div>
 
             <div className="hidden md:block">
-              <div className="ml-10 flex items-baseline space-x-4">
+              <div className="ml-10 flex items-baseline space-x-4 overflow-hidden">
                 {navItems.map((item, index) => (
                   <Link
                     key={index}
                     href={item.href}
-                    className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:scale-105 transition-transform duration-200"
+                    className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-200"
                   >
                     {item.icon}
                     <span className="ml-2">{item.label}</span>
@@ -302,12 +160,10 @@ const Navbar: React.FC = () => {
 
             {/* Right side actions */}
             <div className="hidden md:flex items-center space-x-4">
-              {/* Notification Component */}
               {userProfile?.role.toUpperCase() !== "OWNER" && (
                 <NotificationComponent userEmail={userProfile?.email || ""} />
               )}
 
-              {/* Logout Button */}
               <button
                 onClick={handleLogout}
                 className="flex items-center px-4 py-2 text-sm font-medium text-white rounded-md transition-colors duration-200"
@@ -351,7 +207,7 @@ const Navbar: React.FC = () => {
       {/* Mobile Sidebar Overlay with Blur Effect */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 -z-50 md:hidden"
+          className="fixed inset-0 z-40 md:hidden"
           style={{
             backdropFilter: "blur(4px)",
             backgroundColor: "rgba(0, 0, 0, 0.3)",
@@ -400,7 +256,6 @@ const Navbar: React.FC = () => {
             ))}
           </nav>
           <div className="mt-6 pt-6 border-t border-gray-200">
-            {/* Notification Component for Mobile */}
             {userProfile?.role.toUpperCase() !== "OWNER" && (
               <NotificationComponent
                 userEmail={userProfile?.email || ""}
@@ -408,7 +263,6 @@ const Navbar: React.FC = () => {
               />
             )}
 
-            {/* Logout Button Mobile */}
             <button
               onClick={handleLogout}
               className="flex items-center w-full px-3 py-3 rounded-md text-sm font-medium text-white transition-colors duration-200"
