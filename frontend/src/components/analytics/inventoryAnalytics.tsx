@@ -22,8 +22,16 @@ const mapCategories = (arr: any[] = []) =>
     trend: Number(c.trend ?? c.mom ?? 0),
   }));
 
-// ensure % sum == 100 (fix rounding drift)
-function normalizePercents(parts: Array<{ value: number }>) {
+// --- types for stock pie parts ---
+type StockPart = {
+  name: string;
+  value: number; // percentage
+  count: number; // absolute count
+  color: string;
+};
+
+// ensure % sum == 100 (fix rounding drift) and preserve object shape
+function normalizePercents<T extends { value: number }>(parts: T[]): T[] {
   const total = parts.reduce((s, p) => s + p.value, 0);
   if (total === 100) return parts;
   const diff = 100 - total;
@@ -33,14 +41,14 @@ function normalizePercents(parts: Array<{ value: number }>) {
   return copy;
 }
 
-const mapStockLevels = (obj: any = {}) => {
-  if (Array.isArray(obj)) return obj;
+const mapStockLevels = (obj: any = {}): StockPart[] => {
+  if (Array.isArray(obj)) return obj as StockPart[];
   const inStock = Number(obj.inStock ?? obj.in_stock ?? 0);
   const lowStock = Number(obj.lowStock ?? obj.low_stock ?? 0);
   const outOfStock = Number(obj.outOfStock ?? obj.out_of_stock ?? 0);
   const denom = inStock + lowStock + outOfStock || 1;
 
-  let parts = [
+  let parts: StockPart[] = [
     { name: "In Stock", value: Math.round((inStock / denom) * 100), count: inStock, color: "#10B981" },
     { name: "Low Stock", value: Math.round((lowStock / denom) * 100), count: lowStock, color: "#F59E0B" },
     { name: "Out of Stock", value: Math.round((outOfStock / denom) * 100), count: outOfStock, color: "#EF4444" },
@@ -146,7 +154,7 @@ export default function InventoryAnalytics() {
 
   // Data state
   const [categoryOverview, setCategoryOverview] = useState<any[]>([]);
-  const [stockLevels, setStockLevels] = useState<any[]>([]);
+  const [stockLevels, setStockLevels] = useState<StockPart[]>([]);
   const [monthlyMovement, setMonthlyMovement] = useState<any[]>([]);
   const [topMovingItems, setTopMovingItems] = useState<any[]>([]);
   const [warehouseUtilization, setWarehouseUtilization] = useState<any[]>([]);
