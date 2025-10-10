@@ -72,7 +72,6 @@ const mergeByMonth = (
     map.set(c.month, { ...prev, customers: c.customers ?? prev.customers ?? 0 });
   });
 
-  // Optional: overview.revenueTrend might include missing fields
   if (overview?.revenueTrend && Array.isArray(overview.revenueTrend)) {
     overview.revenueTrend.forEach((row: any, i: number) => {
       const month = row.month || row.label || row.period || `M${i + 1}`;
@@ -86,7 +85,7 @@ const mergeByMonth = (
     });
   }
 
-  // Keep original order of revenue months, then append others
+  // order of months
   const order = [...revArr.map((r) => r.month)];
   [...ordArr, ...custArr].forEach((x) => {
     if (!order.includes(x.month)) order.push(x.month);
@@ -102,33 +101,27 @@ const mapInventoryByCategory = (arr: any[] = []) =>
     value: Number(c.value ?? c.inventoryValue ?? 0),
   }));
 
-// --- NEW: robust order status normalization ---
-// Accepts a variety of input shapes (counts or %). Produces:
-//   { name, count, percent, color }
-// Logic:
-// 1) Prefer explicit counts if present (count, orders, value>100 total, etc.)
-// 2) Otherwise treat provided numbers as percentages
-// 3) Normalize so percents sum to ~100 (handles rounding)
-// 4) Map known DB enum names to human labels
+// --- robust order status normalization ---
 const statusLabel = (raw: string = "") => {
   const key = String(raw).toLowerCase().trim();
   switch (key) {
-    case "pending": return "Pending";
-    case "processing": return "Processing";
-    case "completed": return "Completed";
+    case "pending":
+      return "Pending";
+    case "processing":
+      return "Processing";
+    case "completed":
+      return "Completed";
     case "cancelled":
-    case "canceled": return "Cancelled";
-    default: return raw || "—";
+    case "canceled":
+      return "Cancelled";
+    default:
+      return raw || "—";
   }
 };
 
-const normalizeOrderStatus = (
-  rawArr: any[] = [],
-  palette: string[] = [],
-) => {
+const normalizeOrderStatus = (rawArr: any[] = [], palette: string[] = []) => {
   const rows = (Array.isArray(rawArr) ? rawArr : []).map((s: any) => {
     const name = s.name || s.status || s.label || "—";
-    // raw number could be count or percent
     const rawNum = Number(
       s.count ?? s.orders ?? s.quantity ?? s.total ?? s.value ?? s.percentage ?? s.percent ?? 0
     );
@@ -140,21 +133,13 @@ const normalizeOrderStatus = (
   });
 
   const sum = rows.reduce((a, r) => a + (isNaN(r.raw) ? 0 : r.raw), 0);
-  const isPercentLike =
-    sum > 0 && sum <= 100 && rows.every((r) => r.raw >= 0 && r.raw <= 100);
-
-  // If numbers look like percentages -> use them directly
-  // Else treat them as counts and convert to percentages.
+  const isPercentLike = sum > 0 && sum <= 100 && rows.every((r) => r.raw >= 0 && r.raw <= 100);
   const totalCount = isPercentLike ? 0 : sum;
 
-  // Avoid division by zero
   if ((!isPercentLike && totalCount === 0) || rows.length === 0) return [];
 
   let items = rows.map((r, i) => {
-    const percent = isPercentLike
-      ? r.raw
-      : (r.raw / (totalCount || 1)) * 100;
-
+    const percent = isPercentLike ? r.raw : (r.raw / (totalCount || 1)) * 100;
     return {
       name: r.name,
       count: isPercentLike ? undefined : r.raw,
@@ -163,16 +148,16 @@ const normalizeOrderStatus = (
     };
   });
 
-  // Normalize small floating error to sum ~100
   const totalPct = items.reduce((a, r) => a + r.percent, 0);
   if (totalPct > 0) {
     const diff = 100 - totalPct;
-    // Nudge the largest slice by the diff to make it add to 100
-    const idxMax = items.reduce((imax, r, i, arr) => (r.percent > arr[imax].percent ? i : imax), 0);
+    const idxMax = items.reduce(
+      (imax, r, i, arr) => (r.percent > arr[imax].percent ? i : imax),
+      0
+    );
     items[idxMax] = { ...items[idxMax], percent: items[idxMax].percent + diff };
   }
 
-  // Filter zero slices to keep legend tidy
   items = items.filter((r) => r.percent > 0);
 
   return items;
@@ -185,6 +170,7 @@ const mapOrderStatus = (arr: any[] = []) => arr;
 export default function AnalyticsDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState<"1m" | "3m" | "6m" | "1y">("6m");
   const [loading, setLoading] = useState(false);
+  const [firstLoad, setFirstLoad] = useState(true); // keep single loading effect
   const [error, setError] = useState("");
 
   // State slices
@@ -201,7 +187,6 @@ export default function AnalyticsDashboard() {
     profitMargin: 23.8,
   });
 
-  // extra: if monthly customers unavailable, we use this as a fallback for the card
   const [customersFallbackTotal, setCustomersFallbackTotal] = useState<number | null>(null);
 
   const branchId = undefined;
@@ -218,9 +203,9 @@ export default function AnalyticsDashboard() {
         alertsRes,
         perfRes,
         salesOverviewRes,
-        custAcqRes,       // /customers/acquisition?period=
-        custMetricsRes,   // /customers/metrics?branchId=
-        custOverviewRes,  // /customers/overview?branchId=
+        custAcqRes,
+        custMetricsRes,
+        custOverviewRes,
       ] = await Promise.allSettled([
         analyticsAPI.getOverview({ period: selectedPeriod }),
         analyticsAPI.getRevenueTrend({ period: selectedPeriod }),
@@ -253,7 +238,7 @@ export default function AnalyticsDashboard() {
         orderRows = mapOrderTrendRows(rows || []);
       }
 
-      // Customer monthly rows (preferred: acquisition trend)
+      // Customer monthly rows
       let customerRows: any[] = [];
       if (custAcqRes.status === "fulfilled") {
         const rows = Array.isArray(custAcqRes.value?.data) ? custAcqRes.value.data : custAcqRes.value;
@@ -264,25 +249,21 @@ export default function AnalyticsDashboard() {
       const mergedTrend = mergeByMonth(revenueRows, orderRows, customerRows, overview);
       setRevenueTrend(mergedTrend);
 
-      // If monthly customers all 0, try a fallback total from metrics/overview
+      // Fallback for customers
       const customersSum = mergedTrend.reduce((s, r) => s + Number(r.customers || 0), 0);
       if (customersSum === 0) {
         let fallbackTotal: number | null = null;
 
         if (custMetricsRes.status === "fulfilled") {
-          // look for common fields: activeCustomers, totalCustomers, customers
           const m = custMetricsRes.value || {};
-          fallbackTotal =
-            Number(m.activeCustomers ?? m.totalCustomers ?? m.customers ?? NaN);
+          fallbackTotal = Number(m.activeCustomers ?? m.totalCustomers ?? m.customers ?? NaN);
         }
         if ((fallbackTotal == null || Number.isNaN(fallbackTotal)) && custOverviewRes.status === "fulfilled") {
           const ov = custOverviewRes.value || {};
-          fallbackTotal =
-            Number(ov.activeCustomers ?? ov.totalCustomers ?? ov.customers ?? NaN);
+          fallbackTotal = Number(ov.activeCustomers ?? ov.totalCustomers ?? ov.customers ?? NaN);
         }
         if ((fallbackTotal == null || Number.isNaN(fallbackTotal)) && overview) {
-          fallbackTotal =
-            Number(overview.activeCustomers ?? overview.totalCustomers ?? overview.customers ?? NaN);
+          fallbackTotal = Number(overview.activeCustomers ?? overview.totalCustomers ?? overview.customers ?? NaN);
         }
 
         setCustomersFallbackTotal(
@@ -300,8 +281,7 @@ export default function AnalyticsDashboard() {
         setInventoryByCat([]);
       }
 
-      // ----- Order status (FIXED) -----
-      // Prefer overview.orderStatus, fallback to salesOverview.orderStatus
+      // Order status
       let statusData: any[] = [];
       if (overview?.orderStatus && Array.isArray(overview.orderStatus)) {
         statusData = overview.orderStatus;
@@ -309,13 +289,11 @@ export default function AnalyticsDashboard() {
         statusData = (salesOverviewRes.value as any)?.orderStatus || [];
       }
 
-      // Normalize to {name, count?, percent, color}
       const statusPalette = ["#10B981", "#F59E0B", "#EF4444", "#6B7280", "#3B82F6", "#8B5CF6"];
       const normalizedStatus = normalizeOrderStatus(
         (Array.isArray(statusData) ? statusData : []).map((s: any) => ({
           ...s,
           name: s.name || s.status || "—",
-          // Keep any of value/percentage/count; the normalizer will figure it out.
         })),
         statusPalette
       );
@@ -325,7 +303,10 @@ export default function AnalyticsDashboard() {
       let topProd: any[] = [];
       if (overview?.topProducts && Array.isArray(overview.topProducts)) {
         topProd = overview.topProducts;
-      } else if (salesOverviewRes.status === "fulfilled" && Array.isArray((salesOverviewRes.value as any)?.topProducts)) {
+      } else if (
+        salesOverviewRes.status === "fulfilled" &&
+        Array.isArray((salesOverviewRes.value as any)?.topProducts)
+      ) {
         topProd = (salesOverviewRes.value as any).topProducts;
       }
       const mapTopProducts = (arr: any[] = []) =>
@@ -371,6 +352,7 @@ export default function AnalyticsDashboard() {
       setCustomersFallbackTotal(0);
     } finally {
       setLoading(false);
+      setFirstLoad(false);
     }
   }, [selectedPeriod]);
 
@@ -386,7 +368,6 @@ export default function AnalyticsDashboard() {
     const totalOrders = revenueTrend.reduce((sum, r) => sum + Number(r.orders || 0), 0);
 
     const computedCustomers = revenueTrend.reduce((sum, r) => sum + Number(r.customers || 0), 0);
-    // Fallback when monthly customers not available
     const totalCustomers =
       computedCustomers > 0 ? computedCustomers : Number(customersFallbackTotal ?? 0);
 
@@ -444,6 +425,18 @@ export default function AnalyticsDashboard() {
       </div>
     );
   };
+
+  // ---- single initial loading effect (no skeletons) ----
+  if (firstLoad && loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-700">
+          <div className="h-5 w-5 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+          <span className="font-medium">Loading analytics…</span>
+        </div>
+      </div>
+    );
+  }
 
   const statusPalette = ["#10B981", "#F59E0B", "#EF4444", "#6B7280", "#3B82F6", "#8B5CF6"];
 
@@ -533,13 +526,12 @@ export default function AnalyticsDashboard() {
             </ResponsiveContainer>
           </div>
 
-          {/* Order Status Distribution (FIXED) */}
+          {/* Order Status Distribution */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Order Status Distribution</h3>
             <div className="flex items-center justify-center">
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
-                  {/* Use the normalized 'percent' key */}
                   <Pie
                     data={orderStatus}
                     cx="50%"
@@ -559,10 +551,7 @@ export default function AnalyticsDashboard() {
                       const pct = Number(value);
                       const count = props?.payload?.count;
                       const label = props?.payload?.name || "Orders";
-                      return [
-                        `${pct.toFixed(1)}%${count != null ? ` • ${count.toLocaleString()} orders` : ""}`,
-                        label,
-                      ];
+                      return [`${pct.toFixed(1)}%${count != null ? ` • ${count.toLocaleString()} orders` : ""}`, label];
                     }}
                   />
                 </PieChart>

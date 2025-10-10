@@ -150,6 +150,7 @@ export default function InventoryAnalytics() {
   const [branchOptions, setBranchOptions] = useState<Array<{ id: string; name: string; queryId?: string }>>([]);
 
   const [loading, setLoading] = useState(false);
+  const [firstLoad, setFirstLoad] = useState(true); // <-- added
   const [error, setError] = useState("");
 
   // Data state
@@ -257,6 +258,7 @@ export default function InventoryAnalytics() {
       setError(e?.message || "Failed to load inventory analytics");
     } finally {
       setLoading(false);
+      setFirstLoad(false); // <-- added
     }
   }, [selectedPeriod, branchId, selectedWarehouse]);
 
@@ -362,6 +364,18 @@ export default function InventoryAnalytics() {
         return "#6B7280";
     }
   };
+
+  // ---- initial loading screen (before showing actual values) ----
+  if (firstLoad && loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-700">
+          <div className="h-5 w-5 rounded-full border-2 border-purple-600 border-t-transparent animate-spin" />
+          <span className="font-medium">Loading inventory analytics…</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">

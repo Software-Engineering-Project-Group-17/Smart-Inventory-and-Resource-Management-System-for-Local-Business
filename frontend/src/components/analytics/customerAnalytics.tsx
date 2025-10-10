@@ -194,6 +194,7 @@ export default function CustomerAnalytics() {
   const [selectedPeriod, setSelectedPeriod] = useState("12m");
   const [selectedSegment, setSelectedSegment] = useState("all");
   const [loading, setLoading] = useState(false);
+  const [firstLoad, setFirstLoad] = useState(true); // <-- added
   const [error, setError] = useState("");
 
   // Data state
@@ -305,6 +306,7 @@ export default function CustomerAnalytics() {
       setError(e?.message || "Failed to load customer analytics");
     } finally {
       setLoading(false);
+      setFirstLoad(false); // <-- added
     }
   }, [selectedPeriod]);
 
@@ -397,6 +399,18 @@ export default function CustomerAnalytics() {
       </div>
     );
   };
+
+  // ---- initial loading screen (before showing actual values) ----
+  if (firstLoad && loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-700">
+          <div className="h-5 w-5 rounded-full border-2 border-yellow-600 border-t-transparent animate-spin" />
+          <span className="font-medium">Loading customer analytics…</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
