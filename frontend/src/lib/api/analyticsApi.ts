@@ -192,6 +192,7 @@ export const analyticsAPI = {
     const q = buildQueryString({ branchId });
     return fetchAPI(`/analytics/business-alerts${q}`);
   },
+  
 };
 
 // ==================== SALES API ====================
@@ -228,6 +229,10 @@ export const salesAPI = {
     const q = buildQueryString({ branchId });
     return fetchAPI(`/sales/goals${q}`);
   },
+
+  // *** NEW: Order Status Distribution endpoint ***
+  // Supports either `lookbackDays` (controller you shared) and/or `period`.
+  
 };
 
 // ==================== INVENTORY API ====================

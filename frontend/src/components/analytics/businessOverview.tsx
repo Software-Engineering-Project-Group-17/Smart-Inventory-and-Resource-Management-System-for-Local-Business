@@ -102,33 +102,84 @@ const mapInventoryByCategory = (arr: any[] = []) =>
     value: Number(c.value ?? c.inventoryValue ?? 0),
   }));
 
-const mapOrderStatus = (arr: any[] = [], fallback?: any) => {
-  if (Array.isArray(arr) && arr.length) return arr;
-  if (fallback?.orderStatus) return fallback.orderStatus;
-  return [];
+// --- NEW: robust order status normalization ---
+// Accepts a variety of input shapes (counts or %). Produces:
+//   { name, count, percent, color }
+// Logic:
+// 1) Prefer explicit counts if present (count, orders, value>100 total, etc.)
+// 2) Otherwise treat provided numbers as percentages
+// 3) Normalize so percents sum to ~100 (handles rounding)
+// 4) Map known DB enum names to human labels
+const statusLabel = (raw: string = "") => {
+  const key = String(raw).toLowerCase().trim();
+  switch (key) {
+    case "pending": return "Pending";
+    case "processing": return "Processing";
+    case "completed": return "Completed";
+    case "cancelled":
+    case "canceled": return "Cancelled";
+    default: return raw || "—";
+  }
 };
 
-const mapTopProducts = (arr: any[] = []) =>
-  arr.map((p) => ({
-    name: p.name || p.product || "—",
-    sales: Number(p.sales ?? p.units ?? 0),
-    revenue: Number(p.revenue ?? p.amount ?? 0),
-  }));
+const normalizeOrderStatus = (
+  rawArr: any[] = [],
+  palette: string[] = [],
+) => {
+  const rows = (Array.isArray(rawArr) ? rawArr : []).map((s: any) => {
+    const name = s.name || s.status || s.label || "—";
+    // raw number could be count or percent
+    const rawNum = Number(
+      s.count ?? s.orders ?? s.quantity ?? s.total ?? s.value ?? s.percentage ?? s.percent ?? 0
+    );
+    return {
+      name: statusLabel(name),
+      raw: Number.isFinite(rawNum) ? rawNum : 0,
+      color: s.color,
+    };
+  });
 
-const mapAlerts = (arr: any[] = []) =>
-  arr.map((a) => ({
-    type: (a.type || a.severity || "info").toLowerCase(),
-    title: a.title || a.name || "Alert",
-    message: a.message || a.detail || "",
-  }));
+  const sum = rows.reduce((a, r) => a + (isNaN(r.raw) ? 0 : r.raw), 0);
+  const isPercentLike =
+    sum > 0 && sum <= 100 && rows.every((r) => r.raw >= 0 && r.raw <= 100);
 
-const mapPerfSummary = (m: any = {}) => ({
-  avgOrderValue: Number(m.avgOrderValue ?? 0),
-  orderCompletionRate: Number(m.orderCompletionRate ?? 0),
-  customerRetention: Number(m.customerRetention ?? 0),
-  inventoryTurnover: Number(m.inventoryTurnover ?? 0),
-  profitMargin: Number(m.profitMargin ?? 0),
-});
+  // If numbers look like percentages -> use them directly
+  // Else treat them as counts and convert to percentages.
+  const totalCount = isPercentLike ? 0 : sum;
+
+  // Avoid division by zero
+  if ((!isPercentLike && totalCount === 0) || rows.length === 0) return [];
+
+  let items = rows.map((r, i) => {
+    const percent = isPercentLike
+      ? r.raw
+      : (r.raw / (totalCount || 1)) * 100;
+
+    return {
+      name: r.name,
+      count: isPercentLike ? undefined : r.raw,
+      percent: Number.isFinite(percent) ? percent : 0,
+      color: r.color || palette[i % palette.length],
+    };
+  });
+
+  // Normalize small floating error to sum ~100
+  const totalPct = items.reduce((a, r) => a + r.percent, 0);
+  if (totalPct > 0) {
+    const diff = 100 - totalPct;
+    // Nudge the largest slice by the diff to make it add to 100
+    const idxMax = items.reduce((imax, r, i, arr) => (r.percent > arr[imax].percent ? i : imax), 0);
+    items[idxMax] = { ...items[idxMax], percent: items[idxMax].percent + diff };
+  }
+
+  // Filter zero slices to keep legend tidy
+  items = items.filter((r) => r.percent > 0);
+
+  return items;
+};
+
+// NOTE: mapOrderStatus now delegates to normalizeOrderStatus for safety
+const mapOrderStatus = (arr: any[] = []) => arr;
 
 // ---------- Component ----------
 export default function AnalyticsDashboard() {
@@ -249,23 +300,26 @@ export default function AnalyticsDashboard() {
         setInventoryByCat([]);
       }
 
-      // Order status
+      // ----- Order status (FIXED) -----
+      // Prefer overview.orderStatus, fallback to salesOverview.orderStatus
       let statusData: any[] = [];
       if (overview?.orderStatus && Array.isArray(overview.orderStatus)) {
         statusData = overview.orderStatus;
       } else if (salesOverviewRes.status === "fulfilled") {
         statusData = (salesOverviewRes.value as any)?.orderStatus || [];
       }
-      setOrderStatus(
-        mapOrderStatus(
-          (Array.isArray(statusData) ? statusData : []).map((s: any) => ({
-            name: s.name || s.status || "—",
-            value: Number(s.value ?? s.percentage ?? 0),
-            color: s.color || undefined,
-          })),
-          overview
-        )
+
+      // Normalize to {name, count?, percent, color}
+      const statusPalette = ["#10B981", "#F59E0B", "#EF4444", "#6B7280", "#3B82F6", "#8B5CF6"];
+      const normalizedStatus = normalizeOrderStatus(
+        (Array.isArray(statusData) ? statusData : []).map((s: any) => ({
+          ...s,
+          name: s.name || s.status || "—",
+          // Keep any of value/percentage/count; the normalizer will figure it out.
+        })),
+        statusPalette
       );
+      setOrderStatus(normalizedStatus);
 
       // Top products
       let topProd: any[] = [];
@@ -274,11 +328,23 @@ export default function AnalyticsDashboard() {
       } else if (salesOverviewRes.status === "fulfilled" && Array.isArray((salesOverviewRes.value as any)?.topProducts)) {
         topProd = (salesOverviewRes.value as any).topProducts;
       }
+      const mapTopProducts = (arr: any[] = []) =>
+        arr.map((p) => ({
+          name: p.name || p.product || "—",
+          sales: Number(p.sales ?? p.units ?? 0),
+          revenue: Number(p.revenue ?? p.amount ?? 0),
+        }));
       setTopProducts(mapTopProducts(topProd || []));
 
       // Alerts
       if (alertsRes.status === "fulfilled") {
         const rows = Array.isArray(alertsRes.value?.data) ? alertsRes.value.data : alertsRes.value;
+        const mapAlerts = (arr: any[] = []) =>
+          arr.map((a) => ({
+            type: (a.type || a.severity || "info").toLowerCase(),
+            title: a.title || a.name || "Alert",
+            message: a.message || a.detail || "",
+          }));
         setAlerts(mapAlerts(rows || []));
       } else {
         setAlerts([]);
@@ -286,6 +352,13 @@ export default function AnalyticsDashboard() {
 
       // Performance summary
       if (perfRes.status === "fulfilled") {
+        const mapPerfSummary = (m: any = {}) => ({
+          avgOrderValue: Number(m.avgOrderValue ?? 0),
+          orderCompletionRate: Number(m.orderCompletionRate ?? 0),
+          customerRetention: Number(m.customerRetention ?? 0),
+          inventoryTurnover: Number(m.inventoryTurnover ?? 0),
+          profitMargin: Number(m.profitMargin ?? 0),
+        });
         setPerf((prev) => ({ ...prev, ...mapPerfSummary(perfRes.value) }));
       }
     } catch (e: any) {
@@ -460,30 +533,54 @@ export default function AnalyticsDashboard() {
             </ResponsiveContainer>
           </div>
 
-          {/* Order Status Distribution */}
+          {/* Order Status Distribution (FIXED) */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Order Status Distribution</h3>
             <div className="flex items-center justify-center">
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
-                  <Pie data={orderStatus} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">
+                  {/* Use the normalized 'percent' key */}
+                  <Pie
+                    data={orderStatus}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={5}
+                    dataKey="percent"
+                    nameKey="name"
+                  >
                     {orderStatus.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color || statusPalette[index % statusPalette.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: any) => [`${value}%`, "Orders"]} />
+                  <Tooltip
+                    formatter={(value: any, _name: any, props: any) => {
+                      const pct = Number(value);
+                      const count = props?.payload?.count;
+                      const label = props?.payload?.name || "Orders";
+                      return [
+                        `${pct.toFixed(1)}%${count != null ? ` • ${count.toLocaleString()} orders` : ""}`,
+                        label,
+                      ];
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
             <div className="grid grid-cols-2 gap-4 mt-4">
               {orderStatus.map((status, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: status.color || statusPalette[index % statusPalette.length] }}
-                  />
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: status.color || statusPalette[index % statusPalette.length] }}
+                    />
+                    <span className="text-sm text-gray-700">{status.name}</span>
+                  </div>
                   <span className="text-sm text-gray-600">
-                    {status.name}: {Number(status.value || 0)}%
+                    {status.percent.toFixed(1)}%
+                    {status.count != null ? ` • ${Number(status.count).toLocaleString()}` : ""}
                   </span>
                 </div>
               ))}
