@@ -2,33 +2,15 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Area,
-  AreaChart,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Area, AreaChart, PieChart, Pie, Cell
 } from "recharts";
 import {
-  Package,
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
-  DollarSign,
-  RefreshCw,
-  Activity
+  Package, TrendingUp, TrendingDown, AlertTriangle, DollarSign, RefreshCw, Activity
 } from "lucide-react";
 import { inventoryAPI } from "@/lib/api/analyticsApi";
 
-// ---------- Safe mappers to normalize backend payloads ----------
+// ---------- Safe mappers ----------
 const mapCategories = (arr: any[] = []) =>
   arr.map((c) => ({
     category: c.category || c.name || c.label || "—",
@@ -40,18 +22,32 @@ const mapCategories = (arr: any[] = []) =>
     trend: Number(c.trend ?? c.mom ?? 0),
   }));
 
+// ensure % sum == 100 (fix rounding drift)
+function normalizePercents(parts: Array<{ value: number }>) {
+  const total = parts.reduce((s, p) => s + p.value, 0);
+  if (total === 100) return parts;
+  const diff = 100 - total;
+  const idx = parts.reduce((maxI, p, i, a) => (p.value > a[maxI].value ? i : maxI), 0);
+  const copy = parts.slice();
+  copy[idx] = { ...copy[idx], value: copy[idx].value + diff };
+  return copy;
+}
+
 const mapStockLevels = (obj: any = {}) => {
-  // Accept either array or object {inStock, lowStock, outOfStock, totals}
   if (Array.isArray(obj)) return obj;
   const inStock = Number(obj.inStock ?? obj.in_stock ?? 0);
   const lowStock = Number(obj.lowStock ?? obj.low_stock ?? 0);
   const outOfStock = Number(obj.outOfStock ?? obj.out_of_stock ?? 0);
-  const total = inStock + lowStock + outOfStock || 1;
-  return [
-    { name: "In Stock", value: Math.round((inStock / total) * 100), count: inStock, color: "#10B981" },
-    { name: "Low Stock", value: Math.round((lowStock / total) * 100), count: lowStock, color: "#F59E0B" },
-    { name: "Out of Stock", value: Math.round((outOfStock / total) * 100), count: outOfStock, color: "#EF4444" },
+  const denom = inStock + lowStock + outOfStock || 1;
+
+  let parts = [
+    { name: "In Stock", value: Math.round((inStock / denom) * 100), count: inStock, color: "#10B981" },
+    { name: "Low Stock", value: Math.round((lowStock / denom) * 100), count: lowStock, color: "#F59E0B" },
+    { name: "Out of Stock", value: Math.round((outOfStock / denom) * 100), count: outOfStock, color: "#EF4444" },
   ];
+
+  parts = normalizePercents(parts);
+  return parts;
 };
 
 const mapMovement = (arr: any[] = []) =>
@@ -59,7 +55,10 @@ const mapMovement = (arr: any[] = []) =>
     month: m.month || m.label || m.date || "",
     inbound: Number(m.inbound ?? m.in ?? 0),
     outbound: Number(m.outbound ?? m.out ?? 0),
-    net: Number(m.net ?? (m.inbound ?? 0) - (m.outbound ?? 0) ?? 0),
+    net: Number(
+      m.net ??
+        ((m.inbound ?? m.in ?? 0) - (m.outbound ?? m.out ?? 0))
+    ),
   }));
 
 const mapTopMoving = (arr: any[] = []) =>
@@ -71,32 +70,77 @@ const mapTopMoving = (arr: any[] = []) =>
     velocity: Number(t.velocity ?? t.rate ?? 0),
   }));
 
+type WarehouseRaw = {
+  id?: string | number;
+  branchId?: string | number;
+  branch_id?: string | number;
+  warehouse_id?: string | number;
+  identifier?: string | number;
+  code?: string | number;
+  slug?: string | number;
+  key?: string | number;
+  name?: string;
+  warehouse?: string;
+  capacity?: number;
+  used?: number;
+  utilized?: number;
+  utilization?: number;
+};
+
+// Returns a real backend id if present (NO name fallback here)
+const extractQueryId = (w: WarehouseRaw): string | null => {
+  const id =
+    w.id ??
+    w.branchId ??
+    w.branch_id ??
+    w.warehouse_id ??
+    w.identifier ??
+    w.code ??
+    w.slug ??
+    w.key ??
+    null;
+  if (id === null || id === undefined) return null;
+  const s = String(id).trim();
+  return s.length ? s : null;
+};
+
+// For display we can fall back to name so dropdown shows everything
+const displayIdOrName = (w: WarehouseRaw): string => {
+  const qid = extractQueryId(w);
+  if (qid) return qid;
+  return String(w.warehouse || w.name || "—");
+};
+
 const mapWarehouses = (arr: any[] = []) =>
-  arr.map((w) => ({
-    warehouse: w.warehouse || w.name || "—",
+  arr.map((w: WarehouseRaw) => ({
+    warehouse: (w.warehouse || w.name || "—") as string,
     capacity: Number(w.capacity ?? 0),
     used: Number(w.used ?? w.utilized ?? 0),
-    utilization: Number(w.utilization ?? (w.capacity ? (w.used / w.capacity) * 100 : 0)),
+    utilization: Number(
+      w.utilization ?? (w.capacity ? (Number(w.used ?? 0) / Number(w.capacity)) * 100 : 0)
+    ),
+    __displayId: displayIdOrName(w),   // used as the <option value>
+    __queryId: extractQueryId(w),      // only sent to backend if present
   }));
 
 const mapReorderAlerts = (arr: any[] = []) =>
   arr.map((r) => ({
     item: r.item || r.name || "—",
-    currentStock: Number(
-      r.currentStock ?? r.current_stock ?? r.stock ?? r.current ?? 0
-    ),
-    reorderPoint: Number(
-      r.reorderPoint ?? r.reorder_point ?? r.threshold ?? r.reorder ?? 0
-    ),
+    currentStock: Number(r.currentStock ?? r.current_stock ?? r.stock ?? r.current ?? 0),
+    reorderPoint: Number(r.reorderPoint ?? r.reorder_point ?? r.threshold ?? r.reorder ?? 0),
     supplier: r.supplier || r.vendor || "—",
     urgency: String(r.urgency ?? r.priority ?? "medium").toLowerCase(),
   }));
 
-
-// ---------- Component ----------
 export default function InventoryAnalytics() {
   const [selectedPeriod, setSelectedPeriod] = useState<"3m" | "6m" | "12m">("12m");
-  const [selectedWarehouse, setSelectedWarehouse] = useState<"all" | "main" | "branch-a" | "branch-b">("all");
+
+  // stores the option value (real id if available, else name)
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>("all");
+
+  // dropdown options with both display id and queryId
+  const [branchOptions, setBranchOptions] = useState<Array<{ id: string; name: string; queryId?: string }>>([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -115,7 +159,10 @@ export default function InventoryAnalytics() {
     totalOutOfStock: 0,
   });
 
-  const branchId = selectedWarehouse === "all" ? undefined : selectedWarehouse;
+  // Only send branchId when we have a real backend id
+  const selectedOpt = branchOptions.find(o => o.id === selectedWarehouse);
+  const branchId: string | undefined =
+    selectedWarehouse === "all" ? undefined : (selectedOpt?.queryId || undefined);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -130,13 +177,13 @@ export default function InventoryAnalytics() {
         reorderRes,
         metricsRes,
       ] = await Promise.allSettled([
-        inventoryAPI.getByCategory(branchId),                       // GET /api/inventory/by-category?branchId=
-        inventoryAPI.getStockLevels(branchId),                      // GET /api/inventory/stock-levels?branchId=
-        inventoryAPI.getMovement({ period: selectedPeriod, branchId }), // GET /api/inventory/movement?period=&branchId=
-        inventoryAPI.getTopMoving({ limit: 5, period: selectedPeriod, branchId }), // GET /api/inventory/top-moving
-        inventoryAPI.getWarehouseUtilization(branchId),             // GET /api/inventory/warehouse-utilization?branchId=
-        inventoryAPI.getReorderAlerts(branchId),                    // GET /api/inventory/reorder-alerts?branchId=
-        inventoryAPI.getMetrics(branchId),                          // GET /api/inventory/metrics?branchId=
+        inventoryAPI.getByCategory(branchId),
+        inventoryAPI.getStockLevels(branchId),
+        inventoryAPI.getMovement({ period: selectedPeriod, branchId }),
+        inventoryAPI.getTopMoving({ limit: 5, period: selectedPeriod, branchId }),
+        inventoryAPI.getWarehouseUtilization(branchId),
+        inventoryAPI.getReorderAlerts(branchId),
+        inventoryAPI.getMetrics(branchId),
       ]);
 
       if (byCategoryRes.status === "fulfilled") {
@@ -159,8 +206,28 @@ export default function InventoryAnalytics() {
       }
 
       if (warehouseRes.status === "fulfilled") {
-        const items = Array.isArray(warehouseRes.value?.data) ? warehouseRes.value.data : warehouseRes.value;
-        setWarehouseUtilization(mapWarehouses(items));
+        const raw = Array.isArray(warehouseRes.value?.data) ? warehouseRes.value.data : warehouseRes.value;
+        const mapped = mapWarehouses(raw);
+
+        // card data
+        setWarehouseUtilization(mapped.map(({ __displayId, __queryId, ...rest }) => rest));
+
+        // dropdown options (show all; only some have queryId)
+        const opts = mapped.map((w, i) => ({
+          id: String(w.__displayId),
+          name: String(w.warehouse || `Warehouse ${i + 1}`),
+          queryId: w.__queryId || undefined,
+        }));
+
+        // de-dupe by id
+        const seen = new Set<string>();
+        const dedup = opts.filter((o) => (seen.has(o.id) ? false : (seen.add(o.id), true)));
+        setBranchOptions(dedup);
+
+        // keep selection valid
+        if (selectedWarehouse !== "all" && !dedup.some((o) => o.id === selectedWarehouse)) {
+          setSelectedWarehouse("all");
+        }
       }
 
       if (reorderRes.status === "fulfilled") {
@@ -169,7 +236,7 @@ export default function InventoryAnalytics() {
       }
 
       if (metricsRes.status === "fulfilled") {
-        const m = metricsRes.value || {};
+        const m = (metricsRes as any).value || {};
         setMetrics({
           totalValue: Number(m.totalValue ?? m.inventoryValue ?? 0),
           avgTurnover: Number(m.avgTurnover ?? m.turnover ?? 0),
@@ -183,7 +250,7 @@ export default function InventoryAnalytics() {
     } finally {
       setLoading(false);
     }
-  }, [selectedPeriod, branchId]);
+  }, [selectedPeriod, branchId, selectedWarehouse]);
 
   useEffect(() => {
     fetchAll();
@@ -224,15 +291,7 @@ export default function InventoryAnalytics() {
     };
   }, [metrics, categoryOverview]);
 
-  const MetricCard = ({
-    title,
-    value,
-    change,
-    icon: Icon,
-    color,
-    format = "number",
-    status,
-  }: any) => {
+  const MetricCard = ({ title, value, change, icon: Icon, color, format = "number", status }: any) => {
     const formattedValue =
       format === "currency"
         ? `$${Number(value || 0).toLocaleString()}`
@@ -241,7 +300,6 @@ export default function InventoryAnalytics() {
         : format === "decimal"
         ? Number(value || 0).toFixed(1)
         : Number(value || 0).toLocaleString();
-
     const statusColor =
       status === "good" ? "text-green-600" : status === "warning" ? "text-yellow-600" : "text-red-600";
 
@@ -251,9 +309,11 @@ export default function InventoryAnalytics() {
           <div className="p-3 rounded-lg" style={{ backgroundColor: color + "20" }}>
             <Icon size={24} style={{ color }} />
           </div>
-          {status && <div className={`text-xs px-2 py-1 rounded-full bg-gray-100 ${statusColor}`}>
-            {status === "good" ? "Healthy" : status === "warning" ? "Attention" : "Critical"}
-          </div>}
+          {status && (
+            <div className={`text-xs px-2 py-1 rounded-full bg-gray-100 ${statusColor}`}>
+              {status === "good" ? "Healthy" : status === "warning" ? "Attention" : "Critical"}
+            </div>
+          )}
         </div>
         <div>
           <p className="text-sm text-gray-600 mb-1">{title}</p>
@@ -312,16 +372,21 @@ export default function InventoryAnalytics() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {/* Dynamic branches */}
               <select
                 value={selectedWarehouse}
-                onChange={(e) => setSelectedWarehouse(e.target.value as any)}
+                onChange={(e) => setSelectedWarehouse(e.target.value)}
                 className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500"
               >
                 <option value="all">All Warehouses</option>
-                <option value="main">Main Warehouse</option>
-                <option value="branch-a">Branch A</option>
-                <option value="branch-b">Branch B</option>
+                {branchOptions.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                    {b.queryId ? "" : " (no ID)"}{/* optional hint; remove if undesired */}
+                  </option>
+                ))}
               </select>
+
               <select
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value as any)}
