@@ -171,6 +171,7 @@ export default function AnalyticsNavigation() {
   const router = useRouter();
 
   const [error, setError] = useState("");
+  const [firstLoad, setFirstLoad] = useState(true); // NEW
 
   // >>> ALL DEFAULTS ZERO <<<
   const [quickStats, setQuickStats] = useState<QuickStats>({
@@ -335,6 +336,8 @@ export default function AnalyticsNavigation() {
           setError((e?.message as string)?.split("\n")[0] || "Failed to load analytics");
           setQuickStats((s) => ({ ...s, loading: false }));
         }
+      } finally {
+        if (alive) setFirstLoad(false); // NEW
       }
     })();
 
@@ -417,8 +420,103 @@ export default function AnalyticsNavigation() {
     },
   ] as const;
 
+  const Skeleton = ({ className = "", style }: any) => (
+    <div className={`animate-pulse bg-gray-200 rounded ${className}`} style={style} />
+  );
+
+  // Initial load skeletons (before showing actual values)
+  if (firstLoad && quickStats.loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center gap-4 mb-2">
+              <div className="p-3 rounded-xl text-white" style={{ backgroundColor: "#3674B5" }}>
+                <Activity size={24} aria-hidden />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Business Analytics Hub</h1>
+                <p className="text-gray-600">Comprehensive insights and data visualization for informed decision making</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 mt-3">
+              Access real-time analytics across sales, inventory, customers, and business performance
+            </p>
+          </div>
+
+          {/* Quick Stats Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-lg" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-28 mb-2" />
+                    <Skeleton className="h-7 w-40" />
+                  </div>
+                </div>
+                <Skeleton className="h-4 w-40 mt-3" />
+              </div>
+            ))}
+          </div>
+
+          {/* Insights Skeleton */}
+          <Skeleton className="h-5 w-40 mb-4" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="flex items-start gap-3">
+                  <Skeleton className="h-5 w-5 rounded" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-40 mb-2" />
+                    <Skeleton className="h-4 w-56" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Modules Skeleton */}
+          <Skeleton className="h-5 w-48 mb-4" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {[...Array(2)].map((_, idx) => (
+              <div key={idx} className="bg-white rounded-xl shadow-sm border-2 border-gray-200 p-6">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded-lg" />
+                    <div>
+                      <Skeleton className="h-5 w-48 mb-2" />
+                      <Skeleton className="h-4 w-72" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-5 w-5 rounded" />
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <Skeleton className="h-16 w-full rounded" />
+                  <Skeleton className="h-16 w-full rounded" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+      {/* Thin top loader during refreshes (after first load) */}
+      {!firstLoad && quickStats.loading && (
+        <div className="fixed inset-x-0 top-0 h-1 bg-blue-600 animate-pulse z-40" />
+      )}
+
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -538,6 +636,19 @@ export default function AnalyticsNavigation() {
                 </div>
               );
             })}
+            {!insights.length && (
+              <>
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <TrendingUp className="text-blue-600" size={20} aria-hidden />
+                    <div>
+                      <h3 className="font-medium text-blue-800 mb-1">No insights yet</h3>
+                      <p className="text-sm text-blue-700">Insights will appear here as your data updates.</p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
