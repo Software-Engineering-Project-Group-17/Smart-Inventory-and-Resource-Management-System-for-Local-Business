@@ -81,37 +81,24 @@ export class NotificationService {
 
       // Check if stock is at or below threshold
       if (item.quantity <= item.low_stock_threshold) {
-        // Check if we already have a recent low stock notification for this item
-        const existingNotification = await sql`
-          SELECT id 
-          FROM notification 
-          WHERE inventory_id = ${inventoryId} 
-          AND notification_type = 'low_stock'
-          AND created_at > now() - INTERVAL '24 hours'
-          LIMIT 1
-        `;
+        const title = `Low Stock Alert: ${item.inventory_name}`;
+        const message = `${item.inventory_name} is running low. Current stock: ${item.quantity}, Threshold: ${item.low_stock_threshold}`;
 
-        // Only create notification if no recent one exists
-        if (existingNotification.length === 0) {
-          const title = `Low Stock Alert: ${item.inventory_name}`;
-          const message = `${item.inventory_name} is running low. Current stock: ${item.quantity}, Threshold: ${item.low_stock_threshold}`;
+        const result = await this.createNotification({
+          branchId: item.branch_id,
+          title,
+          message,
+          notificationType: "low_stock",
+          inventoryId: item.inventory_id,
+          metadata: {
+            currentQuantity: item.quantity,
+            threshold: item.low_stock_threshold,
+            categoryName: item.category_name,
+            severity: item.quantity === 0 ? "critical" : "warning",
+          },
+        });
 
-          const result = await this.createNotification({
-            branchId: item.branch_id,
-            title,
-            message,
-            notificationType: "low_stock",
-            inventoryId: item.inventory_id,
-            metadata: {
-              currentQuantity: item.quantity,
-              threshold: item.low_stock_threshold,
-              categoryName: item.category_name,
-              severity: item.quantity === 0 ? "critical" : "warning",
-            },
-          });
-
-          return result;
-        }
+        return result;
       }
 
       return null;
