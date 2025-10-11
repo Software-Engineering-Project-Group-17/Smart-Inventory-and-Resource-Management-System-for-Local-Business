@@ -30,19 +30,17 @@ export class NotificationService {
           notification_type, 
           inventory_id, 
           metadata, 
-          is_read, 
-          created_at
+          is_read
         )
         VALUES (
           ${data.branchId}, 
           ${data.title}, 
           ${data.message}, 
-          ${data.message},
+          ${data.message}, 
           ${data.notificationType}, 
           ${data.inventoryId || null}, 
           ${data.metadata ? JSON.stringify(data.metadata) : null}, 
-          false, 
-          now()
+          false
         )
         RETURNING id, created_at
       `;
@@ -98,7 +96,7 @@ export class NotificationService {
           const title = `Low Stock Alert: ${item.inventory_name}`;
           const message = `${item.inventory_name} is running low. Current stock: ${item.quantity}, Threshold: ${item.low_stock_threshold}`;
 
-          return await this.createNotification({
+          const result = await this.createNotification({
             branchId: item.branch_id,
             title,
             message,
@@ -111,6 +109,8 @@ export class NotificationService {
               severity: item.quantity === 0 ? "critical" : "warning",
             },
           });
+
+          return result;
         }
       }
 
