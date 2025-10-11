@@ -23,6 +23,7 @@ import {
 import { getUserProfile } from "@/lib/auth";
 import { useBarcodeSocket } from "@/hooks/useBarcodeSocket";
 import QRCode from "qrcode";
+import { toastUtils } from "@/lib/toast-utils";
 //import { generateInvoicePDF, downloadInvoicePDF, printInvoicePDF, previewInvoicePDF } from '@/lib/pdfInvoice';
 import {
   downloadSimplePDF,
@@ -95,8 +96,6 @@ function SalesPage() {
     useState<boolean>(false);
   const [editingItem, setEditingItem] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>("");
-  const [success, setSuccess] = useState<string>("");
   const [isClient, setIsClient] = useState<boolean>(false);
   const [invoiceNumber, setInvoiceNumber] = useState<string>("");
   const [currentDate, setCurrentDate] = useState<string>("");
@@ -174,8 +173,7 @@ function SalesPage() {
       setSelectedItem(null);
 
       // Show success message to indicate barcode was received
-      setSuccess(`Barcode scanned: ${barcode}`);
-      setTimeout(() => setSuccess(""), 3000);
+      toastUtils.success("Barcode Scanned", `Successfully scanned: ${barcode}`);
 
       // Automatically search for the scanned barcode
       console.log("🔍 Triggering search for barcode:", barcode);
@@ -198,9 +196,6 @@ function SalesPage() {
       "UserEmail:",
       userEmail
     );
-
-    // Clear previous error
-    setError("");
 
     try {
       const response = await fetch(
@@ -230,21 +225,19 @@ function SalesPage() {
           );
           setSelectedItem(data.inventory[0]);
           setSuggestions([]); // Clear suggestions since we auto-selected
-          setSuccess(`Found item: ${data.inventory[0].name}`);
-          setTimeout(() => setSuccess(""), 5000);
+          toastUtils.success("Item Found", `Found: ${data.inventory[0].name}`);
         } else if (type === "barcode" && data.inventory.length === 0) {
-          setError(`No item found for barcode: ${term}`);
+          toastUtils.error("Item Not Found", `No item found for barcode: ${term}`);
           console.log("🔍 No items found for barcode:", term);
-          setTimeout(() => setError(""), 5000);
         }
       } else {
-        setError(data.error || "Failed to search inventory");
+        toastUtils.error("Search Failed", data.error || "Failed to search inventory");
         setSuggestions([]);
         console.error("🔍 Search failed:", data.error);
       }
     } catch (error) {
       console.error("🔍 Error searching inventory:", error);
-      setError("Failed to search inventory");
+      toastUtils.error("Search Error", "Failed to search inventory");
       setSuggestions([]);
     }
   };
@@ -277,8 +270,7 @@ function SalesPage() {
         setCustomerSearchResult(customer);
         setLoyaltyPoints(customer.loyaltyPoints || 0);
         setShowCustomerRegistration(false);
-        setSuccess(`Customer found: ${customer.name}`);
-        setTimeout(() => setSuccess(""), 3000);
+        toastUtils.success("Customer Found", `Found: ${customer.name}`);
       } else {
         setCustomerInfo({
           name: "",
@@ -293,8 +285,7 @@ function SalesPage() {
       }
     } catch (error) {
       console.error("Error searching customer:", error);
-      setError("Failed to search customer");
-      setTimeout(() => setError(""), 3000);
+      toastUtils.error("Search Failed", "Failed to search customer");
     } finally {
       setIsSearchingCustomer(false);
     }
@@ -303,8 +294,7 @@ function SalesPage() {
   // Register new customer
   const registerCustomer = async () => {
     if (!customerInfo.name.trim() || !customerInfo.phone.trim()) {
-      setError("Name and phone are required");
-      setTimeout(() => setError(""), 3000);
+      toastUtils.validationError("Missing required fields", "Name and phone are required");
       return;
     }
 
@@ -338,16 +328,13 @@ function SalesPage() {
         setCustomerSearchResult(customer);
         setLoyaltyPoints(0);
         setShowCustomerRegistration(false);
-        setSuccess(`Customer registered successfully: ${customer.name}`);
-        setTimeout(() => setSuccess(""), 3000);
+        toastUtils.registrationSuccess("customer");
       } else {
-        setError(data.error || "Failed to register customer");
-        setTimeout(() => setError(""), 3000);
+        toastUtils.registrationError("registration-failed", data.error || "Failed to register customer");
       }
     } catch (error) {
       console.error("Error registering customer:", error);
-      setError("Failed to register customer");
-      setTimeout(() => setError(""), 3000);
+      toastUtils.registrationError("registration-failed", "Failed to register customer");
     }
   };
 
@@ -358,8 +345,7 @@ function SalesPage() {
     description?: string
   ) => {
     if (!customerInfo.id || !customerInfo.isRegistered) {
-      setError("Customer must be registered to manage loyalty points");
-      setTimeout(() => setError(""), 3000);
+      toastUtils.permissionError("manage loyalty points for unregistered customers");
       return;
     }
 
@@ -386,18 +372,15 @@ function SalesPage() {
           loyaltyPoints: updatedCustomer.loyaltyPoints,
         }));
         setLoyaltyPoints(updatedCustomer.loyaltyPoints);
-        setSuccess(
+        toastUtils.success("Loyalty Points Updated", 
           `Loyalty points ${operation}ed: ${points} points. New balance: ${updatedCustomer.loyaltyPoints}`
         );
-        setTimeout(() => setSuccess(""), 5000);
       } else {
-        setError(data.error || "Failed to update loyalty points");
-        setTimeout(() => setError(""), 3000);
+        toastUtils.error("Loyalty Points Error", data.error || "Failed to update loyalty points");
       }
     } catch (error) {
       console.error("Error updating loyalty points:", error);
-      setError("Failed to update loyalty points");
-      setTimeout(() => setError(""), 3000);
+      toastUtils.error("Loyalty Points Error", "Failed to update loyalty points");
     }
   };
 
@@ -502,17 +485,16 @@ function SalesPage() {
 
   const handleCompleteSale = async () => {
     if (items.length === 0) {
-      setError("Cart is empty");
+      toastUtils.validationError("cart cannot be empty");
       return;
     }
 
     if (finalBalance < 0) {
-      setError("Insufficient payment amount");
+      toastUtils.validationError("payment amount is insufficient");
       return;
     }
 
     setLoading(true);
-    setError("");
 
     try {
       const saleData = {
@@ -549,7 +531,7 @@ function SalesPage() {
       const data = await response.json();
 
       if (data.success) {
-        setSuccess(
+        toastUtils.success("Sale Completed", 
           `Sale completed successfully! Invoice: ${data.invoiceNumber}`
         );
 
@@ -603,11 +585,11 @@ function SalesPage() {
         setCustomerInfo({ name: "", phone: "", isRegistered: false });
         setShowCustomerForm(false);
       } else {
-        setError(data.error || "Failed to complete sale");
+        toastUtils.error("Sale Failed", data.error || "Failed to complete sale");
       }
     } catch (error) {
       console.error("Error completing sale:", error);
-      setError("Failed to complete sale");
+      toastUtils.error("Sale Failed", "Failed to complete sale");
     } finally {
       setLoading(false);
     }
@@ -741,51 +723,6 @@ function SalesPage() {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 sm:gap-6">
-          {/* Error and Success Messages */}
-          {error && (
-            <div className="xl:col-span-5 mb-4">
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative">
-                <span className="block sm:inline">{error}</span>
-                <span
-                  className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
-                  onClick={() => setError("")}
-                >
-                  <svg
-                    className="fill-current h-6 w-6 text-red-500"
-                    role="button"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                  >
-                    <title>Close</title>
-                    <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z" />
-                  </svg>
-                </span>
-              </div>
-            </div>
-          )}
-
-          {success && (
-            <div className="xl:col-span-5 mb-4">
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative">
-                <span className="block sm:inline">{success}</span>
-                <span
-                  className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
-                  onClick={() => setSuccess("")}
-                >
-                  <svg
-                    className="fill-current h-6 w-6 text-green-500"
-                    role="button"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                  >
-                    <title>Close</title>
-                    <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z" />
-                  </svg>
-                </span>
-              </div>
-            </div>
-          )}
-
           {/* Left Column - Expanded */}
           <div className="xl:col-span-3">
             {/* Search Section */}
@@ -957,8 +894,7 @@ function SalesPage() {
                             const url = `https://${process.env.NEXT_PUBLIC_SERVER_IP}:${process.env.NEXT_PUBLIC_SERVER_PORT}/scanner?user=${encodeURIComponent(userEmail)}`;
 
                             navigator.clipboard.writeText(url);
-                            setSuccess("Scanner URL copied to clipboard!");
-                            setTimeout(() => setSuccess(""), 3000);
+                            toastUtils.success("URL Copied", "Scanner URL copied to clipboard!");
                           }}
                           className="flex items-center justify-center px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm font-medium"
                         >
