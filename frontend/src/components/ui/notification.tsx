@@ -25,6 +25,8 @@ const NotificationComponent: React.FC<NotificationProps> = ({
     markAllAsRead,
     getNotificationColor,
     formatTimeAgo,
+    isConnected,
+    connectionMode,
   } = useNotifications(userEmail);
 
   // Close alert modal when clicking outside
@@ -78,9 +80,21 @@ const NotificationComponent: React.FC<NotificationProps> = ({
       >
         <div className="bg-white rounded-lg shadow-2xl border border-gray-200">
           <div className="flex justify-between items-center p-4 border-b border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800">
-              Notifications
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Notifications
+              </h3>
+              {/* Connection status indicator */}
+              <div className="flex items-center gap-1">
+                <div 
+                  className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+                  title={`${isConnected ? 'Connected' : 'Disconnected'} (${connectionMode.toUpperCase()})`}
+                />
+                <span className="text-xs text-gray-500">
+                  {connectionMode === 'sse' ? 'Live' : 'Polling'}
+                </span>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
@@ -252,9 +266,21 @@ const NotificationComponent: React.FC<NotificationProps> = ({
           >
             {/* Header */}
             <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-white">
-              <h3 className="text-lg font-semibold text-gray-800">
-                Notifications
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Notifications
+                </h3>
+                {/* Connection status indicator */}
+                <div className="flex items-center gap-1">
+                  <div 
+                    className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+                    title={`${isConnected ? 'Connected' : 'Disconnected'} (${connectionMode.toUpperCase()})`}
+                  />
+                  <span className="text-xs text-gray-500">
+                    {connectionMode === 'sse' ? 'Live' : 'Polling'}
+                  </span>
+                </div>
+              </div>
               <div className="flex items-center gap-2">
                 {unreadCount > 0 && (
                   <button
