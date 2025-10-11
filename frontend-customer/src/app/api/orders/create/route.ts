@@ -133,9 +133,10 @@ export async function POST(request: NextRequest) {
           payment_status,
           shipping_address,
           stripe_payment_intent_id,
+          branch_id,
           created_at
         )
-        VALUES ($1, $2, 'pending', 'unpaid', $3, $4, now())
+        VALUES ($1, $2, 'pending', 'unpaid', $3, $4, $5, now())
         RETURNING id
       `;
 
@@ -144,6 +145,7 @@ export async function POST(request: NextRequest) {
         totalAmount,
         shipping_address || null,
         paymentIntent.id,
+        parseInt(branchId),
       ]);
 
       const orderId = orderResult.rows[0].id;
