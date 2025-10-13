@@ -3,6 +3,7 @@ import React, { useEffect } from "react";
 import { RefreshCw, AlertTriangle, Plus } from "lucide-react";
 import { withAuth } from "@/hooks/useAuth";
 import { useInventoryData } from "@/hooks/useInventoryData";
+import { ROLES } from "@/lib/roles";
 import { InventoryTable } from "@/components/inventory/InventoryList";
 import { StatsCards } from "@/components/inventory/StatsCards";
 import { SimpleInventoryFilters } from "@/components/inventory/SimpleInventoryFilters";
@@ -178,5 +179,5 @@ const InventoryPage = () => {
 };
 
 export default withAuth(InventoryPage, {
-  requiredRoles: ["STAFF", "BRANCH_MANAGER"],
+  requiredRoles: [ROLES.STAFF, ROLES.BRANCH_MANAGER],
 });

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { withAuth } from "@/hooks/useAuth";
+import { ROLES } from "@/lib/roles";
 import { getUserProfile } from "@/lib/auth";
 import { RestockRequest } from "@/types/restock";
 import { InventoryItem } from "@/lib/api/inventory";
@@ -222,5 +223,5 @@ const RestockRequestsPage = () => {
 };
 
 export default withAuth(RestockRequestsPage, {
-  requiredRoles: ["STAFF", "BRANCH_MANAGER", "OWNER"],
+  requiredRoles: [ROLES.STAFF, ROLES.BRANCH_MANAGER, ROLES.OWNER],
 });

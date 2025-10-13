@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { withAuth } from "@/hooks/useAuth";
 import { getUserProfile } from "@/lib/auth";
+import { ROLES } from "@/lib/roles";
 import { RestockRequest } from "@/types/restock";
 import { SupplierOrder } from "@/types/supplier-order";
 import { SupplierOrderCard } from "@/components/restock-requests/SupplierOrderCard";
@@ -361,5 +362,5 @@ const RestockRequestDetailsPage = () => {
 };
 
 export default withAuth(RestockRequestDetailsPage, {
-  requiredRoles: ["STAFF", "BRANCH_MANAGER", "OWNER"],
+  requiredRoles: [ROLES.STAFF, ROLES.BRANCH_MANAGER, ROLES.OWNER],
 });

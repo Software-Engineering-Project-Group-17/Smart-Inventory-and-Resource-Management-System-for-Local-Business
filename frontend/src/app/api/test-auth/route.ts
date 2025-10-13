@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, createAuthResponse } from "@/lib/requireAuth";
+import { ROLES } from "@/lib/roles";
 
 /**
  * Test authentication endpoint
@@ -9,7 +10,10 @@ import { requireAuth, createAuthResponse } from "@/lib/requireAuth";
 // GET /api/test-auth - Test authentication with different role requirements
 export async function GET(request: NextRequest) {
   // Require authentication - Only OWNER and BRANCH_MANAGER can access
-  const authResult = await requireAuth(request, ["OWNER", "BRANCH_MANAGER"]);
+  const authResult = await requireAuth(request, [
+    ROLES.OWNER,
+    ROLES.BRANCH_MANAGER,
+  ]);
   const authResponse = createAuthResponse(authResult);
   if (authResponse) return authResponse;
 
@@ -30,7 +34,7 @@ export async function GET(request: NextRequest) {
 // POST /api/test-auth - Test with staff-only access
 export async function POST(request: NextRequest) {
   // Require authentication - Only STAFF can access this endpoint
-  const authResult = await requireAuth(request, ["STAFF"]);
+  const authResult = await requireAuth(request, [ROLES.STAFF]);
   const authResponse = createAuthResponse(authResult);
   if (authResponse) return authResponse;
 
@@ -48,7 +52,7 @@ export async function POST(request: NextRequest) {
 // PUT /api/test-auth - Test with owner-only access
 export async function PUT(request: NextRequest) {
   // Require authentication - Only OWNER can access this endpoint
-  const authResult = await requireAuth(request, ["OWNER"]);
+  const authResult = await requireAuth(request, [ROLES.OWNER]);
   const authResponse = createAuthResponse(authResult);
   if (authResponse) return authResponse;
 

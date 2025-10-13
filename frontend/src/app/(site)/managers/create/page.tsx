@@ -2,6 +2,7 @@
 import React from "react";
 import { AlertCircle } from "lucide-react";
 import { withAuth } from "@/hooks/useAuth";
+import { ROLES } from "@/lib/roles";
 
 // Import modular components
 import { CreateManagerHeader } from "@/components/managers/ManagerHeader";
@@ -110,5 +111,5 @@ const CreateManagerPage = () => {
 
 // Protect this page for OWNER role only
 export default withAuth(CreateManagerPage, {
-  requiredRoles: ["OWNER"],
+  requiredRoles: [ROLES.OWNER],
 });

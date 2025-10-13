@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { withAuth } from "@/hooks/useAuth";
+import { ROLES } from "@/lib/roles";
 
 // Import our modular components
 import { CreateBranchHeader } from "@/components/branches/CreateBranchHeader";
@@ -18,7 +19,7 @@ const CreateBranchPage = () => {
     errors,
     isSubmitting,
     submitStatus,
-    
+
     // Actions
     handleInputChange,
     handleSubmit,
@@ -67,5 +68,5 @@ const CreateBranchPage = () => {
 
 // Protect this page for OWNER role only (since only owners can create branches)
 export default withAuth(CreateBranchPage, {
-  requiredRoles: ["OWNER"],
+  requiredRoles: [ROLES.OWNER],
 });
