@@ -19,6 +19,36 @@ export interface UserProfile {
   lastLoginAt: string;
 }
 
+// Utility function to decode JWT without verification (for expiration check)
+const decodeJWT = (token: string): any => {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error("Error decoding JWT:", error);
+    return null;
+  }
+};
+
+// Check if token is expired
+const isTokenExpired = (token: string): boolean => {
+  const decoded = decodeJWT(token);
+  if (!decoded || !decoded.exp) {
+    return true; // If we can't decode or no expiration, consider expired
+  }
+
+  // JWT exp is in seconds, Date.now() is in milliseconds
+  const currentTime = Math.floor(Date.now() / 1000);
+  return decoded.exp < currentTime;
+};
+
 // Get user profile from localStorage
 export const getUserProfile = (): UserProfile | null => {
   if (typeof window === "undefined") return null;
@@ -44,7 +74,20 @@ export const isAuthenticated = (): boolean => {
 
   const token = localStorage.getItem("token");
   const profile = getUserProfile();
-  return !!(token && profile);
+
+  // Check if token and profile exist
+  if (!token || !profile) {
+    return false;
+  }
+
+  // Check if token is expired
+  if (isTokenExpired(token)) {
+    // Clear expired authentication data
+    clearAuthData();
+    return false;
+  }
+
+  return true;
 };
 
 // Check if user has specific role
@@ -68,6 +111,32 @@ export const clearAuthData = (): void => {
   localStorage.removeItem("token");
   localStorage.removeItem("userProfile");
   localStorage.removeItem("uid");
+};
+
+// Get token expiration time (for display purposes)
+export const getTokenExpiration = (): Date | null => {
+  if (typeof window === "undefined") return null;
+
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+
+  const decoded = decodeJWT(token);
+  if (!decoded || !decoded.exp) return null;
+
+  return new Date(decoded.exp * 1000); // Convert from seconds to milliseconds
+};
+
+// Check how many minutes until token expires
+export const getTokenTimeRemaining = (): number | null => {
+  const expiration = getTokenExpiration();
+  if (!expiration) return null;
+
+  const now = new Date();
+  const minutesRemaining = Math.floor(
+    (expiration.getTime() - now.getTime()) / (1000 * 60)
+  );
+
+  return minutesRemaining > 0 ? minutesRemaining : 0;
 };
 
 // Get default redirect path based on role

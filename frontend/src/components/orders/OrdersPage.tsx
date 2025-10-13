@@ -196,13 +196,20 @@ const StatCard: React.FC<{
   color: string;
   style?: React.CSSProperties;
 }> = ({ title, value, icon, color, style }) => (
-  <div className="bg-white p-6 rounded-lg shadow-sm border">
+  <div className="bg-white p-3 sm:p-6 rounded-lg shadow-sm border">
     <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-gray-600">{title}</p>
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">
+          {title}
+        </p>
+        <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">
+          {value}
+        </p>
       </div>
-      <div className={`p-3 rounded-full ${color}`} style={style}>
+      <div
+        className={`p-2 sm:p-3 rounded-full ${color} flex-shrink-0 ml-2`}
+        style={style}
+      >
         {icon}
       </div>
     </div>
@@ -577,32 +584,32 @@ export default function OrdersPage() {
 
   return (
     <div
-      className="min-h-screen p-6"
+      className="min-h-screen p-4 sm:p-6"
       style={{ backgroundColor: COLORS.background }}
     >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center">
                 <ShoppingCart
-                  className="h-8 w-8 mr-3"
+                  className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3"
                   style={{ color: COLORS.primary }}
                 />
                 Orders Management
               </h1>
               {branch && (
-                <p className="text-gray-600 mt-1">
+                <p className="text-gray-600 mt-1 text-sm sm:text-base">
                   {branch.name} - {branch.location}
                 </p>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <button
                 onClick={fetchOrders}
                 disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 disabled:opacity-50 w-full sm:w-auto text-sm sm:text-base"
                 style={{ backgroundColor: COLORS.primary }}
                 onMouseEnter={(e) => {
                   if (!loading)
@@ -619,7 +626,7 @@ export default function OrdersPage() {
               </button>
               <button
                 onClick={exportToCSV}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 w-full sm:w-auto text-sm sm:text-base"
               >
                 <Download className="h-4 w-4" />
                 Export CSV
@@ -630,47 +637,49 @@ export default function OrdersPage() {
 
         {/* Statistics Cards */}
         {statistics && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
             <StatCard
               title="Total Orders"
               value={statistics.total_orders}
-              icon={<ShoppingCart className="h-6 w-6 text-white" />}
+              icon={
+                <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              }
               color="bg-opacity-100"
               style={{ backgroundColor: COLORS.primary }}
             />
             <StatCard
               title="Total Revenue"
               value={`$${Number(statistics.total_revenue).toFixed(2)}`}
-              icon={<DollarSign className="h-6 w-6 text-white" />}
+              icon={<DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-white" />}
               color="bg-green-500"
             />
             <StatCard
               title="Avg Order Value"
               value={`$${Number(statistics.average_order_value).toFixed(2)}`}
-              icon={<TrendingUp className="h-6 w-6 text-white" />}
+              icon={<TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-white" />}
               color="bg-purple-500"
             />
             <StatCard
               title="Pending Orders"
               value={statistics.pending_orders}
-              icon={<Clock className="h-6 w-6 text-white" />}
+              icon={<Clock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />}
               color="bg-yellow-500"
             />
           </div>
         )}
 
         {/* Filters */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             {/* Search */}
-            <div className="relative">
+            <div className="relative sm:col-span-2 lg:col-span-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <input
                 type="text"
                 placeholder="Search orders..."
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="pl-10 pr-3 py-2 border rounded-lg w-full focus:ring-2 focus:border-opacity-50 outline-none"
+                className="pl-10 pr-3 py-2 border rounded-lg w-full focus:ring-2 focus:border-opacity-50 outline-none text-sm sm:text-base"
                 style={
                   {
                     "--tw-ring-color": COLORS.primary,
@@ -696,7 +705,7 @@ export default function OrdersPage() {
               onChange={(e) =>
                 handleStatusFilterChange(e.target.value, "order")
               }
-              className="px-3 py-2 border rounded-lg outline-none"
+              className="px-3 py-2 border rounded-lg outline-none text-sm sm:text-base"
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = COLORS.primary;
                 e.currentTarget.style.boxShadow = `0 0 0 2px ${COLORS.primary}33`;
@@ -719,7 +728,7 @@ export default function OrdersPage() {
               onChange={(e) =>
                 handleStatusFilterChange(e.target.value, "payment")
               }
-              className="px-3 py-2 border rounded-lg outline-none"
+              className="px-3 py-2 border rounded-lg outline-none text-sm sm:text-base"
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = COLORS.primary;
                 e.currentTarget.style.boxShadow = `0 0 0 2px ${COLORS.primary}33`;
@@ -743,7 +752,7 @@ export default function OrdersPage() {
               onChange={(e) =>
                 handleDateFilterChange(e.target.value, dateFilter.end)
               }
-              className="px-3 py-2 border rounded-lg outline-none"
+              className="px-3 py-2 border rounded-lg outline-none text-sm sm:text-base"
               placeholder="Start date"
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = COLORS.primary;
@@ -760,7 +769,7 @@ export default function OrdersPage() {
               onChange={(e) =>
                 handleDateFilterChange(dateFilter.start, e.target.value)
               }
-              className="px-3 py-2 border rounded-lg outline-none"
+              className="px-3 py-2 border rounded-lg outline-none text-sm sm:text-base"
               placeholder="End date"
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = COLORS.primary;

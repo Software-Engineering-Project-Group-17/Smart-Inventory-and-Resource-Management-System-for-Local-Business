@@ -5,7 +5,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { getDefaultRedirectPath } from "@/lib/auth";
+import { getDefaultRedirectPath, isAuthenticated } from "@/lib/auth";
 import { toastUtils } from "@/lib/toast-utils";
 import Input from "@/components/admin/Input";
 import Image from "next/image";
@@ -20,9 +20,31 @@ export default function AdminLoginPage() {
 
   const { user, userRole } = useCurrentUser();
 
+  // Initial check for expired tokens on component mount
   useEffect(() => {
-    if (user) {
+    // Check if there's an expired token in localStorage
+    const token = localStorage.getItem("token");
+    const userProfile = localStorage.getItem("userProfile");
+
+    if (token && userProfile && !isAuthenticated()) {
+      // Token exists but is expired - clear it and show message
+      toastUtils.info(
+        "Session Expired",
+        "Your previous session has expired. Please log in again."
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    // Check if user has valid (non-expired) authentication
+    if (user && isAuthenticated()) {
       router.push(getDefaultRedirectPath(userRole || ""));
+    } else if (user && !isAuthenticated()) {
+      // User exists but token is expired - show informative message
+      toastUtils.info(
+        "Session Expired",
+        "Your previous session has expired. Please log in again."
+      );
     }
   }, [user, userRole, router]);
 

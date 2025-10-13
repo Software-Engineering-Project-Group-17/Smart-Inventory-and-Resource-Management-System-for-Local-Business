@@ -2,7 +2,12 @@
 
 import React from "react";
 import OrdersPage from "@/components/orders/OrdersPage";
+import { withAuth } from "@/hooks/useAuth";
 
-export default function Page() {
+const OrderListPage = () => {
   return <OrdersPage />;
-}
+};
+
+export default withAuth(OrderListPage, {
+  requiredRoles: ["OWNER", "BRANCH_MANAGER", "STAFF"],
+});
