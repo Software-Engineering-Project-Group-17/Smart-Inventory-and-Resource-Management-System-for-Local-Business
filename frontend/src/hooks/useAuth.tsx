@@ -7,7 +7,9 @@ import {
   getUserRole,
   hasAnyRole,
   getDefaultRedirectPath,
+  getTokenTimeRemaining,
 } from "@/lib/auth";
+import { toastUtils } from "@/lib/toast-utils";
 
 interface UseAuthOptions {
   requiredRoles?: string[];
@@ -29,6 +31,14 @@ export const useAuth = (options: UseAuthOptions = {}) => {
     const checkAuth = () => {
       // Check if authentication is required
       if (requireAuth && !isAuthenticated()) {
+        // Check if it was due to token expiration
+        const timeRemaining = getTokenTimeRemaining();
+        if (timeRemaining !== null && timeRemaining <= 0) {
+          toastUtils.error(
+            "Session Expired",
+            "Your session has expired. Please log in again."
+          );
+        }
         router.push(redirectTo);
         return;
       }

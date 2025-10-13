@@ -71,9 +71,10 @@ const InventoryPage = () => {
                   Inventory Management
                 </h1>
                 <p className="text-gray-600 mt-2">
-                  {branch
-                    ? `${branch.name} - ${branch.location}`
-                    : "Loading branch info..."}
+                  {branch ? `${branch.name}` : "Loading branch info..."}
+                </p>
+                <p className="text-gray-600 mt-2">
+                  {branch ? `${branch.location}` : ""}
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">

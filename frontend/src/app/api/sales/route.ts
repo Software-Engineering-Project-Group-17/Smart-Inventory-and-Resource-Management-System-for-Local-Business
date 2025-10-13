@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
+import { NotificationService } from "@/lib/notification-service";
 
 // Database connection using Neon
 const sql = neon(process.env.DATABASE_URL!);
@@ -261,6 +262,14 @@ export async function POST(request: NextRequest) {
         SET quantity = quantity - ${item.quantity}
         WHERE inventory_id = ${item.id} AND branch_id = ${branch_id}
       `;
+
+      // Check for low stock notification after inventory update
+      try {
+        await NotificationService.checkAndCreateLowStockNotification(item.id);
+      } catch (notificationError) {
+        console.error(`Failed to check low stock notification for item ${item.id}:`, notificationError);
+        // Don't fail the sale if notification fails
+      }
     }
 
     // Create payment record

@@ -3,6 +3,8 @@
  * This helps frontend components easily add authentication headers
  */
 
+import { clearAuthData } from "./auth";
+
 /**
  * Get authentication token from localStorage
  */
@@ -116,13 +118,11 @@ export function isAuthError(error: any): boolean {
  */
 export function handleAuthError(error: any): void {
   if (isAuthError(error)) {
-    // Clear invalid token
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("token");
-      localStorage.removeItem("userProfile");
-      localStorage.removeItem("uid");
+    // Clear invalid/expired token using the centralized function
+    clearAuthData();
 
-      // Redirect to login
+    // Redirect to login
+    if (typeof window !== "undefined") {
       window.location.href = "/login";
     }
   }

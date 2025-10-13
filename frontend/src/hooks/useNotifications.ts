@@ -30,6 +30,8 @@ export const useNotifications = (userEmail: string) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionMode, setConnectionMode] = useState<'sse' | 'polling'>('sse');
 
   const fetchNotifications = useCallback(async () => {
     if (!userEmail) return;
@@ -187,14 +189,101 @@ export const useNotifications = (userEmail: string) => {
     return date.toLocaleDateString();
   };
 
-  // Auto-refresh notifications every 5 minutes
+  // SSE connection for real-time notifications
   useEffect(() => {
+    if (!userEmail) return;
+
+    let eventSource: EventSource;
+    let fallbackInterval: NodeJS.Timeout;
+    let reconnectTimeout: NodeJS.Timeout;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+
+    const setupSSE = () => {
+      try {
+        eventSource = new EventSource(
+          `/api/notifications/stream?userEmail=${encodeURIComponent(userEmail)}`
+        );
+
+        eventSource.onopen = () => {
+          reconnectAttempts = 0;
+          setError(null);
+          setIsConnected(true);
+          setConnectionMode('sse');
+        };
+
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            switch (data.type) {
+              case 'connected':
+                break;
+                
+              case 'notification_update':
+                setNotifications(data.notifications || []);
+                setUnreadCount(data.unreadCount || 0);
+                setIsLoading(false);
+                break;
+                
+              case 'error':
+                setError(data.message);
+                break;
+                
+              default:
+                break;
+            }
+          } catch (err) {
+            // Silent error handling for SSE message parsing
+          }
+        };
+
+        eventSource.onerror = (error) => {
+          eventSource.close();
+          setIsConnected(false);
+          
+          // Attempt to reconnect with exponential backoff
+          if (reconnectAttempts < maxReconnectAttempts) {
+            const delay = Math.pow(2, reconnectAttempts) * 1000; // 1s, 2s, 4s, 8s, 16s
+            
+            reconnectTimeout = setTimeout(() => {
+              reconnectAttempts++;
+              setupSSE();
+            }, delay);
+          } else {
+            setError('Connection lost. Using fallback mode.');
+            setConnectionMode('polling');
+            // Fallback to polling every 30 seconds
+            fallbackInterval = setInterval(fetchNotifications, 30000);
+          }
+        };
+
+      } catch (err) {
+        // Immediate fallback to polling
+        setError('Real-time updates unavailable. Using fallback mode.');
+        setConnectionMode('polling');
+        setIsConnected(false);
+        fallbackInterval = setInterval(fetchNotifications, 30000);
+      }
+    };
+
+    // Initial fetch and SSE setup
     fetchNotifications();
+    setupSSE();
 
-    const interval = setInterval(fetchNotifications, 5 * 60 * 1000); // 5 minutes
-
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
+    // Cleanup function
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (fallbackInterval) {
+        clearInterval(fallbackInterval);
+      }
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+    };
+  }, [userEmail, fetchNotifications]);
 
   return {
     notifications,
@@ -207,5 +296,7 @@ export const useNotifications = (userEmail: string) => {
     getNotificationIcon,
     getNotificationColor,
     formatTimeAgo,
+    isConnected,
+    connectionMode,
   };
 };

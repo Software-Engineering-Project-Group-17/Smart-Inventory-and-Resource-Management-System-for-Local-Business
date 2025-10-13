@@ -53,59 +53,133 @@ const Navbar: React.FC = () => {
     switch (role) {
       case "OWNER":
         return [
-          { label: "Branches", href: "/branches", icon: <Building2 size={20} /> },
-          { label: "Reports", href: "/reports", icon: <FileBarChart size={20} /> },
-          { label: "analytics", href: "/analytics", icon: <BarChart3 size={20} /> },
+          {
+            label: "Branches",
+            href: "/branches",
+            icon: <Building2 size={20} />,
+          },
+          {
+            label: "Reports",
+            href: "/reports",
+            icon: <FileBarChart size={20} />,
+          },
+          {
+            label: "analytics",
+            href: "/analytics",
+            icon: <BarChart3 size={20} />,
+          },
           { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
       case "MANAGER":
       case "BRANCH_MANAGER":
         return [
-          { label: "Inventory", href: "/inventory", icon: <Package size={20} /> },
+          {
+            label: "Inventory",
+            href: "/inventory",
+            icon: <Package size={20} />,
+          },
+          { label: "Orders", href: "/orders", icon: <Package size={20} /> },
           { label: "Staff", href: "/staff", icon: <Users size={20} /> },
-          { label: "Reports", href: "/reports", icon: <FileBarChart size={20} /> },
-          { label: "analytics", href: "/analytics", icon: <BarChart3 size={20} /> },
-          { label: "Resources", href: "/resources", icon: <Settings size={20} /> },
+          {
+            label: "Reports",
+            href: "/reports",
+            icon: <FileBarChart size={20} />,
+          },
+          {
+            label: "analytics",
+            href: "/analytics",
+            icon: <BarChart3 size={20} />,
+          },
+          {
+            label: "Resources",
+            href: "/resources",
+            icon: <Settings size={20} />,
+          },
           { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
       case "SALES_MANAGER":
         return [
           { label: "Sales", href: "/sales", icon: <ShoppingCart size={20} /> },
-          { label: "Inventory", href: "/inventory", icon: <Package size={20} /> },
-          { label: "Reports", href: "/reports", icon: <FileBarChart size={20} /> },
-          { label: "analytics", href: "/analytics", icon: <BarChart3 size={20} /> },
+          {
+            label: "Inventory",
+            href: "/inventory",
+            icon: <Package size={20} />,
+          },
+          {
+            label: "Reports",
+            href: "/reports",
+            icon: <FileBarChart size={20} />,
+          },
+          {
+            label: "analytics",
+            href: "/analytics",
+            icon: <BarChart3 size={20} />,
+          },
           { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
       case "INVENTORY_MANAGER":
         return [
-          { label: "Inventory", href: "/inventory", icon: <Archive size={20} /> },
-          { label: "Reports", href: "/reports", icon: <FileBarChart size={20} /> },
-          { label: "analytics", href: "/analytics", icon: <BarChart3 size={20} /> },
+          {
+            label: "Inventory",
+            href: "/inventory",
+            icon: <Archive size={20} />,
+          },
+          {
+            label: "Reports",
+            href: "/reports",
+            icon: <FileBarChart size={20} />,
+          },
+          {
+            label: "analytics",
+            href: "/analytics",
+            icon: <BarChart3 size={20} />,
+          },
           { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
       case "RESOURCE_MANAGER":
         return [
-          { label: "Resources", href: "/resources", icon: <Settings size={20} /> },
-          { label: "Inventory", href: "/inventory", icon: <Package size={20} /> },
+          {
+            label: "Resources",
+            href: "/resources",
+            icon: <Settings size={20} />,
+          },
+          {
+            label: "Inventory",
+            href: "/inventory",
+            icon: <Package size={20} />,
+          },
           { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
       case "STAFF":
         return [
           { label: "Sales", href: "/sales", icon: <Receipt size={20} /> },
-          { label: "Inventory", href: "/inventory", icon: <Archive size={20} /> },
-          { label: "Resources", href: "/resources", icon: <Settings size={20} /> },
+          { label: "Orders", href: "/orders", icon: <Package size={20} /> },
+          {
+            label: "Inventory",
+            href: "/inventory",
+            icon: <Archive size={20} />,
+          },
+          {
+            label: "Resources",
+            href: "/resources",
+            icon: <Settings size={20} />,
+          },
           { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
       case "SUPPLIER":
         return [
           { label: "Products", href: "/products", icon: <Package size={20} /> },
-          { label: "Orders", href: "/orders", icon: <ShoppingCart size={20} /> },
+          {
+            label: "Orders",
+            href: "/orders",
+            icon: <ShoppingCart size={20} />,
+          },
           { label: "Profile", href: "/profile", icon: <User size={20} /> },
         ];
 
@@ -117,7 +191,9 @@ const Navbar: React.FC = () => {
         ];
 
       default:
-        return [{ label: "Profile", href: "/profile", icon: <User size={20} /> }];
+        return [
+          { label: "Profile", href: "/profile", icon: <User size={20} /> },
+        ];
     }
   };
 
