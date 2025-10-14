@@ -38,6 +38,8 @@ const AuthWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           customerData?.customer_name || user?.displayName || "Customer"
         }
         customerEmail={customerData?.customer_email || user?.email || ""}
+        existingPhone={customerData?.customer_tel || ""}
+        existingAddress={customerData?.address || ""}
       />
     </>
   );

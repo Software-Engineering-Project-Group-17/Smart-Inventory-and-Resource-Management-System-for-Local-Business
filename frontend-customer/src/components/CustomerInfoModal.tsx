@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Phone, MapPin, User } from "lucide-react";
 
 interface CustomerInfoModalProps {
@@ -9,6 +9,8 @@ interface CustomerInfoModalProps {
   onSubmit: (data: { customer_tel: string; address: string }) => Promise<void>;
   customerName?: string;
   customerEmail?: string;
+  existingPhone?: string;
+  existingAddress?: string;
 }
 
 const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
@@ -17,13 +19,23 @@ const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
   onSubmit,
   customerName,
   customerEmail,
+  existingPhone = "",
+  existingAddress = "",
 }) => {
   const [formData, setFormData] = useState({
-    customer_tel: "",
-    address: "",
+    customer_tel: existingPhone,
+    address: existingAddress,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  // Update form data when existing data changes
+  useEffect(() => {
+    setFormData({
+      customer_tel: existingPhone,
+      address: existingAddress,
+    });
+  }, [existingPhone, existingAddress]);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -72,7 +84,7 @@ const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 backdrop-blur flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -123,7 +135,9 @@ const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-zeta focus:border-zeta transition-colors ${
                 errors.customer_tel ? "border-red-300" : "border-gray-300"
               }`}
-              placeholder="+1 (555) 123-4567"
+              placeholder={
+                existingPhone ? "Update your phone number" : "+1 (555) 123-4567"
+              }
               disabled={isSubmitting}
             />
             {errors.customer_tel && (
@@ -144,7 +158,11 @@ const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-zeta focus:border-zeta transition-colors resize-none ${
                 errors.address ? "border-red-300" : "border-gray-300"
               }`}
-              placeholder="Enter your complete address..."
+              placeholder={
+                existingAddress
+                  ? "Update your address"
+                  : "Enter your complete address..."
+              }
               disabled={isSubmitting}
             />
             {errors.address && (
@@ -177,7 +195,11 @@ const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
               className="flex-1 px-4 py-3 bg-zeta text-white rounded-lg hover:bg-orange-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Saving..." : "Save Information"}
+              {isSubmitting
+                ? "Saving..."
+                : existingPhone || existingAddress
+                ? "Update Information"
+                : "Save Information"}
             </button>
           </div>
         </form>
