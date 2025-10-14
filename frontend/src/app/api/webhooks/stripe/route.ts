@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { neon } from "@neondatabase/serverless";
 import Stripe from "stripe";
+import { NotificationService } from "@/lib/notification-service";
 
 const sql = neon(process.env.DATABASE_URL!);
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -140,8 +141,8 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     // Update inventory quantities
     for (const item of orderItems) {
       if (item.inventory_id) {
-        const newQuantity =
-          Number(item.current_quantity) + Number(item.offered_quantity);
+        const previousQuantity = Number(item.current_quantity);
+        const newQuantity = previousQuantity + Number(item.offered_quantity);
 
         await sql`
           UPDATE inventory_item 
@@ -153,6 +154,21 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
         console.log(
           `Updated inventory ${item.inventory_id}: ${item.current_quantity} -> ${newQuantity} (added ${item.offered_quantity})`
         );
+
+        // Create restock completion notification
+        try {
+          await NotificationService.createRestockCompletionNotification(
+            item.inventory_id,
+            previousQuantity,
+            newQuantity
+          );
+        } catch (notificationError) {
+          console.error(
+            `Failed to create restock notification for item ${item.inventory_id}:`,
+            notificationError
+          );
+          // Don't fail the payment processing if notification fails
+        }
       }
     }
 

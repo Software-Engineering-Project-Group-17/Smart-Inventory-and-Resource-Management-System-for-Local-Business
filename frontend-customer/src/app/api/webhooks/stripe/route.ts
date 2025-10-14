@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Pool } from "pg";
 import Stripe from "stripe";
+import { NotificationService } from "@/lib/notification-service";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -68,6 +69,8 @@ export async function POST(request: NextRequest) {
 
             // Update inventory quantities (reduce stock for paid orders)
             for (const item of itemsResult.rows) {
+              const branchId = parseInt(process.env.BRANCH_ID || "3");
+
               const updateInventoryQuery = `
                 UPDATE inventory_item 
                 SET quantity = quantity - $1
@@ -76,7 +79,7 @@ export async function POST(request: NextRequest) {
               const updateResult = await client.query(updateInventoryQuery, [
                 item.quantity,
                 item.inventory_id,
-                parseInt(process.env.BRANCH_ID || "3"),
+                branchId,
               ]);
 
               // Check if stock was sufficient
@@ -100,6 +103,20 @@ export async function POST(request: NextRequest) {
 
                 // You might want to handle this case differently - maybe set order to processing
                 // and send notification to admin about stock issue
+              } else {
+                // Check for low stock notification after successful inventory update
+                try {
+                  await NotificationService.checkAndCreateLowStockNotification(
+                    item.inventory_id,
+                    branchId
+                  );
+                } catch (notificationError) {
+                  console.error(
+                    `Failed to check low stock notification for item ${item.inventory_id}:`,
+                    notificationError
+                  );
+                  // Don't fail the payment processing if notification fails
+                }
               }
             }
           }
