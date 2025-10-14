@@ -15,10 +15,10 @@ const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(request: NextRequest) {
   console.log("🎯 WEBHOOK CALLED - Timestamp:", new Date().toISOString());
-  
+
   const body = await request.text();
   const sig = request.headers.get("stripe-signature")!;
-  
+
   console.log("📡 Webhook details:", {
     bodyLength: body?.length || 0,
     hasSignature: !!sig,
@@ -41,14 +41,14 @@ export async function POST(request: NextRequest) {
 
   try {
     switch (event.type) {
-        case "payment_intent.succeeded":
-          console.log("💰 Processing payment_intent.succeeded");
-          const paymentIntent = event.data.object as Stripe.PaymentIntent;
-          console.log("🆔 Payment Intent ID:", paymentIntent.id);
+      case "payment_intent.succeeded":
+        console.log("💰 Processing payment_intent.succeeded");
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        console.log("🆔 Payment Intent ID:", paymentIntent.id);
 
-          const client = await pool.connect();
-          try {
-            await client.query("BEGIN");          // Get order details
+        const client = await pool.connect();
+        try {
+          await client.query("BEGIN"); // Get order details
           const orderQuery = `
             SELECT id, order_status, payment_status
             FROM customer_order 
@@ -114,30 +114,45 @@ export async function POST(request: NextRequest) {
                 // You might want to handle this case differently - maybe set order to processing
                 // and send notification to admin about stock issue
               } else {
-                console.log(`✅ Successfully reduced inventory for item ${item.inventory_id} by ${item.quantity} units`);
-                
+                console.log(
+                  `✅ Successfully reduced inventory for item ${item.inventory_id} by ${item.quantity} units`
+                );
+
                 // Check for low stock notification after successful inventory update
-                console.log(`🔍 Checking low stock for item ${item.inventory_id} in branch ${branchId}`);
+                console.log(
+                  `🔍 Checking low stock for item ${item.inventory_id} in branch ${branchId}`
+                );
                 try {
                   // Get updated inventory details for notification
-                  const inventoryAfterUpdate = await client.query(`
+                  const inventoryAfterUpdate = await client.query(
+                    `
                     SELECT inventory_name, quantity, low_stock_threshold
                     FROM inventory_item 
                     WHERE inventory_id = $1 AND branch_id = $2
-                  `, [item.inventory_id, branchId]);
-                  
+                  `,
+                    [item.inventory_id, branchId]
+                  );
+
                   if (inventoryAfterUpdate.rows.length > 0) {
                     const updatedItem = inventoryAfterUpdate.rows[0];
-                    console.log(`📊 Item ${updatedItem.inventory_name}: Current=${updatedItem.quantity}, Threshold=${updatedItem.low_stock_threshold}`);
-                    
-                    const notificationResult = await NotificationService.checkAndCreateLowStockNotification(
-                      item.inventory_id,
-                      branchId
+                    console.log(
+                      `📊 Item ${updatedItem.inventory_name}: Current=${updatedItem.quantity}, Threshold=${updatedItem.low_stock_threshold}`
                     );
+
+                    const notificationResult =
+                      await NotificationService.checkAndCreateLowStockNotification(
+                        item.inventory_id,
+                        branchId
+                      );
                     if (notificationResult) {
-                      console.log(`✅ Created low stock notification:`, notificationResult);
+                      console.log(
+                        `✅ Created low stock notification:`,
+                        notificationResult
+                      );
                     } else {
-                      console.log(`ℹ️ No notification needed for item ${item.inventory_id} (stock above threshold)`);
+                      console.log(
+                        `ℹ️ No notification needed for item ${item.inventory_id} (stock above threshold)`
+                      );
                     }
                   }
                 } catch (notificationError) {
@@ -145,7 +160,10 @@ export async function POST(request: NextRequest) {
                     `❌ Failed to check low stock notification for item ${item.inventory_id}:`,
                     notificationError
                   );
-                  console.error('Notification error details:', notificationError);
+                  console.error(
+                    "Notification error details:",
+                    notificationError
+                  );
                   // Don't fail the payment processing if notification fails
                 }
               }
