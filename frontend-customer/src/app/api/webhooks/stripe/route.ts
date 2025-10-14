@@ -196,6 +196,163 @@ export async function POST(request: NextRequest) {
         }
         break;
 
+      case "charge.updated":
+        console.log("💳 Processing charge.updated");
+        const charge = event.data.object as Stripe.Charge;
+        console.log(
+          "🔍 Charge status:",
+          charge.status,
+          "Payment intent:",
+          charge.payment_intent
+        );
+
+        // Only process if charge is succeeded and has a payment intent
+        if (charge.status === "succeeded" && charge.payment_intent) {
+          console.log("✅ Charge succeeded, processing payment...");
+
+          const chargeClient = await pool.connect();
+          try {
+            await chargeClient.query("BEGIN");
+
+            // Get order details using payment intent ID
+            const orderQuery = `
+              SELECT id, order_status, payment_status
+              FROM customer_order 
+              WHERE stripe_payment_intent_id = $1
+            `;
+            const orderResult = await chargeClient.query(orderQuery, [
+              charge.payment_intent,
+            ]);
+
+            if (orderResult.rows.length === 0) {
+              console.error(
+                `Order not found for payment intent: ${charge.payment_intent}`
+              );
+              await chargeClient.query("ROLLBACK");
+              break;
+            }
+
+            const order = orderResult.rows[0];
+
+            // Only update stock if payment wasn't already processed
+            if (order.payment_status !== "paid") {
+              console.log("🔄 Processing stock updates for order:", order.id);
+
+              // Get order items to update inventory
+              const orderItemsQuery = `
+                SELECT inventory_id, quantity
+                FROM order_item
+                WHERE order_id = $1
+              `;
+              const itemsResult = await chargeClient.query(orderItemsQuery, [
+                order.id,
+              ]);
+
+              // Update inventory quantities (reduce stock for paid orders)
+              for (const item of itemsResult.rows) {
+                const branchId = parseInt(process.env.BRANCH_ID || "3");
+
+                const updateInventoryQuery = `
+                  UPDATE inventory_item 
+                  SET quantity = quantity - $1
+                  WHERE inventory_id = $2 AND quantity >= $1 AND branch_id = $3
+                `;
+                const updateResult = await chargeClient.query(
+                  updateInventoryQuery,
+                  [item.quantity, item.inventory_id, branchId]
+                );
+
+                // Check if stock was sufficient
+                if (updateResult.rowCount === 0) {
+                  console.error(
+                    `Insufficient stock for item ${item.inventory_id} when processing charge for order ${order.id}`
+                  );
+                } else {
+                  console.log(
+                    `✅ Successfully reduced inventory for item ${item.inventory_id} by ${item.quantity} units`
+                  );
+
+                  // Check for low stock notification after successful inventory update
+                  console.log(
+                    `🔍 Checking low stock for item ${item.inventory_id} in branch ${branchId}`
+                  );
+                  try {
+                    // Get updated inventory details for notification
+                    const inventoryAfterUpdate = await chargeClient.query(
+                      `
+                      SELECT inventory_name, quantity, low_stock_threshold
+                      FROM inventory_item 
+                      WHERE inventory_id = $1 AND branch_id = $2
+                    `,
+                      [item.inventory_id, branchId]
+                    );
+
+                    if (inventoryAfterUpdate.rows.length > 0) {
+                      const updatedItem = inventoryAfterUpdate.rows[0];
+                      console.log(
+                        `📊 Item ${updatedItem.inventory_name}: Current=${updatedItem.quantity}, Threshold=${updatedItem.low_stock_threshold}`
+                      );
+
+                      const notificationResult =
+                        await NotificationService.checkAndCreateLowStockNotification(
+                          item.inventory_id,
+                          branchId
+                        );
+                      if (notificationResult) {
+                        console.log(
+                          `✅ Created low stock notification:`,
+                          notificationResult
+                        );
+                      } else {
+                        console.log(
+                          `ℹ️ No notification needed for item ${item.inventory_id} (stock above threshold)`
+                        );
+                      }
+                    }
+                  } catch (notificationError) {
+                    console.error(
+                      `❌ Failed to check low stock notification for item ${item.inventory_id}:`,
+                      notificationError
+                    );
+                    console.error(
+                      "Notification error details:",
+                      notificationError
+                    );
+                    // Don't fail the payment processing if notification fails
+                  }
+                }
+              }
+            } else {
+              console.log("ℹ️ Payment already processed for this order");
+            }
+
+            // Update order status to completed and payment status to paid
+            const updateOrderQuery = `
+              UPDATE customer_order 
+              SET 
+                order_status = 'completed',
+                payment_status = 'paid',
+                updated_at = now()
+              WHERE id = $1
+            `;
+            await chargeClient.query(updateOrderQuery, [order.id]);
+
+            await chargeClient.query("COMMIT");
+            console.log(
+              `✅ Charge processed successfully for order ${order.id} with payment intent: ${charge.payment_intent}`
+            );
+          } catch (error) {
+            await chargeClient.query("ROLLBACK");
+            console.error("❌ Error processing charge.updated:", error);
+            throw error;
+          } finally {
+            chargeClient.release();
+          }
+        } else {
+          console.log("ℹ️ Charge not succeeded or no payment intent, skipping");
+        }
+        break;
+
       case "payment_intent.payment_failed":
         const failedPayment = event.data.object as Stripe.PaymentIntent;
 
