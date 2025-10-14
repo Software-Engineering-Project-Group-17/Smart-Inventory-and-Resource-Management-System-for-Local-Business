@@ -45,6 +45,36 @@ export async function POST(request: NextRequest) {
       }
       break;
 
+    case "charge.updated":
+      const charge = event.data.object as Stripe.Charge;
+      console.log(`Charge updated: ${charge.id}, status: ${charge.status}`);
+
+      // Only process if charge is succeeded and has a payment intent
+      if (charge.status === "succeeded" && charge.payment_intent) {
+        console.log(
+          `Processing successful charge for payment intent: ${charge.payment_intent}`
+        );
+
+        try {
+          // Create a payment intent object from the charge for compatibility
+          const paymentIntentFromCharge = {
+            id: charge.payment_intent as string,
+            metadata: charge.metadata || {},
+          } as Stripe.PaymentIntent;
+
+          await handlePaymentSuccess(paymentIntentFromCharge);
+        } catch (error) {
+          console.error("Error handling charge success:", error);
+          return NextResponse.json(
+            { error: "Failed to process charge success" },
+            { status: 500 }
+          );
+        }
+      } else {
+        console.log(`Charge not succeeded or no payment intent, skipping`);
+      }
+      break;
+
     case "payment_intent.payment_failed":
       const failedPayment = event.data.object as Stripe.PaymentIntent;
       console.log(`Payment failed: ${failedPayment.id}`);
@@ -61,6 +91,79 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ received: true });
+}
+
+/**
+ * Create restock completion notification
+ */
+async function createRestockCompletionNotification(
+  inventoryId: string | number,
+  previousQuantity: number,
+  newQuantity: number,
+  addedQuantity: number
+) {
+  try {
+    // Get inventory item details including branch_id
+    const [inventoryItem] = await sql`
+      SELECT 
+        ii.inventory_id,
+        ii.inventory_name,
+        ii.branch_id,
+        ii.low_stock_threshold,
+        c.category_name
+      FROM inventory_item ii
+      LEFT JOIN category c ON ii.category_id = c.id
+      WHERE ii.inventory_id = ${inventoryId}
+    `;
+
+    if (!inventoryItem) {
+      console.error(`Inventory item ${inventoryId} not found for notification`);
+      return null;
+    }
+
+    const title = `Stock Replenished: ${inventoryItem.inventory_name}`;
+    const message = `${inventoryItem.inventory_name} has been restocked. Added: ${addedQuantity} units. New total: ${newQuantity}`;
+
+    // Create the notification
+    const result = await sql`
+      INSERT INTO notification (
+        branch_id, 
+        title, 
+        message, 
+        content,
+        notification_type, 
+        inventory_id, 
+        metadata, 
+        is_read
+      )
+      VALUES (
+        ${inventoryItem.branch_id}, 
+        ${title}, 
+        ${message}, 
+        ${message},
+        'restock_completion', 
+        ${inventoryItem.inventory_id}, 
+        ${JSON.stringify({
+          previousQuantity,
+          newQuantity,
+          quantityAdded: addedQuantity,
+          categoryName: inventoryItem.category_name,
+          threshold: inventoryItem.low_stock_threshold,
+          source: "supplier_order_webhook",
+        })}, 
+        false
+      )
+      RETURNING id, created_at
+    `;
+
+    console.log(
+      `✅ Created restock notification for ${inventoryItem.inventory_name}: +${addedQuantity} units (${previousQuantity} → ${newQuantity})`
+    );
+    return result[0];
+  } catch (error) {
+    console.error("Error creating restock notification:", error);
+    throw new Error("Failed to create restock notification");
+  }
 }
 
 async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
@@ -137,12 +240,14 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
 
     console.log(`Found ${orderItems.length} items to update in inventory`);
 
-    // Update inventory quantities
+    // Update inventory quantities and create restock notifications
     for (const item of orderItems) {
       if (item.inventory_id) {
-        const newQuantity =
-          Number(item.current_quantity) + Number(item.offered_quantity);
+        const previousQuantity = Number(item.current_quantity);
+        const addedQuantity = Number(item.offered_quantity);
+        const newQuantity = previousQuantity + addedQuantity;
 
+        // Update inventory
         await sql`
           UPDATE inventory_item 
           SET 
@@ -151,8 +256,24 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
         `;
 
         console.log(
-          `Updated inventory ${item.inventory_id}: ${item.current_quantity} -> ${newQuantity} (added ${item.offered_quantity})`
+          `Updated inventory ${item.inventory_id}: ${previousQuantity} -> ${newQuantity} (added ${addedQuantity})`
         );
+
+        // Create restock completion notification
+        try {
+          await createRestockCompletionNotification(
+            item.inventory_id,
+            previousQuantity,
+            newQuantity,
+            addedQuantity
+          );
+        } catch (notificationError) {
+          console.error(
+            `Failed to create restock notification for item ${item.inventory_id}:`,
+            notificationError
+          );
+          // Don't fail the payment processing if notification fails
+        }
       }
     }
 
