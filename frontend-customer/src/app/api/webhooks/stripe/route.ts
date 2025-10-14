@@ -14,15 +14,25 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(request: NextRequest) {
+  console.log("🎯 WEBHOOK CALLED - Timestamp:", new Date().toISOString());
+  
   const body = await request.text();
   const sig = request.headers.get("stripe-signature")!;
+  
+  console.log("📡 Webhook details:", {
+    bodyLength: body?.length || 0,
+    hasSignature: !!sig,
+    signaturePreview: sig?.substring(0, 20) + "...",
+  });
 
   let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
+    console.log("✅ Webhook signature verified successfully");
+    console.log("📋 Event type:", event.type, "Event ID:", event.id);
   } catch (err) {
-    console.error("Webhook signature verification failed:", err);
+    console.error("❌ Webhook signature verification failed:", err);
     return NextResponse.json(
       { error: "Webhook signature verification failed" },
       { status: 400 }
@@ -31,14 +41,14 @@ export async function POST(request: NextRequest) {
 
   try {
     switch (event.type) {
-      case "payment_intent.succeeded":
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        case "payment_intent.succeeded":
+          console.log("💰 Processing payment_intent.succeeded");
+          const paymentIntent = event.data.object as Stripe.PaymentIntent;
+          console.log("🆔 Payment Intent ID:", paymentIntent.id);
 
-        const client = await pool.connect();
-        try {
-          await client.query("BEGIN");
-
-          // Get order details
+          const client = await pool.connect();
+          try {
+            await client.query("BEGIN");          // Get order details
           const orderQuery = `
             SELECT id, order_status, payment_status
             FROM customer_order 
@@ -104,17 +114,38 @@ export async function POST(request: NextRequest) {
                 // You might want to handle this case differently - maybe set order to processing
                 // and send notification to admin about stock issue
               } else {
+                console.log(`✅ Successfully reduced inventory for item ${item.inventory_id} by ${item.quantity} units`);
+                
                 // Check for low stock notification after successful inventory update
+                console.log(`🔍 Checking low stock for item ${item.inventory_id} in branch ${branchId}`);
                 try {
-                  await NotificationService.checkAndCreateLowStockNotification(
-                    item.inventory_id,
-                    branchId
-                  );
+                  // Get updated inventory details for notification
+                  const inventoryAfterUpdate = await client.query(`
+                    SELECT inventory_name, quantity, low_stock_threshold
+                    FROM inventory_item 
+                    WHERE inventory_id = $1 AND branch_id = $2
+                  `, [item.inventory_id, branchId]);
+                  
+                  if (inventoryAfterUpdate.rows.length > 0) {
+                    const updatedItem = inventoryAfterUpdate.rows[0];
+                    console.log(`📊 Item ${updatedItem.inventory_name}: Current=${updatedItem.quantity}, Threshold=${updatedItem.low_stock_threshold}`);
+                    
+                    const notificationResult = await NotificationService.checkAndCreateLowStockNotification(
+                      item.inventory_id,
+                      branchId
+                    );
+                    if (notificationResult) {
+                      console.log(`✅ Created low stock notification:`, notificationResult);
+                    } else {
+                      console.log(`ℹ️ No notification needed for item ${item.inventory_id} (stock above threshold)`);
+                    }
+                  }
                 } catch (notificationError) {
                   console.error(
-                    `Failed to check low stock notification for item ${item.inventory_id}:`,
+                    `❌ Failed to check low stock notification for item ${item.inventory_id}:`,
                     notificationError
                   );
+                  console.error('Notification error details:', notificationError);
                   // Don't fail the payment processing if notification fails
                 }
               }
