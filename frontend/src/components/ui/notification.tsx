@@ -255,7 +255,7 @@ const NotificationComponent: React.FC<NotificationProps> = ({
       {/* Mobile Slide-in Panel */}
       {showMobilePanel && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 md:hidden"
+          className="fixed inset-0 backdrop-blur md:hidden"
           style={{ zIndex: 999999 }}
         >
           {/* Slide-in panel from right */}

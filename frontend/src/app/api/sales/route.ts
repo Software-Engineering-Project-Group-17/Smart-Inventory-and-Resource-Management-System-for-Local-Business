@@ -290,6 +290,13 @@ export async function POST(request: NextRequest) {
       )
     `;
 
+    // Update order status to completed
+    await sql`
+      UPDATE customer_order 
+      SET order_status = 'completed'
+      WHERE id = ${orderId}
+    `;
+
     // Generate invoice number
     const invoiceNumber = `INV-${orderId.toString().padStart(6, '0')}`;
 
