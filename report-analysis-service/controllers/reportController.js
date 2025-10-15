@@ -20,8 +20,38 @@ const parseRange = (start, end, col) => {
   return { where: parts.length ? parts.join(" AND ") : "", vals };
 };
 
+/** NEW: apply a parseRange() result while renumbering placeholders correctly */
+const applyRange = (whereArr, valsArr, dr, paramCount) => {
+  if (!dr.where) return paramCount;
+  const replaced = dr.where.replace(/\$\d+/g, () => {
+    paramCount += 1;
+    return `$${paramCount}`;
+  });
+  whereArr.push(replaced);
+  valsArr.push(...dr.vals);
+  return paramCount;
+};
+
+/** NEW: Build a branch filter that accepts numeric ID or name (ILIKE) */
+const addBranchFilter = (branch, whereArr, valsArr, tableAlias, paramCount) => {
+  if (!branch || !branch.trim()) return paramCount;
+  const b = branch.trim();
+  if (/^\d+$/.test(b)) {
+    // numeric ID
+    paramCount += 1;
+    valsArr.push(Number(b));
+    whereArr.push(`${tableAlias}.branch_id = $${paramCount}`);
+  } else {
+    // name (partial, case-insensitive). Requires LEFT JOIN branches b ... (already present in all queries below)
+    paramCount += 1;
+    valsArr.push(`%${b}%`);
+    whereArr.push(`b.name ILIKE $${paramCount}`);
+  }
+  return paramCount;
+};
+
 const validateFilters = (filters) => {
-  const { start, end, branch, status } = filters;
+  const { start, end /* branch, status */ } = filters;
   const errors = [];
 
   // Validate date format if provided
@@ -37,10 +67,7 @@ const validateFilters = (filters) => {
     errors.push("Start date must be before end date");
   }
 
-  // Validate branch (if provided, should be numeric or string)
-  if (branch && branch.trim() && isNaN(Number(branch)) && typeof branch !== 'string') {
-    errors.push("Invalid branch format");
-  }
+  // Branch can be ID or name — no format error here.
 
   return errors;
 };
@@ -77,7 +104,6 @@ export async function inventoryLowStock(req, res) {
   try {
     const { start, end, branch, status } = req.query;
     
-    // Validate input
     const validationErrors = validateFilters({ start, end, branch, status });
     if (validationErrors.length > 0) {
       return res.status(400).json({
@@ -90,21 +116,12 @@ export async function inventoryLowStock(req, res) {
     const vals = [];
     let paramCount = 0;
 
-    if (branch && branch.trim()) { 
-      paramCount++;
-      vals.push(branch.trim()); 
-      where.push(`ii.branch_id = $${paramCount}`); 
-    }
+    // CHANGED: accept branch name or ID
+    paramCount = addBranchFilter(branch, where, vals, 'ii', paramCount);
 
-    // Date range for updated_at if provided
+    // Date range for updated_at if provided (FIXED numbering)
     const dr = parseRange(start, end, "ii.updated_at");
-    if (dr.where) {
-      dr.vals.forEach(val => {
-        paramCount++;
-        vals.push(val);
-        where.push(dr.where.replace(/\$\d+/g, () => `$${paramCount}`));
-      });
-    }
+    paramCount = applyRange(where, vals, dr, paramCount);
 
     const sql = `
       SELECT 
@@ -153,11 +170,9 @@ export async function ordersSummary(req, res) {
     const vals = [];
     let paramCount = 0;
 
-    if (branch && branch.trim()) { 
-      paramCount++;
-      vals.push(branch.trim()); 
-      where.push(`co.branch_id = $${paramCount}`); 
-    }
+    // CHANGED: branch name or ID
+    paramCount = addBranchFilter(branch, where, vals, 'co', paramCount);
+
     if (status && status.trim()) { 
       paramCount++;
       vals.push(status.trim().toLowerCase()); 
@@ -165,13 +180,7 @@ export async function ordersSummary(req, res) {
     }
 
     const dr = parseRange(start, end, "co.created_at");
-    if (dr.where) {
-      dr.vals.forEach(val => {
-        paramCount++;
-        vals.push(val);
-        where.push(dr.where.replace(/\$\d+/g, () => `$${paramCount}`));
-      });
-    }
+    paramCount = applyRange(where, vals, dr, paramCount);
 
     const sql = `
       SELECT
@@ -225,11 +234,9 @@ export async function customerHistory(req, res) {
     const vals = [];
     let paramCount = 0;
 
-    if (branch && branch.trim()) { 
-      paramCount++;
-      vals.push(branch.trim()); 
-      where.push(`co.branch_id = $${paramCount}`); 
-    }
+    // CHANGED: branch name or ID
+    paramCount = addBranchFilter(branch, where, vals, 'co', paramCount);
+
     if (status && status.trim()) { 
       paramCount++;
       vals.push(status.trim().toLowerCase()); 
@@ -237,13 +244,7 @@ export async function customerHistory(req, res) {
     }
 
     const dr = parseRange(start, end, "co.created_at");
-    if (dr.where) {
-      dr.vals.forEach(val => {
-        paramCount++;
-        vals.push(val);
-        where.push(dr.where.replace(/\$\d+/g, () => `$${paramCount}`));
-      });
-    }
+    paramCount = applyRange(where, vals, dr, paramCount);
 
     const sql = `
       SELECT
@@ -298,11 +299,9 @@ export async function resourcesAssignments(req, res) {
     const vals = [];
     let paramCount = 0;
 
-    if (branch && branch.trim()) { 
-      paramCount++;
-      vals.push(branch.trim()); 
-      where.push(`r.branch_id = $${paramCount}`); 
-    }
+    // CHANGED: branch name or ID
+    paramCount = addBranchFilter(branch, where, vals, 'r', paramCount);
+
     if (status && status.trim()) { 
       paramCount++;
       vals.push(status.trim().toLowerCase()); 
@@ -310,13 +309,7 @@ export async function resourcesAssignments(req, res) {
     }
 
     const dr = parseRange(start, end, "COALESCE(sra.assigned_at, r.created_at)");
-    if (dr.where) {
-      dr.vals.forEach(val => {
-        paramCount++;
-        vals.push(val);
-        where.push(dr.where.replace(/\$\d+/g, () => `$${paramCount}`));
-      });
-    }
+    paramCount = applyRange(where, vals, dr, paramCount);
 
     const sql = `
       SELECT
@@ -371,11 +364,9 @@ export async function restockSummary(req, res) {
     const vals = [];
     let paramCount = 0;
 
-    if (branch && branch.trim()) { 
-      paramCount++;
-      vals.push(branch.trim()); 
-      where.push(`rr.branch_id = $${paramCount}`); 
-    }
+    // CHANGED: branch name or ID
+    paramCount = addBranchFilter(branch, where, vals, 'rr', paramCount);
+
     if (status && status.trim()) { 
       paramCount++;
       vals.push(status.trim().toLowerCase()); 
@@ -383,13 +374,7 @@ export async function restockSummary(req, res) {
     }
 
     const dr = parseRange(start, end, "rr.created_at");
-    if (dr.where) {
-      dr.vals.forEach(val => {
-        paramCount++;
-        vals.push(val);
-        where.push(dr.where.replace(/\$\d+/g, () => `$${paramCount}`));
-      });
-    }
+    paramCount = applyRange(where, vals, dr, paramCount);
 
     const sql = `
       SELECT
@@ -444,11 +429,9 @@ export async function supplierOrderDetails(req, res) {
     const vals = [];
     let paramCount = 0;
 
-    if (branch && branch.trim()) { 
-      paramCount++;
-      vals.push(branch.trim()); 
-      where.push(`rr.branch_id = $${paramCount}`); 
-    }
+    // CHANGED: branch name or ID (filtering by rr.branch_id because POs are tied to requests)
+    paramCount = addBranchFilter(branch, where, vals, 'rr', paramCount);
+
     if (status && status.trim()) { 
       paramCount++;
       vals.push(status.trim().toLowerCase()); 
@@ -456,13 +439,7 @@ export async function supplierOrderDetails(req, res) {
     }
 
     const dr = parseRange(start, end, "so.created_at");
-    if (dr.where) {
-      dr.vals.forEach(val => {
-        paramCount++;
-        vals.push(val);
-        where.push(dr.where.replace(/\$\d+/g, () => `$${paramCount}`));
-      });
-    }
+    paramCount = applyRange(where, vals, dr, paramCount);
 
     const sql = `
       SELECT
@@ -522,11 +499,8 @@ export async function inventoryRestockTracking(req, res) {
     const vals = [];
     let paramCount = 0;
 
-    if (branch && branch.trim()) { 
-      paramCount++;
-      vals.push(branch.trim()); 
-      where.push(`ii.branch_id = $${paramCount}`); 
-    }
+    // CHANGED: branch name or ID
+    paramCount = addBranchFilter(branch, where, vals, 'ii', paramCount);
 
     const sql = `
       SELECT
