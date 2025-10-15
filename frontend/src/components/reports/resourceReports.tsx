@@ -447,19 +447,18 @@ export default function ResourcesReportsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Branch
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., HQ"
-                  value={filters.branch || ""}
-                  onChange={(e) =>
-                    setFilters((f) => ({ ...f, branch: e.target.value }))
-                  }
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
-                />
-              </div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Branch (name or ID)
+  </label>
+  <input
+    type="text"
+    placeholder="e.g., HQ or 1"
+    value={filters.branch || ""}
+    onChange={(e) => setFilters((f) => ({ ...f, branch: e.target.value.trimStart() }))}
+    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
+  />
+</div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
