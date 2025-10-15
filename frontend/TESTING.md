@@ -27,6 +27,71 @@ pnpm test:ui
 pnpm test:coverage
 ```
 
+## Running Individual Test Files
+
+### Component Tests
+
+```bash
+# Inventory Components
+pnpm vitest run "src/components/inventory/__tests__/InventoryList.test.tsx"
+pnpm vitest run "src/components/inventory/__tests__/StatsCards.test.tsx"
+pnpm vitest run "src/components/inventory/__tests__/SimpleInventoryFilters.test.tsx"
+```
+
+### Page Tests
+
+```bash
+# Sales Page
+pnpm vitest run "src/app/(site)/sales/__tests__/page.test.tsx"
+
+# Inventory Pages
+pnpm vitest run "src/app/(site)/inventory/__tests__/page.test.tsx"
+pnpm vitest run "src/app/(site)/inventory/addItem/__tests__/page.test.tsx"
+```
+
+### API Route Tests
+
+```bash
+# Sales API
+pnpm vitest run "src/app/api/sales/__tests__/route.test.ts"
+
+# Inventory API
+pnpm vitest run "src/app/api/inventory/__tests__/route.test.ts"
+```
+
+### Hook Tests
+
+```bash
+# Inventory Data Hook
+pnpm vitest run "src/hooks/__tests__/useInventoryData.test.ts"
+```
+
+### Utility Tests
+
+```bash
+# Utility Functions
+pnpm vitest run "src/lib/__tests__/utils.test.ts"
+```
+
+## Running All Tests by Category
+
+```bash
+# Run all component tests
+pnpm vitest run "src/components/**/__tests__/*.test.tsx"
+
+# Run all page tests
+pnpm vitest run "src/app/(site)/**/__tests__/*.test.tsx"
+
+# Run all API route tests
+pnpm vitest run "src/app/api/**/__tests__/*.test.ts"
+
+# Run all hook tests
+pnpm vitest run "src/hooks/**/__tests__/*.test.ts"
+
+# Run all utility tests
+pnpm vitest run "src/lib/**/__tests__/*.test.ts"
+```
+
 ## Test Structure
 
 ### Component Tests
@@ -254,13 +319,44 @@ export default defineConfig({
 
 ```bash
 # Run specific test file
-pnpm test sales.test.tsx
+pnpm vitest run "src/app/(site)/sales/__tests__/page.test.tsx"
 
 # Run tests matching pattern
-pnpm test --grep "should calculate total"
+pnpm vitest run --grep "should calculate total"
+
+# Run test in watch mode (useful for debugging)
+pnpm vitest watch "src/app/(site)/sales/__tests__/page.test.tsx"
 
 # Debug in VS Code
 # Add breakpoints and run in debug mode
+```
+
+## Quick Test Reference
+
+### All Test Files Quick Commands
+
+```bash
+# Copy and paste any of these commands to run specific tests:
+
+# Components
+pnpm vitest run "src/components/inventory/__tests__/InventoryList.test.tsx"
+pnpm vitest run "src/components/inventory/__tests__/StatsCards.test.tsx"
+pnpm vitest run "src/components/inventory/__tests__/SimpleInventoryFilters.test.tsx"
+
+# Pages
+pnpm vitest run "src/app/(site)/sales/__tests__/page.test.tsx"
+pnpm vitest run "src/app/(site)/inventory/__tests__/page.test.tsx"
+pnpm vitest run "src/app/(site)/inventory/addItem/__tests__/page.test.tsx"
+
+# API Routes
+pnpm vitest run "src/app/api/sales/__tests__/route.test.ts"
+pnpm vitest run "src/app/api/inventory/__tests__/route.test.ts"
+
+# Hooks
+pnpm vitest run "src/hooks/__tests__/useInventoryData.test.ts"
+
+# Utils
+pnpm vitest run "src/lib/__tests__/utils.test.ts"
 ```
 
 ## Coverage Reports

@@ -108,8 +108,7 @@ export async function GET(request: NextRequest) {
       // Send initial notifications
       sendNotifications();
 
-      // Set up polling every 10 seconds for new notifications
-      // Note: In production, you'd want to use database triggers or WebSocket for true real-time
+      // Set interval to send notifications every 10 seconds
       intervalId = setInterval(sendNotifications, 10000);
     },
 

@@ -5,14 +5,32 @@ import { NextRequest } from 'next/server'
 // Mock the neon database
 vi.mock('@neondatabase/serverless', () => ({
   neon: vi.fn(() => {
-    return vi.fn().mockImplementation((query) => {
+    // Return a function that acts as a tagged template
+    const sqlFunction = (strings: TemplateStringsArray | string[], ...values: any[]) => {
+      const queryString = Array.isArray(strings) ? strings.join('?') : strings;
+      
       // Mock staff query
-      if (query.text?.includes('SELECT s.branch_id FROM staff')) {
+      if (queryString.includes('SELECT s.branch_id FROM staff') || 
+          queryString.includes('SELECT s.branch_id')) {
         return Promise.resolve([{ branch_id: 1 }])
       }
       
-      // Mock inventory query
-      if (query.text?.includes('SELECT') && query.text?.includes('inventory_item')) {
+      // Mock inventory search by barcode
+      if (queryString.includes('barcode') && (queryString.includes('ILIKE') || queryString.includes('WHERE'))) {
+        return Promise.resolve([
+          {
+            id: 1,
+            name: 'Test Product',
+            barcode: '123456789',
+            price: '10.99',
+            stock: '50',
+            category: 'Electronics'
+          }
+        ])
+      }
+      
+      // Mock inventory search by name or general inventory query
+      if (queryString.includes('inventory_name') || queryString.includes('inventory_item')) {
         return Promise.resolve([
           {
             id: 1,
@@ -26,14 +44,33 @@ vi.mock('@neondatabase/serverless', () => ({
       }
       
       // Mock order creation
-      if (query.text?.includes('INSERT INTO customer_order')) {
+      if (queryString.includes('INSERT INTO customer_order')) {
         return Promise.resolve([{ id: 1 }])
+      }
+      
+      // Mock order items insertion
+      if (queryString.includes('INSERT INTO order_item')) {
+        return Promise.resolve([])
+      }
+      
+      // Mock inventory update
+      if (queryString.includes('UPDATE inventory_item')) {
+        return Promise.resolve([])
       }
       
       // Default response
       return Promise.resolve([])
-    })
+    }
+    
+    return sqlFunction
   })
+}))
+
+// Mock the notification service
+vi.mock('@/lib/notification-service', () => ({
+  NotificationService: vi.fn(() => ({
+    sendLowStockAlert: vi.fn(),
+  })),
 }))
 
 describe('/api/sales', () => {

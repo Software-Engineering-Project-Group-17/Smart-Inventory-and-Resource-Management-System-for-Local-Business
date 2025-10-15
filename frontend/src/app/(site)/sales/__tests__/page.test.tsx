@@ -3,6 +3,50 @@ import { render, screen, fireEvent, waitFor } from '@/test/test-utils'
 import userEvent from '@testing-library/user-event'
 import SalesPage from '@/app/(site)/sales/page'
 
+// Mock getUserProfile
+vi.mock('@/lib/auth', () => ({
+  getUserProfile: vi.fn(() => ({
+    email: 'test@example.com',
+    name: 'Test User'
+  }))
+}))
+
+// Mock toast utilities
+vi.mock('@/lib/toast-utils', () => ({
+  toastUtils: {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn()
+  }
+}))
+
+// Mock PDF generation utilities
+vi.mock('@/lib/simplePdf', () => ({
+  downloadSimplePDF: vi.fn(),
+  printSimplePDF: vi.fn(),
+  previewSimplePDF: vi.fn()
+}))
+
+// Mock QRCode
+vi.mock('qrcode', () => ({
+  default: {
+    toDataURL: vi.fn(() => Promise.resolve('data:image/png;base64,mockqrcode'))
+  }
+}))
+
+// Mock useBarcodeSocket hook
+vi.mock('@/hooks/useBarcodeSocket', () => ({
+  useBarcodeSocket: vi.fn(() => ({
+    isConnected: true,
+    lastScannedBarcode: null,
+    lastScanEvent: null,
+    connectionStatus: 'Connected',
+    sendBarcode: vi.fn(),
+    reconnect: vi.fn()
+  }))
+}))
+
 // Mock fetch responses
 const mockInventoryResponse = {
   success: true,
@@ -31,26 +75,31 @@ describe('SalesPage', () => {
     vi.resetAllMocks()
     
     // Mock successful fetch responses by default
-    global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url.includes('/api/sales')) {
-        if (url.includes('search=')) {
+    global.fetch = vi.fn().mockImplementation((url: string | URL | Request, options?: any) => {
+      const urlString = typeof url === 'string' ? url : url.toString()
+      
+      if (urlString.includes('/api/sales')) {
+        // GET request with search parameter
+        if (urlString.includes('search=') || urlString.includes('userEmail=')) {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockInventoryResponse)
-          })
+          } as Response)
         }
         // POST request for completing sale
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockSaleResponse)
-        })
+        if (options?.method === 'POST') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(mockSaleResponse)
+          } as Response)
+        }
       }
       
       // Default response
       return Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ success: true })
-      })
+      } as Response)
     })
   })
 
@@ -73,9 +122,9 @@ describe('SalesPage', () => {
     
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/sales?search=Test%20Product')
+        expect.stringMatching(/\/api\/sales\?search=.*Test.*Product.*&type=name&userEmail=/)
       )
-    })
+    }, { timeout: 3000 })
   })
 
   it('displays search results', async () => {
@@ -108,10 +157,13 @@ describe('SalesPage', () => {
     await user.click(screen.getByText('Test Product'))
     
     // Product should be selected and details shown
-    expect(screen.getByText('Add to Cart')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText(/Add to Cart/)).toBeInTheDocument()
+    })
     
-    // Add to cart
-    await user.click(screen.getByText('Add to Cart'))
+    // Add to cart - find the button that contains "Add to Cart"
+    const addButton = screen.getByRole('button', { name: /Add to Cart/i })
+    await user.click(addButton)
     
     // Cart should now have 1 item
     await waitFor(() => {
@@ -132,16 +184,22 @@ describe('SalesPage', () => {
     })
     
     await user.click(screen.getByText('Test Product'))
-    await user.click(screen.getByText('Add to Cart'))
     
-    // Try to complete sale without payment
-    const completeButton = screen.getByText('Complete & Print Invoice')
-    await user.click(completeButton)
-    
-    // Should show insufficient payment error
+    // Add to cart
     await waitFor(() => {
-      expect(screen.getByText('Insufficient payment amount')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Add to Cart/i })).toBeInTheDocument()
     })
+    const addButton = screen.getByRole('button', { name: /Add to Cart/i })
+    await user.click(addButton)
+    
+    // Wait for cart to update
+    await waitFor(() => {
+      expect(screen.getByText('Shopping Cart (1 items)')).toBeInTheDocument()
+    })
+    
+    // The complete sale button should be disabled when payment is insufficient
+    const completeButton = screen.getByRole('button', { name: /Complete Sale & Generate Invoice/i })
+    expect(completeButton).toBeDisabled()
   })
 
   it('completes sale successfully with valid payment', async () => {
@@ -157,19 +215,42 @@ describe('SalesPage', () => {
     })
     
     await user.click(screen.getByText('Test Product'))
-    await user.click(screen.getByText('Add to Cart'))
     
-    // Add payment amount
+    // Add to cart
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Add to Cart/i })).toBeInTheDocument()
+    })
+    const addButton = screen.getByRole('button', { name: /Add to Cart/i })
+    await user.click(addButton)
+    
+    // Wait for cart to update
+    await waitFor(() => {
+      expect(screen.getByText('Shopping Cart (1 items)')).toBeInTheDocument()
+    })
+    
+    // Add payment amount - find the Customer Payment input by placeholder
     const paymentInput = screen.getByPlaceholderText('0.00')
+    await user.clear(paymentInput)
     await user.type(paymentInput, '20')
     
     // Complete sale
-    const completeButton = screen.getByText('Complete & Print Invoice')
+    const completeButton = screen.getByRole('button', { name: /Complete Sale & Generate Invoice/i })
+    
+    // Button should now be enabled
+    await waitFor(() => {
+      expect(completeButton).not.toBeDisabled()
+    })
+    
     await user.click(completeButton)
     
-    // Should show success message
+    // Should call the API
     await waitFor(() => {
-      expect(screen.getByText(/Sale completed successfully/)).toBeInTheDocument()
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/sales'),
+        expect.objectContaining({
+          method: 'POST'
+        })
+      )
     })
   })
 

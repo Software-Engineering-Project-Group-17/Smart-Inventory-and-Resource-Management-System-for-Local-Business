@@ -8,7 +8,13 @@ vi.mock('@/hooks/useAuth', () => ({
   withAuth: (Component: any) => Component,
 }))
 
-// Mock the inventory data hook
+// Mock showRoleAccessNotification and hasAnyRole
+vi.mock('@/lib/auth', () => ({
+  showRoleAccessNotification: vi.fn(),
+  hasAnyRole: vi.fn(() => true), // Mock to return true by default
+}))
+
+// Mock inventory data hook
 const mockInventoryData = {
   inventory: [
     {
@@ -43,7 +49,7 @@ const mockInventoryData = {
   },
   stats: {
     totalItems: 2,
-    totalValue: 900.00, // (50 * 15) + (5 * 30) = 750 + 150 = 900
+    totalValue: 900.00,
     lowStockCount: 1,
     categoriesCount: 2
   },
@@ -70,8 +76,11 @@ const mockInventoryData = {
   refreshInventory: vi.fn(),
 }
 
+// Create a mutable mock that we can update per test
+let currentMockData = { ...mockInventoryData }
+
 vi.mock('@/hooks/useInventoryData', () => ({
-  useInventoryData: () => mockInventoryData,
+  useInventoryData: () => currentMockData,
 }))
 
 // Mock Next.js Link component
@@ -86,13 +95,16 @@ vi.mock('next/link', () => ({
 describe('InventoryPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset mock data to default before each test
+    currentMockData = { ...mockInventoryData }
   })
 
   it('renders the inventory page correctly', () => {
     render(<InventoryPage />)
 
     expect(screen.getByText('Inventory Management')).toBeInTheDocument()
-    expect(screen.getByText('Main Branch - Downtown')).toBeInTheDocument()
+    expect(screen.getByText('Main Branch')).toBeInTheDocument()
+    expect(screen.getByText('Downtown')).toBeInTheDocument()
     expect(screen.getByText('Add Category')).toBeInTheDocument()
     expect(screen.getByText('Add Item')).toBeInTheDocument()
     expect(screen.getByText('Restock Request')).toBeInTheDocument()
@@ -103,8 +115,13 @@ describe('InventoryPage', () => {
     render(<InventoryPage />)
 
     expect(screen.getByText('Total Items')).toBeInTheDocument()
-    expect(screen.getByText('2')).toBeInTheDocument()
-    expect(screen.getByText('Total Value')).toBeInTheDocument()
+    // Use getAllByText since "2" appears twice (Total Items: 2, Categories: 2)
+    const twoElements = screen.getAllByText('2')
+    expect(twoElements.length).toBeGreaterThanOrEqual(1)
+    
+    // Use getAllByText since "Total Value" appears in both stats card and table header
+    const totalValueElements = screen.getAllByText('Total Value')
+    expect(totalValueElements.length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('$900.00')).toBeInTheDocument()
     expect(screen.getByText('Low Stock Items')).toBeInTheDocument()
     expect(screen.getByText('1')).toBeInTheDocument()
@@ -144,31 +161,32 @@ describe('InventoryPage', () => {
 
     expect(screen.getByText('Test Product 1')).toBeInTheDocument()
     expect(screen.getByText('Low Stock Item')).toBeInTheDocument()
-    expect(screen.getByText('Electronics')).toBeInTheDocument()
-    expect(screen.getByText('Clothing')).toBeInTheDocument()
+    // Use getAllByText since "Electronics" and "Clothing" appear in both filter dropdown and table
+    const electronicsElements = screen.getAllByText('Electronics')
+    expect(electronicsElements.length).toBeGreaterThanOrEqual(1)
+    const clothingElements = screen.getAllByText('Clothing')
+    expect(clothingElements.length).toBeGreaterThanOrEqual(1)
   })
 
   it('handles loading state correctly', () => {
-    const loadingMockData = {
+    // Update the mock data for this test
+    currentMockData = {
       ...mockInventoryData,
       isLoading: true,
     }
 
-    vi.mocked(require('@/hooks/useInventoryData').useInventoryData).mockReturnValue(loadingMockData)
-
     render(<InventoryPage />)
 
     // Should show loading animation
-    expect(document.querySelector('.animate-pulse')).toBeInTheDocument()
+    expect(document.querySelector('.animate-spin')).toBeInTheDocument()
   })
 
   it('handles error state correctly', () => {
-    const errorMockData = {
+    // Update the mock data for this test
+    currentMockData = {
       ...mockInventoryData,
       error: 'Failed to load inventory data',
     }
-
-    vi.mocked(require('@/hooks/useInventoryData').useInventoryData).mockReturnValue(errorMockData)
 
     render(<InventoryPage />)
 
@@ -179,19 +197,19 @@ describe('InventoryPage', () => {
 
   it('can retry loading inventory after error', async () => {
     const user = userEvent.setup()
-    const errorMockData = {
+    
+    // Update the mock data for this test
+    currentMockData = {
       ...mockInventoryData,
       error: 'Failed to load inventory data',
     }
-
-    vi.mocked(require('@/hooks/useInventoryData').useInventoryData).mockReturnValue(errorMockData)
 
     render(<InventoryPage />)
 
     const tryAgainButton = screen.getByText('Try Again')
     await user.click(tryAgainButton)
 
-    expect(mockInventoryData.refreshInventory).toHaveBeenCalled()
+    expect(currentMockData.refreshInventory).toHaveBeenCalled()
   })
 
   it('has correct navigation links', () => {
@@ -207,12 +225,11 @@ describe('InventoryPage', () => {
   })
 
   it('does not show low stock alert when showLowStockOnly is true', () => {
-    const filteredMockData = {
+    // Update the mock data for this test
+    currentMockData = {
       ...mockInventoryData,
       showLowStockOnly: true,
     }
-
-    vi.mocked(require('@/hooks/useInventoryData').useInventoryData).mockReturnValue(filteredMockData)
 
     render(<InventoryPage />)
 
@@ -220,7 +237,8 @@ describe('InventoryPage', () => {
   })
 
   it('does not show low stock alert when there are no low stock items', () => {
-    const noLowStockMockData = {
+    // Update the mock data for this test
+    currentMockData = {
       ...mockInventoryData,
       lowStockItems: [],
       stats: {
@@ -228,8 +246,6 @@ describe('InventoryPage', () => {
         lowStockCount: 0,
       }
     }
-
-    vi.mocked(require('@/hooks/useInventoryData').useInventoryData).mockReturnValue(noLowStockMockData)
 
     render(<InventoryPage />)
 

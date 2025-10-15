@@ -1,7 +1,22 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { InventoryTable } from '../InventoryList'
 import { InventoryItem } from '@/lib/api/inventory'
+
+// Mock the auth module
+vi.mock('@/lib/auth', () => ({
+  getUserProfile: vi.fn(() => ({ email: 'test@example.com', name: 'Test User' })),
+  hasAnyRole: vi.fn(() => false), // Default to false (no edit permissions)
+}))
+
+// Mock toast utils
+vi.mock('@/lib/toast-utils', () => ({
+  toastUtils: {
+    formSuccess: vi.fn(),
+    error: vi.fn(),
+    networkError: vi.fn(),
+  },
+}))
 
 const mockInventoryItems: InventoryItem[] = [
   {
@@ -37,6 +52,10 @@ const mockInventoryItems: InventoryItem[] = [
 ]
 
 describe('InventoryTable', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('displays loading state correctly', () => {
     render(<InventoryTable inventory={[]} isLoading={true} />)
 
@@ -54,29 +73,34 @@ describe('InventoryTable', () => {
   it('renders inventory table with items correctly', () => {
     render(<InventoryTable inventory={mockInventoryItems} isLoading={false} />)
 
-    // Check table headers
+    // Check table headers (actual headers from component)
     expect(screen.getByText('Item Details')).toBeInTheDocument()
     expect(screen.getByText('Category')).toBeInTheDocument()
     expect(screen.getByText('Stock')).toBeInTheDocument()
     expect(screen.getByText('Unit Price')).toBeInTheDocument()
+    expect(screen.getByText('Low Stock Threshold')).toBeInTheDocument()
     expect(screen.getByText('Total Value')).toBeInTheDocument()
     expect(screen.getByText('Status')).toBeInTheDocument()
 
     // Check inventory item data
     expect(screen.getByText('Test Product 1')).toBeInTheDocument()
-    expect(screen.getByText('Electronics')).toBeInTheDocument()
+    // Category badges appear in the table
+    const electronicsElements = screen.getAllByText('Electronics')
+    expect(electronicsElements.length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('50')).toBeInTheDocument()
     expect(screen.getByText('$15.00')).toBeInTheDocument()
     expect(screen.getByText('$750.00')).toBeInTheDocument() // 50 * 15.00
 
     expect(screen.getByText('Low Stock Item')).toBeInTheDocument()
-    expect(screen.getByText('Clothing')).toBeInTheDocument()
+    const clothingElements = screen.getAllByText('Clothing')
+    expect(clothingElements.length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('5')).toBeInTheDocument()
     expect(screen.getByText('$30.00')).toBeInTheDocument()
     expect(screen.getByText('$150.00')).toBeInTheDocument() // 5 * 30.00
 
     expect(screen.getByText('Out of Stock Item')).toBeInTheDocument()
-    expect(screen.getByText('Food')).toBeInTheDocument()
+    const foodElements = screen.getAllByText('Food')
+    expect(foodElements.length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('0')).toBeInTheDocument()
     expect(screen.getByText('$8.00')).toBeInTheDocument()
     expect(screen.getByText('$0.00')).toBeInTheDocument() // 0 * 8.00
@@ -85,8 +109,10 @@ describe('InventoryTable', () => {
   it('displays correct status badges for different stock levels', () => {
     render(<InventoryTable inventory={mockInventoryItems} isLoading={false} />)
 
-    // Low stock item should show warning badge (currentStock <= reorderLevel)
-    expect(screen.getByText('Low Stock')).toBeInTheDocument()
+    // Low stock items should show warning badge (currentStock <= reorderLevel)
+    // Multiple items can have "Low Stock" badge
+    const lowStockBadges = screen.getAllByText('Low Stock')
+    expect(lowStockBadges.length).toBeGreaterThanOrEqual(1)
 
     // Normal stock item should show in stock badge
     expect(screen.getByText('In Stock')).toBeInTheDocument()
@@ -95,9 +121,10 @@ describe('InventoryTable', () => {
   it('displays reorder levels correctly', () => {
     render(<InventoryTable inventory={mockInventoryItems} isLoading={false} />)
 
-    expect(screen.getByText('Reorder at: 10')).toBeInTheDocument()
-    expect(screen.getByText('Reorder at: 20')).toBeInTheDocument()
-    expect(screen.getByText('Reorder at: 15')).toBeInTheDocument()
+    // The component shows reorder levels in the "Low Stock Threshold" column
+    expect(screen.getByText('10')).toBeInTheDocument()
+    expect(screen.getByText('20')).toBeInTheDocument()
+    expect(screen.getByText('15')).toBeInTheDocument()
   })
 
   it('calculates total values correctly', () => {
@@ -134,7 +161,8 @@ describe('InventoryTable', () => {
     
     render(<InventoryTable inventory={[itemWithEmptyName]} isLoading={false} />)
 
-    expect(screen.getByText('Electronics')).toBeInTheDocument()
+    const electronicsElements = screen.getAllByText('Electronics')
+    expect(electronicsElements.length).toBeGreaterThanOrEqual(1)
   })
 
   it('handles zero quantity correctly', () => {
@@ -157,7 +185,9 @@ describe('InventoryTable', () => {
     
     render(<InventoryTable inventory={[itemAtReorderLevel]} isLoading={false} />)
 
-    expect(screen.getByText('10')).toBeInTheDocument()
+    // "10" appears in both Stock column and Low Stock Threshold column
+    const tenElements = screen.getAllByText('10')
+    expect(tenElements.length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('Low Stock')).toBeInTheDocument()
   })
 
