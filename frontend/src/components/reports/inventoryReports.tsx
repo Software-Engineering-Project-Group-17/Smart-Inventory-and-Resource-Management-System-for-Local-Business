@@ -1,30 +1,32 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { 
-  FileText, 
-  RefreshCw, 
-  Download, 
-  Printer, 
+import {
+  FileText,
+  RefreshCw,
+  Download,
+  Printer,
   Search,
   Package,
   TrendingDown,
   Calendar,
   Filter,
-  AlertTriangle
-} from 'lucide-react';
+  AlertTriangle,
+} from "lucide-react";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
-// Types and helpers (same as original)
+// Types and helpers
 type Row = Record<string, string | number | boolean | null | undefined>;
 
 interface Filters {
   start?: string;
   end?: string;
-  branch?: string;
+  branch?: string; // editable unless non-zero branchId is found -> then locked
   status?: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_REPORTS_ANALYTICS_API_URL || 'http://localhost:4005';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_REPORTS_ANALYTICS_API_URL || "http://localhost:4005";
 
 function toCSV(rows: Row[]): string {
   if (!rows.length) return "";
@@ -36,7 +38,9 @@ function toCSV(rows: Row[]): string {
     return s;
   };
   const headerLine = headers.map(escape).join(",");
-  const bodyLines = rows.map((r) => headers.map((h) => escape((r as any)[h])).join(","));
+  const bodyLines = rows.map((r) =>
+    headers.map((h) => escape((r as any)[h])).join(",")
+  );
   return [headerLine, ...bodyLines].join("\n");
 }
 
@@ -53,28 +57,64 @@ function downloadCSV(filename: string, rows: Row[]) {
   URL.revokeObjectURL(url);
 }
 
+/** Extract branchId from various possible shapes. Returns a number or null. */
+function extractBranchId(source: any): number | null {
+  if (!source || typeof source !== "object") return null;
+  const candidates = [
+    source.branchId,
+    source.branch_id,
+    source.branchID,
+    source.branch?.id,
+    source.branch?.branchId,
+    source.user?.branchId,
+    source.user?.branch?.id,
+  ];
+  for (const c of candidates) {
+    const n = Number(c);
+    if (!Number.isNaN(n) && Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+/** Extract branchName if present (optional, best-effort) */
+function extractBranchName(source: any): string | null {
+  if (!source || typeof source !== "object") return null;
+  return (
+    source.branchName ??
+    source.branch_name ??
+    source.branch?.name ??
+    source.user?.branchName ??
+    source.user?.branch?.name ??
+    null
+  );
+}
+
 async function getData(report: string, filters: Filters): Promise<Row[]> {
   try {
     const queryParams = new URLSearchParams();
-    if (filters.start) queryParams.append('start', filters.start);
-    if (filters.end) queryParams.append('end', filters.end);
-    if (filters.branch) queryParams.append('branch', filters.branch);
-    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.start) queryParams.append("start", filters.start);
+    if (filters.end) queryParams.append("end", filters.end);
+    if (filters.branch) queryParams.append("branch", filters.branch);
+    if (filters.status) queryParams.append("status", filters.status);
 
     const queryString = queryParams.toString();
-    const url = `${API_BASE_URL}/api/reports/${report}${queryString ? `?${queryString}` : ''}`;
+    const url = `${API_BASE_URL}/api/reports/${report}${
+      queryString ? `?${queryString}` : ""
+    }`;
 
     const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch data: ${response.status} ${response.statusText}`
+      );
     }
 
     const data = await response.json();
-    
+
     if (Array.isArray(data)) return data;
     else if (data.data && Array.isArray(data.data)) return data.data;
     else if (data.success && Array.isArray(data.result)) return data.result;
@@ -100,45 +140,120 @@ export default function InventoryReportsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Branch lock logic (lock when a non-zero branchId is found)
+  const [userBranchId, setUserBranchId] = useState<string | null>(null);
+  const [isBranchLocked, setIsBranchLocked] = useState<boolean>(false);
+  const [ready, setReady] = useState(false);
+  const [refreshIndex, setRefreshIndex] = useState(0);
+
   // Inventory-specific reports
   const INVENTORY_REPORTS = {
     "inventory-low-stock": {
       label: "Low Stock Alert",
       icon: AlertTriangle,
-      description: "Items below restock threshold"
+      description: "Items below restock threshold",
     },
     "restock-summary": {
-      label: "Restock Summary", 
+      label: "Restock Summary",
       icon: Package,
-      description: "Inventory restocking overview"
+      description: "Inventory restocking overview",
     },
     "inventory-restock-tracking": {
       label: "Restock Tracking",
       icon: TrendingDown,
-      description: "Track incoming inventory"
-    }
+      description: "Track incoming inventory",
+    },
   };
 
-  // Update URL in browser (if needed)
+  // Resolve branchId: use authenticatedFetch ONLY for /api/profile
   useEffect(() => {
-    // In a real Next.js app, you would update the URL here
-    // For now, we'll just track the state locally
-    console.log('Report changed to:', report, 'with filters:', filters);
-  }, [report, filters]);
+    (async () => {
+      try {
+        const localJson = localStorage.getItem("userProfile");
+        const localUser = localJson ? JSON.parse(localJson) : null;
 
+        // 1) Try localStorage first.
+        let branchNum = extractBranchId(localUser);
+        let branchName = extractBranchName(localUser);
+
+        // 2) Fallback to authenticated profile call.
+        if ((branchNum == null || Number.isNaN(branchNum)) && localUser?.id) {
+          const res = await authenticatedFetch("/api/profile", {
+            headers: {
+              "x-user-id": String(localUser.id),
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (res.ok) {
+            const payload = await res.json();
+            const userPayload = payload?.user ?? payload;
+            branchNum = extractBranchId(userPayload);
+            branchName = extractBranchName(userPayload);
+
+            // Persist merged profile into localStorage for next time
+            if (branchNum != null) {
+              const merged = {
+                ...(localUser || {}),
+                ...(userPayload || {}),
+                branchId: branchNum,
+                ...(branchName ? { branchName } : {}),
+              };
+              localStorage.setItem("userProfile", JSON.stringify(merged));
+            }
+          } else {
+            console.warn(
+              "[Inventory Analytics] /api/profile failed:",
+              res.status,
+              res.statusText
+            );
+          }
+        }
+
+        // If we have a non-zero branch, lock it.
+        if (branchNum != null && Number.isFinite(branchNum) && branchNum !== 0) {
+          const branchStr = String(branchNum);
+          setUserBranchId(branchStr);
+          setIsBranchLocked(true);
+          setFilters((f) => ({ ...f, branch: branchStr }));
+        } else {
+          // No branch assigned (or zero) — allow manual branch filtering
+          setUserBranchId(null);
+          setIsBranchLocked(false);
+        }
+      } catch (e) {
+        console.error("[Inventory Analytics] Branch resolution error:", e);
+        // On error, still allow page to work with an editable branch filter.
+        setIsBranchLocked(false);
+      } finally {
+        setReady(true);
+      }
+    })();
+  }, []);
+
+  // Fetch when ready, using locked branch if available; otherwise whatever user typed.
   useEffect(() => {
+    if (!ready) return;
+
     let active = true;
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getData(report, filters);
+        const effectiveBranch = isBranchLocked
+          ? userBranchId || undefined
+          : filters.branch?.trim() || undefined;
+
+        const data = await getData(report, {
+          ...filters,
+          branch: effectiveBranch, // undefined -> all branches
+        });
         if (active) setRows(data);
       } catch (err) {
         if (active) {
           setError(
-            err instanceof Error 
-              ? `Failed to load report data: ${err.message}` 
+            err instanceof Error
+              ? `Failed to load report data: ${err.message}`
               : "Failed to load report data. Please try again."
           );
         }
@@ -146,8 +261,21 @@ export default function InventoryReportsPage() {
         if (active) setLoading(false);
       }
     })();
-    return () => { active = false; };
-  }, [report, filters]);
+
+    return () => {
+      active = false;
+    };
+  }, [
+    ready,
+    isBranchLocked,
+    userBranchId,
+    report,
+    filters.start,
+    filters.end,
+    filters.status,
+    filters.branch,
+    refreshIndex,
+  ]);
 
   const filteredRows = useMemo(() => {
     if (!searchQuery) return rows;
@@ -158,59 +286,76 @@ export default function InventoryReportsPage() {
   }, [rows, searchQuery]);
 
   const canExport = filteredRows.length > 0;
-  const currentReport = INVENTORY_REPORTS[report as keyof typeof INVENTORY_REPORTS];
+  const currentReport =
+    INVENTORY_REPORTS[report as keyof typeof INVENTORY_REPORTS];
 
   const handleDownloadPDF = async () => {
-  if (!filteredRows.length) return;
+    if (!filteredRows.length) return;
 
-  const [{ jsPDF }, autoTableModule] = await Promise.all([
-    import('jspdf'),
-    import('jspdf-autotable')
-  ]);
+    const [{ jsPDF }, autoTableModule] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
 
-  const autoTable = autoTableModule.default;
-  const doc = new jsPDF({ orientation: 'l', unit: 'pt' }); // landscape for wide tables
+    const autoTable = autoTableModule.default;
+    const doc = new jsPDF({ orientation: "l", unit: "pt" }); // landscape for wide tables
 
-  const headers = Object.keys(filteredRows[0]);
-  const head = [headers.map(h => h.replace(/_/g, ' '))];
-  const body = filteredRows.map(r => headers.map(h => String((r as any)[h] ?? '')));
+    const headers = Object.keys(filteredRows[0]);
+    const head = [headers.map((h) => h.replace(/_/g, " "))];
+    const body = filteredRows.map((r) =>
+      headers.map((h) => String((r as any)[h] ?? ""))
+    );
 
-  // Header
-  doc.setFontSize(16);
-  doc.text(currentReport.label, 40, 32);
-  doc.setFontSize(10);
-  doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 48);
+    // Header
+    doc.setFontSize(16);
+    doc.text(currentReport.label, 40, 32);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 48);
 
-  // Table
-  autoTable(doc, {
-    head,
-    body,
-    startY: 60,
-    margin: { left: 40, right: 40 },
-    styles: { fontSize: 8, cellPadding: 4, overflow: 'linebreak' },
-    headStyles: { fillColor: [54, 116, 181], textColor: 255 },
-    didDrawPage: (data) => {
-      // optional footer
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      doc.setFontSize(9);
-      doc.text(
-        `${report} • ${filteredRows.length} rows`,
-        pageWidth - 40,
-        pageHeight - 20,
-        { align: 'right' }
-      );
-    }
-  });
+    // Table
+    // @ts-ignore
+    autoTable(doc, {
+      head,
+      body,
+      startY: 60,
+      margin: { left: 40, right: 40 },
+      styles: { fontSize: 8, cellPadding: 4, overflow: "linebreak" },
+      headStyles: { fillColor: [54, 116, 181], textColor: 255 },
+      didDrawPage: () => {
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        doc.setFontSize(9);
+        doc.text(
+          `${report} • ${filteredRows.length} rows`,
+          pageWidth - 40,
+          pageHeight - 20,
+          { align: "right" }
+        );
+      },
+    });
 
-  doc.save(`${report}-${new Date().toISOString().split('T')[0]}.pdf`);
-};
-
+    doc.save(`${report}-${new Date().toISOString().split("T")[0]}.pdf`);
+  };
 
   const handleRetry = () => {
     setError(null);
-    setFilters((prev) => ({ ...prev }));
+    setRefreshIndex((i) => i + 1);
   };
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="p-8 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#3674B5] mb-4"></div>
+            <p className="text-gray-500 text-lg font-medium">
+              Preparing your inventory reports…
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
@@ -218,12 +363,19 @@ export default function InventoryReportsPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 rounded-xl text-white" style={{ backgroundColor: "#3674B5" }}>
+            <div
+              className="p-3 rounded-xl text-white"
+              style={{ backgroundColor: "#3674B5" }}
+            >
               <Package size={24} />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Inventory Reports</h1>
-              <p className="text-gray-600">Monitor stock levels and restocking activities</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Inventory Reports
+              </h1>
+              <p className="text-gray-600">
+                Monitor stock levels and restocking activities
+              </p>
             </div>
           </div>
         </div>
@@ -238,19 +390,27 @@ export default function InventoryReportsPage() {
                 key={key}
                 onClick={() => setReport(key)}
                 className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                  isSelected 
-                    ? 'border-[#3674B5] bg-blue-50' 
-                    : 'border-gray-200 bg-white hover:border-gray-300'
+                  isSelected
+                    ? "border-[#3674B5] bg-blue-50"
+                    : "border-gray-200 bg-white hover:border-gray-300"
                 }`}
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-3 rounded-lg ${
-                    isSelected ? 'bg-[#3674B5] text-white' : 'bg-gray-100 text-gray-600'
-                  }`}>
+                  <div
+                    className={`p-3 rounded-lg ${
+                      isSelected
+                        ? "bg-[#3674B5] text-white"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
                     <IconComponent size={24} />
                   </div>
                   <div>
-                    <h3 className={`font-semibold ${isSelected ? 'text-[#3674B5]' : 'text-gray-900'}`}>
+                    <h3
+                      className={`font-semibold ${
+                        isSelected ? "text-[#3674B5]" : "text-gray-900"
+                      }`}
+                    >
                       {config.label}
                     </h3>
                   </div>
@@ -265,32 +425,45 @@ export default function InventoryReportsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#3674B5" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#3674B5" }}
+              >
                 <FileText size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Current Report</p>
-                <p className="text-xl font-bold text-gray-900">{currentReport.label}</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {currentReport.label}
+                </p>
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#10B981" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#10B981" }}
+              >
                 <Package size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Items</p>
-                <p className="text-2xl font-bold text-gray-900">{filteredRows.length}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {filteredRows.length}
+                </p>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">Inventory entries</p>
           </div>
-          
+
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#F59E0B" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#F59E0B" }}
+              >
                 <Calendar size={24} />
               </div>
               <div>
@@ -301,15 +474,18 @@ export default function InventoryReportsPage() {
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">
-              {filters.start && filters.end 
-                ? `${filters.start} to ${filters.end}` 
+              {filters.start && filters.end
+                ? `${filters.start} to ${filters.end}`
                 : "All available data"}
             </p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#EF4444" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#EF4444" }}
+              >
                 <AlertTriangle size={24} />
               </div>
               <div>
@@ -351,54 +527,88 @@ export default function InventoryReportsPage() {
           {/* Filters */}
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg text-white" style={{ backgroundColor: "#F59E0B" }}>
+              <div
+                className="p-2 rounded-lg text-white"
+                style={{ backgroundColor: "#F59E0B" }}
+              >
                 <Filter size={20} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800">Filters & Options</h3>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Filters & Options
+              </h3>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Start Date
+                </label>
                 <input
                   type="date"
                   value={filters.start || ""}
-                  onChange={(e) => setFilters((f) => ({ ...f, start: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, start: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  End Date
+                </label>
                 <input
                   type="date"
                   value={filters.end || ""}
-                  onChange={(e) => setFilters((f) => ({ ...f, end: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, end: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 />
               </div>
-              
-              <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Branch (name or ID)
-  </label>
-  <input
-    type="text"
-    placeholder="e.g., HQ or 1"
-    value={filters.branch || ""}
-    onChange={(e) => setFilters((f) => ({ ...f, branch: e.target.value.trimStart() }))}
-    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
-  />
-</div>
 
-              
+              {/* Branch Field: locked if a non-zero branchId is found */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Branch {isBranchLocked ? "(locked)" : "(name or ID)"}
+                </label>
+                <input
+                  type="text"
+                  placeholder={isBranchLocked ? "" : "e.g., HQ or 1"}
+                  value={isBranchLocked ? userBranchId ?? "" : filters.branch ?? ""}
+                  onChange={
+                    isBranchLocked
+                      ? undefined
+                      : (e) =>
+                          setFilters((f) => ({
+                            ...f,
+                            branch: e.target.value.trimStart(),
+                          }))
+                  }
+                  readOnly={isBranchLocked}
+                  disabled={isBranchLocked}
+                  className={`w-full px-3 py-2 border border-gray-200 rounded-lg ${
+                    isBranchLocked ? "bg-gray-100 cursor-not-allowed" : ""
+                  } focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]`}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {isBranchLocked
+                    ? "Locked to your assigned branch."
+                    : "Optional: filter by a branch; leave blank for all branches."}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
                 <input
                   type="text"
                   placeholder="e.g., LOW"
                   value={filters.status || ""}
-                  onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, status: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 />
               </div>
@@ -420,14 +630,17 @@ export default function InventoryReportsPage() {
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 />
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleRetry}
                   disabled={loading}
                   className="flex items-center gap-2 px-4 py-3 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-[#3674B5] disabled:opacity-50 transition-colors"
                 >
-                  <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                  <RefreshCw
+                    size={16}
+                    className={loading ? "animate-spin" : ""}
+                  />
                   Refresh
                 </button>
                 <button
@@ -438,7 +651,13 @@ export default function InventoryReportsPage() {
                   Print
                 </button>
                 <button
-                  onClick={() => canExport && downloadCSV(`${report}-${new Date().toISOString().split('T')[0]}.csv`, filteredRows)}
+                  onClick={() =>
+                    canExport &&
+                    downloadCSV(
+                      `${report}-${new Date().toISOString().split("T")[0]}.csv`,
+                      filteredRows
+                    )
+                  }
                   disabled={!canExport}
                   className="flex items-center gap-2 px-4 py-3 text-white rounded-lg hover:opacity-90 focus:ring-2 focus:ring-[#3674B5] disabled:opacity-50 transition-colors"
                   style={{ backgroundColor: "#10B981" }}
@@ -464,21 +683,27 @@ export default function InventoryReportsPage() {
             {loading ? (
               <div className="p-8 text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#3674B5] mb-4"></div>
-                <p className="text-gray-500 text-lg font-medium">Loading inventory data...</p>
-                <p className="text-gray-400 text-sm mt-1">Please wait while we fetch your data</p>
+                <p className="text-gray-500 text-lg font-medium">
+                  Loading inventory data...
+                </p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Please wait while we fetch your data
+                </p>
               </div>
             ) : filteredRows.length === 0 ? (
               <div className="p-8 text-center">
-                <div 
+                <div
                   className="p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center"
                   style={{ backgroundColor: "#F3F4F6" }}
                 >
                   <Package size={32} className="text-gray-400" />
                 </div>
-                <p className="text-gray-500 text-lg font-medium">No Inventory Data</p>
+                <p className="text-gray-500 text-lg font-medium">
+                  No Inventory Data
+                </p>
                 <p className="text-gray-400 text-sm mt-1">
-                  {rows.length === 0 
-                    ? "No inventory data found for the selected filters." 
+                  {rows.length === 0
+                    ? "No inventory data found for the selected filters."
                     : "No inventory data matches your search criteria."}
                 </p>
               </div>
@@ -488,17 +713,26 @@ export default function InventoryReportsPage() {
                   <thead>
                     <tr style={{ backgroundColor: "#3674B5" }}>
                       {Object.keys(filteredRows[0]).map((header) => (
-                        <th key={header} className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider">
-                          {header.replace(/_/g, ' ')}
+                        <th
+                          key={header}
+                          className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider"
+                        >
+                          {header.replace(/_/g, " ")}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {filteredRows.map((row, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50 transition-colors duration-150">
+                      <tr
+                        key={idx}
+                        className="hover:bg-gray-50 transition-colors duration-150"
+                      >
                         {Object.keys(filteredRows[0]).map((key) => (
-                          <td key={key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td
+                            key={key}
+                            className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                          >
                             {String(row[key] ?? "")}
                           </td>
                         ))}
@@ -514,10 +748,22 @@ export default function InventoryReportsPage() {
 
       <style jsx global>{`
         @media print {
-          body * { visibility: hidden; }
-          .print\\:visible, .print\\:visible * { visibility: visible; }
-          .print\\:visible { position: absolute; left: 0; top: 0; width: 100%; }
-          @page { margin: 0.5in; }
+          body * {
+            visibility: hidden;
+          }
+          .print\\:visible,
+          .print\\:visible * {
+            visibility: visible;
+          }
+          .print\\:visible {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          @page {
+            margin: 0.5in;
+          }
         }
       `}</style>
     </div>
