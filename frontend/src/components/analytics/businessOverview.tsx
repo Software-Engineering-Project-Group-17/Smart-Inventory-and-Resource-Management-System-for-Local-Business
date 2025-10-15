@@ -1,6 +1,7 @@
+// app/(dash)/AnalyticsDashboard.tsx
 "use client";
 
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   BarChart,
   Bar,
@@ -28,7 +29,13 @@ import {
   AlertTriangle,
   CheckCircle,
 } from "lucide-react";
-import { analyticsAPI, inventoryAPI, salesAPI, customerAPI } from "@/lib/api/analyticsApi";
+import {
+  analyticsAPI,
+  inventoryAPI,
+  salesAPI,
+  customerAPI,
+  subscribeRealtime, // ⬅️ realtime
+} from "@/lib/api/analyticsApi";
 
 // ---------- Safe mappers ----------
 const mapRevenueTrend = (arr: any[] = []) =>
@@ -362,6 +369,55 @@ export default function AnalyticsDashboard() {
 
   const refreshData = () => fetchAll();
 
+  // ---------- Realtime: subscribe to server events & refetch (debounced) ----------
+  const invalidateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // Include all topics that can affect what this dashboard shows
+    const topics = [
+      // Analytics
+      "analytics.overview",
+      "analytics.revenue-trend",
+      "analytics.order-trend",
+      "analytics.business-alerts",
+      "analytics.performance-summary",
+      // Inventory
+      "inventory.by-category",
+      // Sales (for topProducts / orderStatus fallback)
+      "sales.overview",
+      // Customers (for trend + metrics)
+      "customers.acquisition",
+      "customers.metrics",
+      "customers.overview",
+      // Generic catch-all you can emit after any write on the backend
+      "analytics.invalidate",
+    ];
+
+    const unsubscribe = subscribeRealtime(topics, (msg: any) => {
+      // Optional filtering to avoid refetching for other periods/branches
+      try {
+        const msgPeriod = msg?.data?.period || msg?.data?.range || msg?.data?.window;
+        if (msgPeriod && String(msgPeriod) !== String(selectedPeriod)) return;
+
+        // If you later add branch filtering, uncomment:
+        // const msgBranch = msg?.data?.branchId ?? msg?.data?.branch_id;
+        // if (branchId && msgBranch !== undefined && String(msgBranch) !== String(branchId)) return;
+      } catch {
+        // ignore malformed payloads
+      }
+
+      if (invalidateTimer.current) clearTimeout(invalidateTimer.current);
+      invalidateTimer.current = setTimeout(() => {
+        fetchAll();
+      }, 300); // debounce bursts
+    });
+
+    return () => {
+      if (invalidateTimer.current) clearTimeout(invalidateTimer.current);
+      unsubscribe?.();
+    };
+  }, [fetchAll, selectedPeriod /*, branchId*/]);
+
   // ---------- Derived metrics ----------
   const metrics = useMemo(() => {
     const totalRevenue = revenueTrend.reduce((sum, r) => sum + Number(r.revenue || 0), 0);
@@ -451,7 +507,14 @@ export default function AnalyticsDashboard() {
                 <TrendingUp size={24} />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Business Analytics</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-3xl font-bold text-gray-900">Business Analytics</h1>
+                  {/* Small live badge */}
+                  <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    Live
+                  </span>
+                </div>
                 <p className="text-gray-600">Real-time insights and performance metrics</p>
                 {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
               </div>
