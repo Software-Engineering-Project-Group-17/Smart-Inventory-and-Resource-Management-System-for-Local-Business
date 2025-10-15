@@ -197,7 +197,8 @@ export const analyticsAPI = {
 
 // ==================== SALES API ====================
 export const salesAPI = {
-  getOverview: async (params: { period?: Period } = {}) => {
+  // Accept any params so we can pass { period: '7d'|'30d'|'90d', branchId, categoryId }
+  getOverview: async (params: Record<string, any> = {}) => {
     const q = buildQueryString(params);
     return fetchAPI(`/sales/overview${q}`);
   },
@@ -209,8 +210,9 @@ export const salesAPI = {
     const q = buildQueryString(params);
     return fetchAPI(`/sales/by-category${q}`);
   },
-  getSalesByChannel: async (branchId?: string | number) => {
-    const q = buildQueryString({ branchId });
+  // Updated to accept generic params (so we can send categoryId as well)
+  getSalesByChannel: async (params: Record<string, any> = {}) => {
+    const q = buildQueryString(params);
     return fetchAPI(`/sales/by-channel${q}`);
   },
   getTopPerformers: async (params: Record<string, any> = {}) => {
@@ -221,18 +223,23 @@ export const salesAPI = {
     const q = buildQueryString(params);
     return fetchAPI(`/sales/hourly-pattern${q}`);
   },
-  getMetrics: async (branchId?: string | number) => {
-    const q = buildQueryString({ branchId });
+  // Updated to accept generic params (supports categoryId, branchId)
+  getMetrics: async (params: Record<string, any> = {}) => {
+    const q = buildQueryString(params);
     return fetchAPI(`/sales/metrics${q}`);
   },
-  getSalesGoals: async (branchId?: string | number) => {
-    const q = buildQueryString({ branchId });
+  // Updated to accept generic params (supports categoryId, branchId)
+  getSalesGoals: async (params: Record<string, any> = {}) => {
+    const q = buildQueryString(params);
     return fetchAPI(`/sales/goals${q}`);
   },
 
   // *** NEW: Order Status Distribution endpoint ***
-  // Supports either `lookbackDays` (controller you shared) and/or `period`.
-  
+  // Supports either `lookbackDays` and/or `period`.
+  // getOrderStatusDistribution: async (params: Record<string, any> = {}) => {
+  //   const q = buildQueryString(params);
+  //   return fetchAPI(`/sales/order-status-distribution${q}`);
+  // },
 };
 
 // ==================== INVENTORY API ====================

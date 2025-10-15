@@ -108,8 +108,8 @@ const getStockLevels = async (req, res) => {
     const outOfStock = parseInt(row.out_of_stock || 0, 10);
     
     res.json([
-      { name: 'In Stock',   value: total > 0 ? Math.round((inStock / total) * 100) : 0,   count: inStock,   color: '#10B981' },
-      { name: 'Low Stock',  value: total > 0 ? Math.round((lowStock / total) * 100) : 0,  count: lowStock,  color: '#F59E0B' },
+      { name: 'In Stock',     value: total > 0 ? Math.round((inStock / total) * 100) : 0,    count: inStock,   color: '#10B981' },
+      { name: 'Low Stock',    value: total > 0 ? Math.round((lowStock / total) * 100) : 0,   count: lowStock,  color: '#F59E0B' },
       { name: 'Out of Stock', value: total > 0 ? Math.round((outOfStock / total) * 100) : 0, count: outOfStock, color: '#EF4444' }
     ]);
 
@@ -123,14 +123,16 @@ const getStockLevels = async (req, res) => {
 const getMovement = async (req, res) => {
   try {
     const { branchId } = req.query;
-    const monthsRaw = req.query.months ?? 12;
+
+    // Accept `period` alias (e.g., "3m", "6m", "12m") or numeric `months`
+    const monthsRaw = req.query.months ?? req.query.period ?? 12;
     const months = Math.max(1, Math.min(parseInt(monthsRaw, 10) || 12, 60)); // 1..60
 
     const sql = `
       WITH date_series AS (
         SELECT 
           date_trunc('month', CURRENT_DATE) - (n || ' months')::interval AS month
-        FROM generate_series(0, $${branchId ? 2 : 1}) AS n
+        FROM generate_series(0, $${branchId ? 2 : 1}::int - 1) AS n
       ),
       order_items AS (
         SELECT 
@@ -141,15 +143,23 @@ const getMovement = async (req, res) => {
         WHERE co.order_status = 'completed'
         ${branchId ? 'AND co.branch_id = $1' : ''}
         GROUP BY date_trunc('month', co.created_at)
+      ),
+      calc AS (
+        SELECT
+          ds.month,
+          COALESCE(oi.outbound, 0)::int AS outbound,
+          -- demo inbound based on outbound +/- up to 100 (clamped to >= 0)
+          GREATEST(0, COALESCE(oi.outbound, 0) + FLOOR(RANDOM() * 200) - 100)::int AS inbound
+        FROM date_series ds
+        LEFT JOIN order_items oi ON ds.month = oi.month
       )
       SELECT 
-        to_char(ds.month, 'Mon') AS month,
-        COALESCE(oi.outbound, 0) AS outbound,
-        FLOOR(RANDOM() * 500 + 200) AS inbound,
-        FLOOR(RANDOM() * 200 - 100) AS net
-      FROM date_series ds
-      LEFT JOIN order_items oi ON ds.month = oi.month
-      ORDER BY ds.month
+        to_char(month, 'Mon') AS month,
+        inbound,
+        outbound,
+        (inbound - outbound) AS net
+      FROM calc
+      ORDER BY month
     `;
     
     const params = branchId ? [branchId, months] : [months];
@@ -175,6 +185,10 @@ const getTopMoving = async (req, res) => {
     const limitRaw = req.query.limit ?? 5;
     const limit = Math.max(1, Math.min(parseInt(limitRaw, 10) || 5, 100));
 
+    // Accept "3m"/"6m"/"12m" or numeric `months`
+    const monthsRaw = req.query.months ?? req.query.period ?? 12;
+    const months = Math.max(1, Math.min(parseInt(monthsRaw, 10) || 12, 60));
+
     const sql = `
       SELECT 
         ii.inventory_name AS name,
@@ -193,7 +207,7 @@ const getTopMoving = async (req, res) => {
       FROM inventory_item ii
       LEFT JOIN order_item oi ON ii.inventory_id = oi.inventory_id
       LEFT JOIN customer_order co ON oi.order_id = co.id
-        AND co.created_at >= CURRENT_DATE - interval '30 days'
+        AND co.created_at >= CURRENT_DATE - ($${branchId ? 3 : 2} || ' months')::interval
         AND co.order_status = 'completed'
       LEFT JOIN category c ON ii.category_id = c.id
       ${branchId ? 'WHERE ii.branch_id = $1' : ''}
@@ -203,7 +217,7 @@ const getTopMoving = async (req, res) => {
       LIMIT $${branchId ? 2 : 1}
     `;
     
-    const params = branchId ? [branchId, limit] : [limit];
+    const params = branchId ? [branchId, limit, months] : [limit, months];
     const result = await query(sql, params);
     
     res.json(result.rows.map(row => ({
@@ -227,6 +241,7 @@ const getWarehouseUtilization = async (req, res) => {
 
     const sql = `
       SELECT 
+        b.id   AS branch_id,
         b.name AS warehouse,
         10000 AS capacity,
         COUNT(ii.inventory_id) * 5 AS used,
@@ -242,6 +257,7 @@ const getWarehouseUtilization = async (req, res) => {
     const result = await query(sql, params);
     
     res.json(result.rows.map(row => ({
+      branch_id: String(row.branch_id),
       warehouse: row.warehouse,
       capacity: parseInt(row.capacity, 10),
       used: parseInt(row.used, 10),
@@ -306,6 +322,7 @@ const getMetrics = async (req, res) => {
         SELECT 
           COUNT(*) AS total_stock,
           COUNT(CASE WHEN quantity <= low_stock_threshold THEN 1 END) AS low_stock,
+          COUNT(CASE WHEN quantity = 0 THEN 1 END) AS out_of_stock,
           COALESCE(SUM(quantity * unit_price), 0) AS total_value
         FROM inventory_item
         ${branchId ? 'WHERE branch_id = $1' : ''}
@@ -318,6 +335,7 @@ const getMetrics = async (req, res) => {
       SELECT 
         cp.total_stock,
         cp.low_stock,
+        cp.out_of_stock,
         cp.total_value,
         3.2 AS stock_change,
         5.8 AS value_change,
@@ -333,6 +351,7 @@ const getMetrics = async (req, res) => {
     res.json({
       totalStock: parseInt(row.total_stock || 0, 10),
       lowStock: parseInt(row.low_stock || 0, 10),
+      outOfStock: parseInt(row.out_of_stock || 0, 10),
       totalValue: parseFloat(row.total_value || 0),
       stockChange: parseFloat(row.stock_change || 0),
       valueChange: parseFloat(row.value_change || 0),
