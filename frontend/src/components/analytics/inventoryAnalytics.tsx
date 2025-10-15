@@ -1,3 +1,4 @@
+// app/(dashboard)/inventory/InventoryAnalytics.tsx (or your component path)
 "use client";
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
@@ -150,7 +151,7 @@ export default function InventoryAnalytics() {
   const [branchOptions, setBranchOptions] = useState<Array<{ id: string; name: string; queryId?: string }>>([]);
 
   const [loading, setLoading] = useState(false);
-  const [firstLoad, setFirstLoad] = useState(true); // <-- added
+  const [firstLoad, setFirstLoad] = useState(true);
   const [error, setError] = useState("");
 
   // Data state
@@ -176,6 +177,10 @@ export default function InventoryAnalytics() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setError("");
+
+    // normalize "3m" | "6m" | "12m" → numeric months
+    const periodMonths = Number(String(selectedPeriod).replace("m", "")) || 12;
+
     try {
       const [
         byCategoryRes,
@@ -188,8 +193,9 @@ export default function InventoryAnalytics() {
       ] = await Promise.allSettled([
         inventoryAPI.getByCategory(branchId),
         inventoryAPI.getStockLevels(branchId),
-        inventoryAPI.getMovement({ period: selectedPeriod, branchId }),
-        inventoryAPI.getTopMoving({ limit: 5, period: selectedPeriod, branchId }),
+        // ⬇️ send numeric months to be explicit
+        inventoryAPI.getMovement({ months: periodMonths, branchId }),
+        inventoryAPI.getTopMoving({ limit: 5, months: periodMonths, branchId }),
         inventoryAPI.getWarehouseUtilization(branchId),
         inventoryAPI.getReorderAlerts(branchId),
         inventoryAPI.getMetrics(branchId),
@@ -225,7 +231,7 @@ export default function InventoryAnalytics() {
         const opts = mapped.map((w, i) => ({
           id: String(w.__displayId),
           name: String(w.warehouse || `Warehouse ${i + 1}`),
-          queryId: w.__queryId || undefined,
+          queryId: (raw[i]?.branch_id ?? raw[i]?.id ?? w.__queryId) ? String(w.__queryId || raw[i]?.branch_id || raw[i]?.id) : undefined,
         }));
 
         // de-dupe by id
@@ -258,7 +264,7 @@ export default function InventoryAnalytics() {
       setError(e?.message || "Failed to load inventory analytics");
     } finally {
       setLoading(false);
-      setFirstLoad(false); // <-- added
+      setFirstLoad(false);
     }
   }, [selectedPeriod, branchId, selectedWarehouse]);
 
@@ -404,7 +410,6 @@ export default function InventoryAnalytics() {
                 {branchOptions.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.name}
-                    {b.queryId ? "" : " (no ID)"}{/* optional hint; remove if undesired */}
                   </option>
                 ))}
               </select>

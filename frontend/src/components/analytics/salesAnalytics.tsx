@@ -1,3 +1,4 @@
+// app/(dash)/SalesAnalytics.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
@@ -41,8 +42,10 @@ const mapDailySales = (arr: any[] = []) =>
       ),
   }));
 
+// Include id, keep label separately
 const mapByCategory = (arr: any[] = []) =>
   arr.map((c) => ({
+    id: Number(c.id ?? c.category_id ?? c.categoryId ?? NaN),
     category: c.category || c.name || c.label || "—",
     sales: Number(c.sales ?? c.revenue ?? 0),
     orders: Number(c.orders ?? 0),
@@ -86,9 +89,13 @@ const mapMetrics = (m: any = {}) => ({
   conversionRate: Number(m.conversionRate ?? 0),
   weeklyGrowth: Number(m.weeklyGrowth ?? 0),
 });
+
+// Align to backend fields: { target, achieved, achievementPercent, remaining }
 const mapGoals = (g: any = {}) => ({
-  monthlyTarget: Number(g.monthlyTarget ?? 120000),
-  targetAchievement: Number(g.targetAchievement ?? 0), // percent if provided
+  monthlyTarget: Number(g.monthlyTarget ?? g.target ?? 120000),
+  targetAchievement: Number(g.targetAchievement ?? g.achievementPercent ?? 0), // %
+  achieved: Number(g.achieved ?? 0),
+  remaining: Number(g.remaining ?? 0),
 });
 
 // ---------------- Component ----------------
@@ -96,10 +103,19 @@ export default function SalesAnalytics() {
   const [selectedPeriod, setSelectedPeriod] = useState<"7d" | "30d" | "90d">(
     "30d"
   );
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [categoryOptions, setCategoryOptions] = useState<string[]>([]); // ← dynamic categories
+
+  // store category selection by id
+  const [selectedCategory, setSelectedCategory] = useState<"all" | number>(
+    "all"
+  );
+
+  // dynamic dropdown options: {value,label}
+  const [categoryOptions, setCategoryOptions] = useState<
+    Array<{ value: number; label: string }>
+  >([]);
+
   const [loading, setLoading] = useState(false);
-  const [firstLoad, setFirstLoad] = useState(true); // <-- added
+  const [firstLoad, setFirstLoad] = useState(true);
   const [error, setError] = useState("");
 
   // Data state
@@ -118,12 +134,17 @@ export default function SalesAnalytics() {
   const [goals, setGoals] = useState<any>({
     monthlyTarget: 120000,
     targetAchievement: 0,
+    achieved: 0,
+    remaining: 0,
   });
 
-  // Build common params
+  const periodDays =
+    selectedPeriod === "7d" ? 7 : selectedPeriod === "30d" ? 30 : 90;
+
+  // Build common params (send categoryId, not label)
   const params = {
     period: selectedPeriod,
-    category: selectedCategory === "all" ? undefined : selectedCategory,
+    categoryId: selectedCategory === "all" ? undefined : selectedCategory,
   };
 
   const fetchAll = useCallback(async () => {
@@ -139,13 +160,18 @@ export default function SalesAnalytics() {
         metricsRes,
         goalsRes,
       ] = await Promise.allSettled([
-        salesAPI.getDailySales(params),
-        salesAPI.getSalesByCategory(params),
-        salesAPI.getSalesByChannel(undefined),
+        salesAPI.getDailySales({ ...params }),
+        salesAPI.getSalesByCategory({ ...params }),
+        // channel accepts params now (so it can respect categoryId)
+        salesAPI.getSalesByChannel({ categoryId: params.categoryId }),
         salesAPI.getTopPerformers({ limit: 5, ...params }),
-        salesAPI.getHourlyPattern(params),
-        salesAPI.getMetrics(undefined),
-        salesAPI.getSalesGoals(undefined),
+        salesAPI.getHourlyPattern({
+          days: Math.min(periodDays, 60),
+          categoryId: params.categoryId,
+        }),
+        // pass categoryId so backend metrics/goals can respect filter
+        salesAPI.getMetrics({ categoryId: params.categoryId }),
+        salesAPI.getSalesGoals({ categoryId: params.categoryId }),
       ]);
 
       if (dailyRes.status === "fulfilled") {
@@ -154,6 +180,7 @@ export default function SalesAnalytics() {
           : dailyRes.value;
         setDailySales(mapDailySales(rows));
       }
+
       if (byCatRes.status === "fulfilled") {
         const rows = Array.isArray(byCatRes.value?.data)
           ? byCatRes.value.data
@@ -163,36 +190,48 @@ export default function SalesAnalytics() {
 
         // build unique category list for dropdown
         const opts = Array.from(
-          new Set(mapped.map((c) => String(c.category)))
-        ).sort();
+          new Map(
+            mapped
+              .filter((c) => Number.isFinite(c.id))
+              .map((c) => [
+                c.id,
+                { value: Number(c.id), label: String(c.category) },
+              ])
+          ).values()
+        ).sort((a, b) => a.label.localeCompare(b.label));
         setCategoryOptions(opts);
 
         // if current selection no longer exists, reset to "all"
         setSelectedCategory((prev) =>
-          prev === "all" || opts.includes(prev) ? prev : "all"
+          prev === "all" || opts.some((o) => o.value === prev) ? prev : "all"
         );
       }
+
       if (byChRes.status === "fulfilled") {
         const rows = Array.isArray(byChRes.value?.data)
           ? byChRes.value.data
           : byChRes.value;
         setSalesByChannel(mapByChannel(rows));
       }
+
       if (topRes.status === "fulfilled") {
         const rows = Array.isArray(topRes.value?.data)
           ? topRes.value.data
           : topRes.value;
         setTopSalespersons(mapTopPerformers(rows));
       }
+
       if (hourlyRes.status === "fulfilled") {
         const rows = Array.isArray(hourlyRes.value?.data)
           ? hourlyRes.value.data
           : hourlyRes.value;
         setHourlyPattern(mapHourly(rows));
       }
+
       if (metricsRes.status === "fulfilled") {
         setMetrics(mapMetrics(metricsRes.value));
       }
+
       if (goalsRes.status === "fulfilled") {
         setGoals(mapGoals(goalsRes.value));
       }
@@ -200,7 +239,7 @@ export default function SalesAnalytics() {
       setError(e?.message || "Failed to load sales analytics");
     } finally {
       setLoading(false);
-      setFirstLoad(false); // <-- added
+      setFirstLoad(false);
     }
   }, [selectedPeriod, selectedCategory]);
 
@@ -210,25 +249,32 @@ export default function SalesAnalytics() {
 
   const refreshData = () => fetchAll();
 
-  // --------- derive goal progress if API doesn't provide it ----------
+  // --------- derived metrics (category-aware) ----------
   const derived = useMemo(() => {
     const totalSales =
-      metrics.totalSales ||
-      dailySales.reduce((sum, d) => sum + Number(d.sales || 0), 0);
-    const totalOrders =
-      metrics.totalOrders ||
-      dailySales.reduce((sum, d) => sum + Number(d.orders || 0), 0);
-    const avgOrderValue =
-      metrics.avgOrderValue || (totalOrders > 0 ? totalSales / totalOrders : 0);
+      dailySales.reduce((sum, d) => sum + Number(d.sales || 0), 0) ||
+      Number(metrics.totalSales || 0);
 
+    const totalOrders =
+      dailySales.reduce((sum, d) => sum + Number(d.orders || 0), 0) ||
+      Number(metrics.totalOrders || 0);
+
+    const avgOrderValue =
+      totalOrders > 0
+        ? totalSales / totalOrders
+        : Number(metrics.avgOrderValue || 0);
+
+    // weekly growth from last 7 vs prev 7 on filtered data
     const last7 = dailySales.slice(-7);
     const prev7 = dailySales.slice(-14, -7);
     const last7Sales = last7.reduce((s, d) => s + Number(d.sales || 0), 0);
     const prev7Sales = prev7.reduce((s, d) => s + Number(d.sales || 0), 0);
     const weeklyGrowth =
-      metrics.weeklyGrowth ||
-      (prev7Sales > 0 ? ((last7Sales - prev7Sales) / prev7Sales) * 100 : 0);
+      prev7Sales > 0
+        ? ((last7Sales - prev7Sales) / prev7Sales) * 100
+        : Number(metrics.weeklyGrowth || 0);
 
+    // MTD from filtered data (dates may be MM/DD; fallback to totalSales)
     const now = new Date();
     let mtd = 0;
     for (const d of dailySales) {
@@ -244,20 +290,13 @@ export default function SalesAnalytics() {
     }
     if (mtd === 0) mtd = totalSales;
 
-    const monthlyTarget = goals.monthlyTarget || 120000;
-    let targetAchievement =
-      typeof goals.targetAchievement === "number" && goals.targetAchievement > 0
-        ? goals.targetAchievement
-        : monthlyTarget > 0
-        ? (mtd / monthlyTarget) * 100
-        : 0;
+    const monthlyTarget = Number(goals.monthlyTarget || 120000);
 
-    targetAchievement = Math.max(0, Math.min(targetAchievement, 100));
+    // Make goals reflect the filtered MTD, not backend %.
+    const achievedAmount = mtd;
+    const targetAchievement =
+      monthlyTarget > 0 ? (achievedAmount / monthlyTarget) * 100 : 0;
 
-    const achievedAmount = Math.min(
-      monthlyTarget,
-      (targetAchievement / 100) * monthlyTarget
-    );
     const remainingAmount = Math.max(0, monthlyTarget - achievedAmount);
 
     return {
@@ -265,9 +304,9 @@ export default function SalesAnalytics() {
       totalOrders,
       avgOrderValue,
       weeklyGrowth,
-      conversionRate: metrics.conversionRate || 0,
+      conversionRate: Number(metrics.conversionRate || 0),
       monthlyTarget,
-      targetAchievement,
+      targetAchievement: Math.max(0, Math.min(targetAchievement, 100)),
       achievedAmount,
       remainingAmount,
     };
@@ -278,8 +317,18 @@ export default function SalesAnalytics() {
     () =>
       selectedCategory === "all"
         ? salesByCategory
-        : salesByCategory.filter((c) => c.category === selectedCategory),
+        : salesByCategory.filter((c) => c.id === selectedCategory),
     [selectedCategory, salesByCategory]
+  );
+
+  // Recompute channel amounts based on filtered totalSales (keeps shares, syncs totals)
+  const channelWithAmounts = useMemo(
+    () =>
+      salesByChannel.map((ch) => ({
+        ...ch,
+        amount: (Number(ch.value || 0) / 100) * Number(derived.totalSales || 0),
+      })),
+    [salesByChannel, derived.totalSales]
   );
 
   const MetricCard = ({
@@ -368,16 +417,19 @@ export default function SalesAnalytics() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {/* CATEGORY FILTER — now dynamic */}
+              {/* CATEGORY FILTER — dynamic (id-based) */}
               <select
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSelectedCategory(v === "all" ? "all" : Number(v));
+                }}
                 className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Categories</option>
                 {categoryOptions.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+                  <option key={c.value} value={c.value}>
+                    {c.label}
                   </option>
                 ))}
               </select>
@@ -494,7 +546,7 @@ export default function SalesAnalytics() {
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie
-                  data={salesByChannel}
+                  data={channelWithAmounts}
                   cx="50%"
                   cy="50%"
                   innerRadius={40}
@@ -502,15 +554,22 @@ export default function SalesAnalytics() {
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {salesByChannel.map((entry, index) => (
+                  {channelWithAmounts.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: any) => [`${value}%`, "Share"]} />
+                <Tooltip
+                  formatter={(value: any, name: any) => {
+                    if (name === "value") return [`${value}%`, "Share"];
+                    if (name === "amount")
+                      return [`$${Number(value).toLocaleString()}`, "Amount"];
+                    return [value, name];
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
             <div className="space-y-3 mt-4">
-              {salesByChannel.map((channel, index) => (
+              {channelWithAmounts.map((channel, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div
@@ -669,7 +728,7 @@ export default function SalesAnalytics() {
                   Target: ${Number(derived.monthlyTarget).toLocaleString()}
                 </p>
                 <p className="text-sm text-gray-600">
-                  Achieved: ${Number(derived.achievedAmount).toLocaleString()}
+                  Achieved (MTD): ${Number(derived.achievedAmount).toLocaleString()}
                 </p>
                 <p className="text-sm text-gray-600">
                   Remaining: ${Number(derived.remainingAmount).toLocaleString()}
