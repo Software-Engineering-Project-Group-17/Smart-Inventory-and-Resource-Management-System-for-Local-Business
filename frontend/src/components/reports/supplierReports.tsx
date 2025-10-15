@@ -13,6 +13,7 @@ import {
   DollarSign,
   Package,
 } from "lucide-react";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 // Types and helpers
 export type Row = Record<string, string | number | boolean | null | undefined>;
@@ -24,7 +25,8 @@ interface Filters {
   status?: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_REPORTS_ANALYTICS_API_URL || "http://localhost:4005";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_REPORTS_ANALYTICS_API_URL || "http://localhost:4005";
 
 function toCSV(rows: Row[]): string {
   if (!rows.length) return "";
@@ -36,7 +38,9 @@ function toCSV(rows: Row[]): string {
     return s;
   };
   const headerLine = headers.map(escape).join(",");
-  const bodyLines = rows.map((r) => headers.map((h) => escape((r as any)[h])).join(","));
+  const bodyLines = rows.map((r) =>
+    headers.map((h) => escape((r as any)[h])).join(",")
+  );
   return [headerLine, ...bodyLines].join("\n");
 }
 
@@ -53,6 +57,38 @@ function downloadCSV(filename: string, rows: Row[]) {
   URL.revokeObjectURL(url);
 }
 
+/** Extract branchId from various possible shapes. Returns a number or null. */
+function extractBranchId(source: any): number | null {
+  if (!source || typeof source !== "object") return null;
+  const candidates = [
+    source.branchId,
+    source.branch_id,
+    source.branchID,
+    source.branch?.id,
+    source.branch?.branchId,
+    source.user?.branchId,
+    source.user?.branch?.id,
+  ];
+  for (const c of candidates) {
+    const n = Number(c);
+    if (!Number.isNaN(n) && Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+/** Extract branchName if present (optional, best-effort) */
+function extractBranchName(source: any): string | null {
+  if (!source || typeof source !== "object") return null;
+  return (
+    source.branchName ??
+    source.branch_name ??
+    source.branch?.name ??
+    source.user?.branchName ??
+    source.user?.branch?.name ??
+    null
+  );
+}
+
 async function getData(report: string, filters: Filters): Promise<Row[]> {
   try {
     const queryParams = new URLSearchParams();
@@ -62,7 +98,9 @@ async function getData(report: string, filters: Filters): Promise<Row[]> {
     if (filters.status) queryParams.append("status", filters.status);
 
     const queryString = queryParams.toString();
-    const url = `${API_BASE_URL}/api/reports/${report}${queryString ? `?${queryString}` : ""}`;
+    const url = `${API_BASE_URL}/api/reports/${report}${
+      queryString ? `?${queryString}` : ""
+    }`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -70,7 +108,9 @@ async function getData(report: string, filters: Filters): Promise<Row[]> {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch data: ${response.status} ${response.statusText}`
+      );
     }
 
     const data = await response.json();
@@ -89,11 +129,22 @@ export default function SupplierReportsPage() {
   const printRef = useRef<HTMLDivElement | null>(null);
 
   const [report, setReport] = useState("supplier-order-details");
-  const [filters, setFilters] = useState<Filters>({ start: "", end: "", branch: "", status: "" });
+  const [filters, setFilters] = useState<Filters>({
+    start: "",
+    end: "",
+    branch: "",
+    status: "",
+  });
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Branch lock state
+  const [userBranchId, setUserBranchId] = useState<string | null>(null);
+  const [isBranchLocked, setIsBranchLocked] = useState<boolean>(false);
+  const [ready, setReady] = useState(false);
+  const [refreshIndex, setRefreshIndex] = useState(0);
 
   // Supplier-specific reports
   const SUPPLIER_REPORTS = {
@@ -104,13 +155,83 @@ export default function SupplierReportsPage() {
     },
   } as const;
 
+  // Resolve branchId from localStorage or /api/profile; lock if non-zero
   useEffect(() => {
+    (async () => {
+      try {
+        const localJson = localStorage.getItem("userProfile");
+        const localUser = localJson ? JSON.parse(localJson) : null;
+
+        let branchNum = extractBranchId(localUser);
+        let branchName = extractBranchName(localUser);
+
+        if ((branchNum == null || Number.isNaN(branchNum)) && localUser?.id) {
+          const res = await authenticatedFetch("/api/profile", {
+            headers: {
+              "x-user-id": String(localUser.id),
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (res.ok) {
+            const payload = await res.json();
+            const userPayload = payload?.user ?? payload;
+            branchNum = extractBranchId(userPayload);
+            branchName = extractBranchName(userPayload);
+
+            if (branchNum != null) {
+              const merged = {
+                ...(localUser || {}),
+                ...(userPayload || {}),
+                branchId: branchNum,
+                ...(branchName ? { branchName } : {}),
+              };
+              localStorage.setItem("userProfile", JSON.stringify(merged));
+            }
+          } else {
+            console.warn(
+              "[Supplier Reports] /api/profile failed:",
+              res.status,
+              res.statusText
+            );
+          }
+        }
+
+        if (branchNum != null && Number.isFinite(branchNum) && branchNum !== 0) {
+          const branchStr = String(branchNum);
+          setUserBranchId(branchStr);
+          setIsBranchLocked(true);
+          setFilters((f) => ({ ...f, branch: branchStr }));
+        } else {
+          setUserBranchId(null);
+          setIsBranchLocked(false);
+        }
+      } catch (e) {
+        console.error("[Supplier Reports] Branch resolution error:", e);
+        setIsBranchLocked(false);
+      } finally {
+        setReady(true);
+      }
+    })();
+  }, []);
+
+  // Fetch data (respect locked branch if present)
+  useEffect(() => {
+    if (!ready) return;
+
     let active = true;
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getData(report, filters);
+        const effectiveBranch = isBranchLocked
+          ? userBranchId || undefined
+          : filters.branch?.trim() || undefined;
+
+        const data = await getData(report, {
+          ...filters,
+          branch: effectiveBranch, // undefined => all branches
+        });
         if (active) setRows(data);
       } catch (err) {
         if (active) {
@@ -124,19 +245,33 @@ export default function SupplierReportsPage() {
         if (active) setLoading(false);
       }
     })();
+
     return () => {
       active = false;
     };
-  }, [report, filters]);
+  }, [
+    ready,
+    isBranchLocked,
+    userBranchId,
+    report,
+    filters.start,
+    filters.end,
+    filters.status,
+    filters.branch,
+    refreshIndex,
+  ]);
 
   const filteredRows = useMemo(() => {
     if (!searchQuery) return rows;
     const q = searchQuery.toLowerCase();
-    return rows.filter((r) => Object.values(r).some((v) => String(v ?? "").toLowerCase().includes(q)));
+    return rows.filter((r) =>
+      Object.values(r).some((v) => String(v ?? "").toLowerCase().includes(q))
+    );
   }, [rows, searchQuery]);
 
   const canExport = filteredRows.length > 0;
-  const currentReport = SUPPLIER_REPORTS[report as keyof typeof SUPPLIER_REPORTS];
+  const currentReport =
+    SUPPLIER_REPORTS[report as keyof typeof SUPPLIER_REPORTS];
 
   // Calculate supplier statistics
   const supplierStats = useMemo(() => {
@@ -169,55 +304,72 @@ export default function SupplierReportsPage() {
   }, [filteredRows]);
 
   const handleDownloadPDF = async () => {
-  if (!filteredRows.length) return;
+    if (!filteredRows.length) return;
 
-  const [{ jsPDF }, autoTableModule] = await Promise.all([
-    import('jspdf'),
-    import('jspdf-autotable')
-  ]);
+    const [{ jsPDF }, autoTableModule] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
 
-  const autoTable = autoTableModule.default;
-  const doc = new jsPDF({ orientation: 'l', unit: 'pt' }); // landscape for wide tables
+    const autoTable = autoTableModule.default;
+    const doc = new jsPDF({ orientation: "l", unit: "pt" }); // landscape
 
-  const headers = Object.keys(filteredRows[0]);
-  const head = [headers.map(h => h.replace(/_/g, ' '))];
-  const body = filteredRows.map(r => headers.map(h => String((r as any)[h] ?? '')));
+    const headers = Object.keys(filteredRows[0]);
+    const head = [headers.map((h) => h.replace(/_/g, " "))];
+    const body = filteredRows.map((r) =>
+      headers.map((h) => String((r as any)[h] ?? ""))
+    );
 
-  // Header
-  doc.setFontSize(16);
-  doc.text(currentReport.label, 40, 32);
-  doc.setFontSize(10);
-  doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 48);
+    // Header
+    doc.setFontSize(16);
+    doc.text(currentReport.label, 40, 32);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 48);
 
-  // Table
-  autoTable(doc, {
-    head,
-    body,
-    startY: 60,
-    margin: { left: 40, right: 40 },
-    styles: { fontSize: 8, cellPadding: 4, overflow: 'linebreak' },
-    headStyles: { fillColor: [54, 116, 181], textColor: 255 },
-    didDrawPage: (data) => {
-      // optional footer
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      doc.setFontSize(9);
-      doc.text(
-        `${report} • ${filteredRows.length} rows`,
-        pageWidth - 40,
-        pageHeight - 20,
-        { align: 'right' }
-      );
-    }
-  });
+    // Table
+    // @ts-ignore
+    autoTable(doc, {
+      head,
+      body,
+      startY: 60,
+      margin: { left: 40, right: 40 },
+      styles: { fontSize: 8, cellPadding: 4, overflow: "linebreak" },
+      headStyles: { fillColor: [54, 116, 181], textColor: 255 },
+      didDrawPage: () => {
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        doc.setFontSize(9);
+        doc.text(
+          `${report} • ${filteredRows.length} rows`,
+          pageWidth - 40,
+          pageHeight - 20,
+          { align: "right" }
+        );
+      },
+    });
 
-  doc.save(`${report}-${new Date().toISOString().split('T')[0]}.pdf`);
-};
+    doc.save(`${report}-${new Date().toISOString().split("T")[0]}.pdf`);
+  };
 
   const handleRetry = () => {
     setError(null);
-    setFilters((prev) => ({ ...prev }));
+    setRefreshIndex((i) => i + 1);
   };
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="p-8 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#3674B5] mb-4"></div>
+            <p className="text-gray-500 text-lg font-medium">
+              Preparing your supplier reports…
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
@@ -225,12 +377,19 @@ export default function SupplierReportsPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 rounded-xl text-white" style={{ backgroundColor: "#3674B5" }}>
+            <div
+              className="p-3 rounded-xl text-white"
+              style={{ backgroundColor: "#3674B5" }}
+            >
               <Truck size={24} />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Supplier Reports</h1>
-              <p className="text-gray-600">Monitor supplier performance and purchase orders</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Supplier Reports
+              </h1>
+              <p className="text-gray-600">
+                Monitor supplier performance and purchase orders
+              </p>
             </div>
           </div>
         </div>
@@ -245,15 +404,29 @@ export default function SupplierReportsPage() {
                 key={key}
                 onClick={() => setReport(key)}
                 className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                  isSelected ? "border-[#3674B5] bg-blue-50" : "border-gray-200 bg-white hover:border-gray-300"
+                  isSelected
+                    ? "border-[#3674B5] bg-blue-50"
+                    : "border-gray-200 bg-white hover:border-gray-300"
                 }`}
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`p-3 rounded-lg ${isSelected ? "bg-[#3674B5] text-white" : "bg-gray-100 text-gray-600"}`}>
+                  <div
+                    className={`p-3 rounded-lg ${
+                      isSelected
+                        ? "bg-[#3674B5] text-white"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
                     <IconComponent size={24} />
                   </div>
                   <div>
-                    <h3 className={`font-semibold ${isSelected ? "text-[#3674B5]" : "text-gray-900"}`}>{config.label}</h3>
+                    <h3
+                      className={`font-semibold ${
+                        isSelected ? "text-[#3674B5]" : "text-gray-900"
+                      }`}
+                    >
+                      {config.label}
+                    </h3>
                   </div>
                 </div>
                 <p className="text-sm text-gray-600">{config.description}</p>
@@ -266,12 +439,17 @@ export default function SupplierReportsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#3674B5" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#3674B5" }}
+              >
                 <Building2 size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Suppliers</p>
-                <p className="text-2xl font-bold text-gray-900">{supplierStats.uniqueSuppliers}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {supplierStats.uniqueSuppliers}
+                </p>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">Active suppliers</p>
@@ -279,12 +457,17 @@ export default function SupplierReportsPage() {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#10B981" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#10B981" }}
+              >
                 <ShoppingBag size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Purchase Orders</p>
-                <p className="text-2xl font-bold text-gray-900">{supplierStats.totalOrders}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {supplierStats.totalOrders}
+                </p>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">Total orders</p>
@@ -292,12 +475,17 @@ export default function SupplierReportsPage() {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#F59E0B" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#F59E0B" }}
+              >
                 <DollarSign size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Value</p>
-                <p className="text-2xl font-bold text-gray-900">${supplierStats.totalValue.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  ${supplierStats.totalValue.toFixed(2)}
+                </p>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">Purchase value</p>
@@ -305,12 +493,17 @@ export default function SupplierReportsPage() {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg text-white" style={{ backgroundColor: "#8B5CF6" }}>
+              <div
+                className="p-3 rounded-lg text-white"
+                style={{ backgroundColor: "#8B5CF6" }}
+              >
                 <Package size={24} />
               </div>
               <div>
                 <p className="text-sm text-gray-600">Avg Order Value</p>
-                <p className="text-2xl font-bold text-gray-900">${supplierStats.avgOrderValue.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  ${supplierStats.avgOrderValue.toFixed(2)}
+                </p>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">Per purchase order</p>
@@ -322,7 +515,11 @@ export default function SupplierReportsPage() {
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="bg-red-100 p-1 rounded">
-                <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-4 h-4 text-red-600"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M13,13H11V7H13M11,15H13V17H11M15.73,3H8.27L3,8.27V15.73L8.27,21H15.73L21,15.73V8.27L15.73,3Z" />
                 </svg>
               </div>
@@ -331,7 +528,10 @@ export default function SupplierReportsPage() {
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
             </div>
-            <button onClick={handleRetry} className="text-red-600 hover:text-red-800 font-medium text-sm">
+            <button
+              onClick={handleRetry}
+              className="text-red-600 hover:text-red-800 font-medium text-sm"
+            >
               Retry
             </button>
           </div>
@@ -342,52 +542,86 @@ export default function SupplierReportsPage() {
           {/* Filters */}
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg text-white" style={{ backgroundColor: "#F59E0B" }}>
+              <div
+                className="p-2 rounded-lg text-white"
+                style={{ backgroundColor: "#F59E0B" }}
+              >
                 <Filter size={20} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-800">Filters & Options</h3>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Filters & Options
+              </h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Start Date
+                </label>
                 <input
                   type="date"
                   value={filters.start || ""}
-                  onChange={(e) => setFilters((f) => ({ ...f, start: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, start: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  End Date
+                </label>
                 <input
                   type="date"
                   value={filters.end || ""}
-                  onChange={(e) => setFilters((f) => ({ ...f, end: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, end: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 />
               </div>
 
+              {/* Branch: locked if non-zero branchId found; editable otherwise */}
               <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Branch (name or ID)
-  </label>
-  <input
-    type="text"
-    placeholder="e.g., HQ or 1"
-    value={filters.branch || ""}
-    onChange={(e) => setFilters((f) => ({ ...f, branch: e.target.value.trimStart() }))}
-    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
-  />
-</div>
-
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Branch {isBranchLocked ? "(locked)" : "(name or ID)"}
+                </label>
+                <input
+                  type="text"
+                  placeholder={isBranchLocked ? "" : "e.g., HQ or 1"}
+                  value={isBranchLocked ? userBranchId ?? "" : filters.branch ?? ""}
+                  onChange={
+                    isBranchLocked
+                      ? undefined
+                      : (e) =>
+                          setFilters((f) => ({
+                            ...f,
+                            branch: e.target.value.trimStart(),
+                          }))
+                  }
+                  readOnly={isBranchLocked}
+                  disabled={isBranchLocked}
+                  className={`w-full px-3 py-2 border border-gray-200 rounded-lg ${
+                    isBranchLocked ? "bg-gray-100 cursor-not-allowed" : ""
+                  } focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]`}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {isBranchLocked
+                    ? "Locked to your assigned branch."
+                    : "Optional: filter by a branch; leave blank for all branches."}
+                </p>
+              </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Order Status</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Order Status
+                </label>
                 <select
                   value={filters.status || ""}
-                  onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, status: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
                 >
                   <option value="">All Statuses</option>
@@ -422,7 +656,10 @@ export default function SupplierReportsPage() {
                   disabled={loading}
                   className="flex items-center gap-2 px-4 py-3 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-[#3674B5] disabled:opacity-50 transition-colors"
                 >
-                  <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                  <RefreshCw
+                    size={16}
+                    className={loading ? "animate-spin" : ""}
+                  />
                   Refresh
                 </button>
 
@@ -468,15 +705,24 @@ export default function SupplierReportsPage() {
             {loading ? (
               <div className="p-8 text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#3674B5] mb-4"></div>
-                <p className="text-gray-500 text-lg font-medium">Loading supplier data...</p>
-                <p className="text-gray-400 text-sm mt-1">Please wait while we fetch your data</p>
+                <p className="text-gray-500 text-lg font-medium">
+                  Loading supplier data...
+                </p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Please wait while we fetch your data
+                </p>
               </div>
             ) : filteredRows.length === 0 ? (
               <div className="p-8 text-center">
-                <div className="p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: "#F3F4F6" }}>
+                <div
+                  className="p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center"
+                  style={{ backgroundColor: "#F3F4F6" }}
+                >
                   <Truck size={32} className="text-gray-400" />
                 </div>
-                <p className="text-gray-500 text-lg font-medium">No Supplier Data</p>
+                <p className="text-gray-500 text-lg font-medium">
+                  No Supplier Data
+                </p>
                 <p className="text-gray-400 text-sm mt-1">
                   {rows.length === 0
                     ? "No supplier data found for the selected filters."
@@ -500,9 +746,15 @@ export default function SupplierReportsPage() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {filteredRows.map((row, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50 transition-colors duration-150">
+                      <tr
+                        key={idx}
+                        className="hover:bg-gray-50 transition-colors duration-150"
+                      >
                         {Object.keys(filteredRows[0]).map((key) => (
-                          <td key={key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td
+                            key={key}
+                            className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                          >
                             {String(row[key] ?? "")}
                           </td>
                         ))}
@@ -518,10 +770,22 @@ export default function SupplierReportsPage() {
 
       <style jsx global>{`
         @media print {
-          body * { visibility: hidden; }
-          .print\\:visible, .print\\:visible * { visibility: visible; }
-          .print\\:visible { position: absolute; left: 0; top: 0; width: 100%; }
-          @page { margin: 0.5in; }
+          body * {
+            visibility: hidden;
+          }
+          .print\\:visible,
+          .print\\:visible * {
+            visibility: visible;
+          }
+          .print\\:visible {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          @page {
+            margin: 0.5in;
+          }
         }
       `}</style>
     </div>

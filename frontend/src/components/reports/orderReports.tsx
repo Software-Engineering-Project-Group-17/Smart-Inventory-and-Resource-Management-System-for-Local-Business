@@ -2,19 +2,17 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  FileText,
   RefreshCw,
   Download,
   Printer,
   Search,
   ShoppingCart,
   DollarSign,
-  Calendar,
   Filter,
-  TrendingUp,
   CheckCircle,
   Clock,
 } from "lucide-react";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 // Types and helpers
 type Row = Record<string, string | number | boolean | null | undefined>;
@@ -22,13 +20,14 @@ type Row = Record<string, string | number | boolean | null | undefined>;
 interface Filters {
   start?: string;
   end?: string;
-  branch?: string;
+  branch?: string; // editable unless a non-zero branchId is found
   status?: string;
 }
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_REPORTS_ANALYTICS_API_URL || "http://localhost:4005";
 
+// ---- Utilities ----
 function toCSV(rows: Row[]): string {
   if (!rows.length) return "";
   const headers = Object.keys(rows[0]);
@@ -58,40 +57,68 @@ function downloadCSV(filename: string, rows: Row[]) {
   URL.revokeObjectURL(url);
 }
 
-async function getData(report: string, filters: Filters): Promise<Row[]> {
-  try {
-    const queryParams = new URLSearchParams();
-    if (filters.start) queryParams.append("start", filters.start);
-    if (filters.end) queryParams.append("end", filters.end);
-    if (filters.branch) queryParams.append("branch", filters.branch);
-    if (filters.status) queryParams.append("status", filters.status);
-
-    const queryString = queryParams.toString();
-    const url = `${API_BASE_URL}/api/reports/${report}${
-      queryString ? `?${queryString}` : ""
-    }`;
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch data: ${response.status} ${response.statusText}`
-      );
-    }
-
-    const data = await response.json();
-
-    if (Array.isArray(data)) return data;
-    else if (data.data && Array.isArray(data.data)) return data.data;
-    else if (data.success && Array.isArray(data.result)) return data.result;
-    else return [];
-  } catch (error) {
-    console.error(`Error fetching ${report} data:`, error);
-    throw error;
+/** Extract branchId from various possible shapes. Returns a number or null. */
+function extractBranchId(source: any): number | null {
+  if (!source || typeof source !== "object") return null;
+  const candidates = [
+    source.branchId,
+    source.branch_id,
+    source.branchID,
+    source.branch?.id,
+    source.branch?.branchId,
+    source.user?.branchId,
+    source.user?.branch?.id,
+  ];
+  for (const c of candidates) {
+    const n = Number(c);
+    if (!Number.isNaN(n) && Number.isFinite(n)) return n;
   }
+  return null;
+}
+
+/** Extract branchName if present (optional, best-effort) */
+function extractBranchName(source: any): string | null {
+  if (!source || typeof source !== "object") return null;
+  return (
+    source.branchName ??
+    source.branch_name ??
+    source.branch?.name ??
+    source.user?.branchName ??
+    source.user?.branch?.name ??
+    null
+  );
+}
+
+// Fetch report data from your external analytics service
+// NOTE: plain fetch (NO authenticatedFetch, NO auth headers).
+async function getData(report: string, filters: Filters): Promise<Row[]> {
+  const queryParams = new URLSearchParams();
+  if (filters.start) queryParams.append("start", filters.start);
+  if (filters.end) queryParams.append("end", filters.end);
+  if (filters.branch) queryParams.append("branch", filters.branch);
+  if (filters.status) queryParams.append("status", filters.status);
+
+  const queryString = queryParams.toString();
+  const url = `${API_BASE_URL}/api/reports/${report}${
+    queryString ? `?${queryString}` : ""
+  }`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch data: ${response.status} ${response.statusText}`
+    );
+  }
+
+  const data = await response.json();
+  if (Array.isArray(data)) return data;
+  if (data.data && Array.isArray(data.data)) return data.data;
+  if (data.success && Array.isArray(data.result)) return data.result;
+  return [];
 }
 
 export default function OrdersReportsPage() {
@@ -101,13 +128,19 @@ export default function OrdersReportsPage() {
   const [filters, setFilters] = useState<Filters>({
     start: "",
     end: "",
-    branch: "",
+    branch: "", // may be set & locked from profile
     status: "",
   });
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Branch lock logic (lock when a non-zero branchId is found)
+  const [userBranchId, setUserBranchId] = useState<string | null>(null);
+  const [isBranchLocked, setIsBranchLocked] = useState<boolean>(false);
+  const [ready, setReady] = useState(false);
+  const [refreshIndex, setRefreshIndex] = useState(0);
 
   // Orders-specific reports
   const ORDERS_REPORTS = {
@@ -119,18 +152,89 @@ export default function OrdersReportsPage() {
     },
   };
 
-  // Update URL in browser (if needed)
+  // Resolve branchId: use authenticatedFetch ONLY for /api/profile
   useEffect(() => {
-    console.log("Report changed to:", report, "with filters:", filters);
-  }, [report, filters]);
+    (async () => {
+      try {
+        const localJson = localStorage.getItem("userProfile");
+        const localUser = localJson ? JSON.parse(localJson) : null;
 
+        // 1) Try localStorage first.
+        let branchNum = extractBranchId(localUser);
+        let branchName = extractBranchName(localUser);
+
+        // 2) Fallback to authenticated profile call.
+        if ((branchNum == null || Number.isNaN(branchNum)) && localUser?.id) {
+          const res = await authenticatedFetch("/api/profile", {
+            headers: {
+              "x-user-id": String(localUser.id),
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (res.ok) {
+            const payload = await res.json();
+            const userPayload = payload?.user ?? payload;
+            branchNum = extractBranchId(userPayload);
+            branchName = extractBranchName(userPayload);
+
+            // Persist merged profile into localStorage for next time
+            if (branchNum != null) {
+              const merged = {
+                ...(localUser || {}),
+                ...(userPayload || {}),
+                branchId: branchNum,
+                ...(branchName ? { branchName } : {}),
+              };
+              localStorage.setItem("userProfile", JSON.stringify(merged));
+            }
+          } else {
+            console.warn(
+              "[Analytics] /api/profile failed:",
+              res.status,
+              res.statusText
+            );
+          }
+        }
+
+        // If we have a non-zero branch, lock it.
+        if (branchNum != null && Number.isFinite(branchNum) && branchNum !== 0) {
+          const branchStr = String(branchNum);
+          setUserBranchId(branchStr);
+          setIsBranchLocked(true);
+          setFilters((f) => ({ ...f, branch: branchStr }));
+        } else {
+          // No branch assigned (or zero) — allow manual branch filtering
+          setUserBranchId(null);
+          setIsBranchLocked(false);
+        }
+      } catch (e) {
+        console.error("[Analytics] Branch resolution error:", e);
+        // On error, still allow page to work with an editable branch filter.
+        setIsBranchLocked(false);
+      } finally {
+        setReady(true);
+      }
+    })();
+  }, []);
+
+  // Fetch when ready, using locked branch if available; otherwise whatever user typed.
   useEffect(() => {
+    if (!ready) return;
+
     let active = true;
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getData(report, filters);
+        const effectiveBranch = isBranchLocked
+          ? userBranchId || undefined
+          : filters.branch?.trim() || undefined;
+
+        const data = await getData(report, {
+          ...filters,
+          branch: effectiveBranch, // undefined -> all branches
+        });
         if (active) setRows(data);
       } catch (err) {
         if (active) {
@@ -144,27 +248,34 @@ export default function OrdersReportsPage() {
         if (active) setLoading(false);
       }
     })();
+
     return () => {
       active = false;
     };
-  }, [report, filters]);
+  }, [
+    ready,
+    isBranchLocked,
+    userBranchId,
+    report,
+    filters.start,
+    filters.end,
+    filters.status,
+    filters.branch, // include when branch is editable
+    refreshIndex,
+  ]);
 
   const filteredRows = useMemo(() => {
     if (!searchQuery) return rows;
     const q = searchQuery.toLowerCase();
     return rows.filter((r) =>
-      Object.values(r).some((v) =>
-        String(v ?? "")
-          .toLowerCase()
-          .includes(q)
-      )
+      Object.values(r).some((v) => String(v ?? "").toLowerCase().includes(q))
     );
   }, [rows, searchQuery]);
 
   const canExport = filteredRows.length > 0;
   const currentReport = ORDERS_REPORTS[report as keyof typeof ORDERS_REPORTS];
 
-  // Calculate order statistics
+  // Aggregate stats
   const orderStats = useMemo(() => {
     const totalOrders = filteredRows.length;
     const totalValue = filteredRows.reduce((sum, row) => {
@@ -198,14 +309,12 @@ export default function OrdersReportsPage() {
 
   const handleDownloadPDF = async () => {
     if (!filteredRows.length) return;
-
     const [{ jsPDF }, autoTableModule] = await Promise.all([
       import("jspdf"),
       import("jspdf-autotable"),
     ]);
-
     const autoTable = autoTableModule.default;
-    const doc = new jsPDF({ orientation: "l", unit: "pt" }); // landscape for wide tables
+    const doc = new jsPDF({ orientation: "l", unit: "pt" });
 
     const headers = Object.keys(filteredRows[0]);
     const head = [headers.map((h) => h.replace(/_/g, " "))];
@@ -213,13 +322,12 @@ export default function OrdersReportsPage() {
       headers.map((h) => String((r as any)[h] ?? ""))
     );
 
-    // Header
     doc.setFontSize(16);
     doc.text(currentReport.label, 40, 32);
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 48);
 
-    // Table
+    // @ts-ignore
     autoTable(doc, {
       head,
       body,
@@ -227,8 +335,7 @@ export default function OrdersReportsPage() {
       margin: { left: 40, right: 40 },
       styles: { fontSize: 8, cellPadding: 4, overflow: "linebreak" },
       headStyles: { fillColor: [54, 116, 181], textColor: 255 },
-      didDrawPage: (data) => {
-        // optional footer
+      didDrawPage: () => {
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         doc.setFontSize(9);
@@ -246,8 +353,23 @@ export default function OrdersReportsPage() {
 
   const handleRetry = () => {
     setError(null);
-    setFilters((prev) => ({ ...prev }));
+    setRefreshIndex((i) => i + 1);
   };
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="p-8 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#3674B5] mb-4"></div>
+            <p className="text-gray-500 text-lg font-medium">
+              Preparing your branch reports…
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
@@ -274,7 +396,9 @@ export default function OrdersReportsPage() {
 
         {/* Report Selection Cards */}
         <div className="grid grid-cols-1 gap-6 mb-6">
-          {Object.entries(ORDERS_REPORTS).map(([key, config]) => {
+          {Object.entries({
+            "orders-summary": ORDERS_REPORTS["orders-summary"],
+          }).map(([key, config]) => {
             const IconComponent = config.icon;
             const isSelected = report === key;
             return (
@@ -460,19 +584,36 @@ export default function OrdersReportsPage() {
                 />
               </div>
 
+              {/* Branch Field: locked if a non-zero branchId is found */}
               <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Branch (name or ID)
-  </label>
-  <input
-    type="text"
-    placeholder="e.g., HQ or 1"
-    value={filters.branch || ""}
-    onChange={(e) => setFilters((f) => ({ ...f, branch: e.target.value.trimStart() }))}
-    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]"
-  />
-</div>
-
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Branch {isBranchLocked ? "(locked)" : "(optional)"}
+                </label>
+                <input
+                  type="text"
+                  placeholder={isBranchLocked ? "" : "e.g., HQ or 1"}
+                  value={isBranchLocked ? userBranchId ?? "" : filters.branch ?? ""}
+                  onChange={
+                    isBranchLocked
+                      ? undefined
+                      : (e) =>
+                          setFilters((f) => ({
+                            ...f,
+                            branch: e.target.value.trimStart(),
+                          }))
+                  }
+                  readOnly={isBranchLocked}
+                  disabled={isBranchLocked}
+                  className={`w-full px-3 py-2 border border-gray-200 rounded-lg ${
+                    isBranchLocked ? "bg-gray-100 cursor-not-allowed" : ""
+                  } focus:ring-2 focus:ring-[#3674B5] focus:border-[#3674B5]`}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {isBranchLocked
+                    ? "Locked to your assigned branch."
+                    : "Optional: filter by a branch; leave blank for all branches."}
+                </p>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
