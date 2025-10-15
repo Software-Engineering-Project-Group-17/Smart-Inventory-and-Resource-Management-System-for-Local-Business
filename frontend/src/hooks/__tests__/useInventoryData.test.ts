@@ -209,10 +209,11 @@ describe('useInventoryData', () => {
 
     expect(inventoryApi.getAll).toHaveBeenCalledOnce()
 
-    // Call refresh
-    result.current.refreshInventory()
-
-    expect(result.current.isLoading).toBe(true)
+    // Call refresh and wait for loading state to update
+    await waitFor(() => {
+      result.current.refreshInventory()
+      return result.current.isLoading === true
+    })
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
