@@ -1,7 +1,7 @@
-// app/(dashboard)/inventory/InventoryAnalytics.tsx (or your component path)
+// app/(dashboard)/inventory/InventoryAnalytics.tsx
 "use client";
 
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Area, AreaChart, PieChart, Pie, Cell
@@ -9,7 +9,7 @@ import {
 import {
   Package, TrendingUp, TrendingDown, AlertTriangle, DollarSign, RefreshCw, Activity
 } from "lucide-react";
-import { inventoryAPI } from "@/lib/api/analyticsApi";
+import { inventoryAPI, subscribeRealtime } from "@/lib/api/analyticsApi";
 
 // ---------- Safe mappers ----------
 const mapCategories = (arr: any[] = []) =>
@@ -273,6 +273,46 @@ export default function InventoryAnalytics() {
   }, [fetchAll]);
 
   const refreshData = () => fetchAll();
+
+  // ---------------- Realtime subscription (SSE/WS) ----------------
+  const invalidateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // Adjust topics to match what your backend emits
+    const topics = [
+      "inventory.by-category",
+      "inventory.stock-levels",
+      "inventory.movement",
+      "inventory.top-moving",
+      "inventory.warehouse-utilization",
+      "inventory.reorder-alerts",
+      "inventory.metrics",
+      "inventory.invalidate"
+    ];
+
+    const unsubscribe = subscribeRealtime(topics, (msg: any) => {
+      // Optional: ignore events for other branches if payload includes an id
+      try {
+        const msgBranch = msg?.data?.branchId ?? msg?.data?.branch_id;
+        if (branchId && msgBranch && String(msgBranch) !== String(branchId)) {
+          return;
+        }
+      } catch {
+        // ignore
+      }
+
+      // Debounce to avoid stampeding re-fetches
+      if (invalidateTimer.current) clearTimeout(invalidateTimer.current);
+      invalidateTimer.current = setTimeout(() => {
+        fetchAll();
+      }, 300);
+    });
+
+    return () => {
+      if (invalidateTimer.current) clearTimeout(invalidateTimer.current);
+      unsubscribe?.();
+    };
+  }, [fetchAll, branchId]);
 
   const inventoryMetrics = useMemo(() => {
     const totals = {

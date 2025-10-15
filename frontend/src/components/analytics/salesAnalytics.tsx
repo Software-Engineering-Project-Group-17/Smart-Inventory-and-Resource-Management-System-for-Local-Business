@@ -1,7 +1,7 @@
 // app/(dash)/SalesAnalytics.tsx
 "use client";
 
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   BarChart,
   Bar,
@@ -27,7 +27,7 @@ import {
   RefreshCw,
   Target,
 } from "lucide-react";
-import { salesAPI } from "@/lib/api/analyticsApi";
+import { salesAPI, subscribeRealtime } from "@/lib/api/analyticsApi";
 
 // ---------------- Safe mappers (normalize backend shapes) ----------------
 const mapDailySales = (arr: any[] = []) =>
@@ -248,6 +248,58 @@ export default function SalesAnalytics() {
   }, [fetchAll]);
 
   const refreshData = () => fetchAll();
+
+  // -------------------- Realtime (SSE/WS) --------------------
+  // Debounce refetches in case multiple topics arrive together.
+  const invalidateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const topics = [
+      "sales.daily",
+      "sales.by-category",
+      "sales.by-channel",
+      "sales.top-performers",
+      "sales.hourly",
+      "sales.metrics",
+      "sales.goals",
+      // a generic invalidation signal you can emit server-side after any write:
+      "sales.invalidate",
+    ];
+
+    const unsubscribe = subscribeRealtime(topics, (msg: any) => {
+      // Optional payload filtering if backend includes period or category in the event:
+      try {
+        const msgPeriod = msg?.data?.period || msg?.data?.range;
+        if (msgPeriod && String(msgPeriod) !== String(selectedPeriod)) return;
+
+        // selectedCategory: "all" | number
+        const selCat =
+          selectedCategory === "all" ? null : Number(selectedCategory);
+        const msgCat = msg?.data?.categoryId ?? msg?.data?.category_id;
+        if (
+          selCat !== null &&
+          selCat !== undefined &&
+          Number.isFinite(selCat) &&
+          msgCat !== undefined &&
+          Number(msgCat) !== Number(selCat)
+        ) {
+          return;
+        }
+      } catch {
+        // ignore malformed payloads
+      }
+
+      if (invalidateTimer.current) clearTimeout(invalidateTimer.current);
+      invalidateTimer.current = setTimeout(() => {
+        fetchAll();
+      }, 300);
+    });
+
+    return () => {
+      if (invalidateTimer.current) clearTimeout(invalidateTimer.current);
+      unsubscribe?.();
+    };
+  }, [fetchAll, selectedPeriod, selectedCategory]);
 
   // --------- derived metrics (category-aware) ----------
   const derived = useMemo(() => {

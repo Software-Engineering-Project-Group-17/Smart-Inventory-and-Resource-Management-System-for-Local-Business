@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   BarChart as RBarChart,
   Bar,
@@ -32,7 +32,7 @@ import {
   Heart,
   Award,
 } from "lucide-react";
-import { customerAPI } from "@/lib/api/analyticsApi";
+import { customerAPI, subscribeRealtime } from "@/lib/api/analyticsApi";
 
 // --- Color helpers (consistent with your design palette) ---
 const SEGMENT_COLORS = [
@@ -155,8 +155,8 @@ const mapRetention = (arr: RawRetention[] = []) =>
     cohort: r.cohort || r.label || `Month ${idx + 1}`,
     retention: Number(r.retention ?? r.rate ?? 0),
   }));
-  
-  const AcquisitionTooltip = ({ active, payload, label }: any) => {
+
+const AcquisitionTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   const row = payload[0].payload || {};
   const newC = Number(row.newCustomers ?? row.new ?? 0);
@@ -169,7 +169,6 @@ const mapRetention = (arr: RawRetention[] = []) =>
     </div>
   );
 };
-
 
 const DemographicsTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -186,15 +185,12 @@ const DemographicsTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-
-
-
 export default function CustomerAnalytics() {
   // Filters (extend with branchId when you have multi-branch UI)
   const [selectedPeriod, setSelectedPeriod] = useState("12m");
   const [selectedSegment, setSelectedSegment] = useState("all");
   const [loading, setLoading] = useState(false);
-  const [firstLoad, setFirstLoad] = useState(true); // <-- added
+  const [firstLoad, setFirstLoad] = useState(true);
   const [error, setError] = useState("");
 
   // Data state
@@ -306,7 +302,7 @@ export default function CustomerAnalytics() {
       setError(e?.message || "Failed to load customer analytics");
     } finally {
       setLoading(false);
-      setFirstLoad(false); // <-- added
+      setFirstLoad(false);
     }
   }, [selectedPeriod]);
 
@@ -316,6 +312,50 @@ export default function CustomerAnalytics() {
   }, [fetchAll]);
 
   const refreshData = () => fetchAll();
+
+  // -------------------- Realtime (SSE/WS) --------------------
+  // The backend should emit messages to any of these topics whenever underlying
+  // customer data changes. On receipt we debounce and refetch.
+  const invalidateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const topics = [
+      "customers.segments",
+      "customers.acquisition",
+      "customers.demographics",
+      "customers.behavior",
+      "customers.top-customers",
+      "customers.retention",
+      "customers.metrics",
+      // generic cache-buster/refresh signal:
+      "customers.invalidate",
+    ];
+
+    const unsubscribe = subscribeRealtime(topics, (msg: any) => {
+      // Optional filters if your backend includes them in the payload:
+      try {
+        const msgPeriod = msg?.data?.period;
+        if (msgPeriod && String(msgPeriod) !== String(selectedPeriod)) return;
+
+        const msgSegment = (msg?.data?.segment ?? msg?.data?.tier)?.toString()?.toLowerCase?.();
+        if (selectedSegment !== "all" && msgSegment && msgSegment !== selectedSegment.toLowerCase()) {
+          return;
+        }
+      } catch {
+        // ignore if payload not structured
+      }
+
+      if (invalidateTimer.current) clearTimeout(invalidateTimer.current);
+      invalidateTimer.current = setTimeout(() => {
+        fetchAll();
+      }, 300);
+    });
+
+    return () => {
+      if (invalidateTimer.current) clearTimeout(invalidateTimer.current);
+      unsubscribe?.();
+    };
+  }, [fetchAll, selectedPeriod, selectedSegment]);
 
   // Derived metric cards (use backend metrics when available)
   const customerMetrics = useMemo(() => {
@@ -567,34 +607,32 @@ export default function CustomerAnalytics() {
               Customer Acquisition Trend
             </h3>
             <ResponsiveContainer width="100%" height={300}>
-  <AreaChart data={acquisition}>
-    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-    
-    <YAxis stroke="#6b7280" />
-    <Tooltip content={<AcquisitionTooltip />} />
-    <Area
-      type="monotone"
-      dataKey="newCustomers"
-      stackId="1"
-      stroke="#10B981"
-      fill="#10B981"
-      fillOpacity={0.8}
-      name="New Customers"
-      isAnimationActive={false}
-    />
-    <Area
-      type="monotone"
-      dataKey="returningCustomers"
-      stackId="1"
-      stroke="#3674B5"
-      fill="#3674B5"
-      fillOpacity={0.8}
-      name="Returning Customers"
-      isAnimationActive={false}
-    />
-  </AreaChart>
-</ResponsiveContainer>
-
+              <AreaChart data={acquisition}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <YAxis stroke="#6b7280" />
+                <Tooltip content={<AcquisitionTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="newCustomers"
+                  stackId="1"
+                  stroke="#10B981"
+                  fill="#10B981"
+                  fillOpacity={0.8}
+                  name="New Customers"
+                  isAnimationActive={false}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="returningCustomers"
+                  stackId="1"
+                  stroke="#3674B5"
+                  fill="#3674B5"
+                  fillOpacity={0.8}
+                  name="Returning Customers"
+                  isAnimationActive={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
@@ -605,15 +643,14 @@ export default function CustomerAnalytics() {
               Customer Demographics
             </h3>
             <ResponsiveContainer width="100%" height={300}>
-  <RBarChart data={demographics} layout="vertical">
-    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-    <XAxis type="number" stroke="#6b7280" domain={[0, 'dataMax + 1']} />
-    <YAxis dataKey="ageGroup" type="category" stroke="#6b7280" width={60} />
-    <Tooltip />
-    <Bar dataKey="customers" fill="#F59E0B" name="Customers" barSize={18} />
-  </RBarChart>
-</ResponsiveContainer>
-
+              <RBarChart data={demographics} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis type="number" stroke="#6b7280" domain={[0, "dataMax + 1"]} />
+                <YAxis dataKey="ageGroup" type="category" stroke="#6b7280" width={60} />
+                <Tooltip />
+                <Bar dataKey="customers" fill="#F59E0B" name="Customers" barSize={18} />
+              </RBarChart>
+            </ResponsiveContainer>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
