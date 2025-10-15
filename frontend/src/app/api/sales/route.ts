@@ -240,19 +240,23 @@ export async function POST(request: NextRequest) {
         throw new Error(`Insufficient stock for item: ${item.name}`);
       }
 
-      // Create order item
+      // Create order item with calculated total_price
+      const calculatedTotalPrice = item.quantity * item.price;
+      
       await sql`
         INSERT INTO order_item (
           order_id,
           inventory_id,
           quantity,
-          unit_price
+          unit_price,
+          total_price
         )
         VALUES (
           ${orderId},
           ${item.id},
           ${item.quantity},
-          ${item.price}
+          ${item.price},
+          ${calculatedTotalPrice}
         )
       `;
 
@@ -288,6 +292,13 @@ export async function POST(request: NextRequest) {
         'paid',
         NOW()
       )
+    `;
+
+    // Update order status to completed
+    await sql`
+      UPDATE customer_order 
+      SET order_status = 'completed'
+      WHERE id = ${orderId}
     `;
 
     // Generate invoice number

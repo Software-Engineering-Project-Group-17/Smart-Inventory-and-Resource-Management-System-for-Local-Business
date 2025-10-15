@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import AWS from "aws-sdk";
 import { neon } from "@neondatabase/serverless";
 import { requireAuth, createAuthResponse } from "@/lib/requireAuth";
+import { ROLES } from "@/lib/roles";
 
 // Configure AWS S3
 const s3 = new AWS.S3({
@@ -18,9 +19,9 @@ const sql = neon(process.env.DATABASE_URL!);
 export async function GET(request: NextRequest) {
   // Require authentication - Allow OWNER, BRANCH_MANAGER, and STAFF to view categories
   const authResult = await requireAuth(request, [
-    "OWNER",
-    "BRANCH_MANAGER",
-    "STAFF",
+    ROLES.OWNER,
+    ROLES.BRANCH_MANAGER,
+    ROLES.STAFF,
   ]);
   const authResponse = createAuthResponse(authResult);
   if (authResponse) return authResponse;
@@ -50,7 +51,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   // Require authentication - Only OWNER and BRANCH_MANAGER can create categories
-  const authResult = await requireAuth(request, ["OWNER", "BRANCH_MANAGER"]);
+  const authResult = await requireAuth(request, [
+    ROLES.OWNER,
+    ROLES.BRANCH_MANAGER,
+  ]);
   const authResponse = createAuthResponse(authResult);
   if (authResponse) return authResponse;
 
@@ -168,7 +172,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const authResult = await requireAuth(request, ["OWNER", "BRANCH_MANAGER"]);
+  const authResult = await requireAuth(request, [
+    ROLES.OWNER,
+    ROLES.BRANCH_MANAGER,
+  ]);
   const authResponse = createAuthResponse(authResult);
   if (authResponse) return authResponse;
   try {
@@ -337,7 +344,10 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const authResult = await requireAuth(request, ["OWNER", "BRANCH_MANAGER"]);
+  const authResult = await requireAuth(request, [
+    ROLES.OWNER,
+    ROLES.BRANCH_MANAGER,
+  ]);
   const authResponse = createAuthResponse(authResult);
   if (authResponse) return authResponse;
   try {

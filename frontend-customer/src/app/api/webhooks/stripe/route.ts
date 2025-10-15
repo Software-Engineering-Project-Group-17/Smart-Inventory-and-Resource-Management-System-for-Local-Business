@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Pool } from "pg";
 import Stripe from "stripe";
+import { NotificationService } from "@/lib/notification-service";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -37,7 +38,6 @@ export async function POST(request: NextRequest) {
         try {
           await client.query("BEGIN");
 
-          // Get order details
           const orderQuery = `
             SELECT id, order_status, payment_status
             FROM customer_order 
@@ -58,7 +58,6 @@ export async function POST(request: NextRequest) {
 
           // Only update stock if payment wasn't already processed
           if (order.payment_status !== "paid") {
-            // Get order items to update inventory
             const orderItemsQuery = `
               SELECT inventory_id, quantity
               FROM order_item
@@ -68,6 +67,8 @@ export async function POST(request: NextRequest) {
 
             // Update inventory quantities (reduce stock for paid orders)
             for (const item of itemsResult.rows) {
+              const branchId = parseInt(process.env.BRANCH_ID || "3");
+
               const updateInventoryQuery = `
                 UPDATE inventory_item 
                 SET quantity = quantity - $1
@@ -76,12 +77,11 @@ export async function POST(request: NextRequest) {
               const updateResult = await client.query(updateInventoryQuery, [
                 item.quantity,
                 item.inventory_id,
-                parseInt(process.env.BRANCH_ID || "3"),
+                branchId,
               ]);
 
               // Check if stock was sufficient
               if (updateResult.rowCount === 0) {
-                // Get item name for error logging
                 const itemNameQuery = `
                   SELECT inventory_name
                   FROM inventory_item
@@ -97,9 +97,20 @@ export async function POST(request: NextRequest) {
                 console.error(
                   `Insufficient stock for ${itemName} (ID: ${item.inventory_id}) when processing payment for order ${order.id}`
                 );
-
-                // You might want to handle this case differently - maybe set order to processing
-                // and send notification to admin about stock issue
+              } else {
+                // Check for low stock notification after successful inventory update
+                try {
+                  await NotificationService.checkAndCreateLowStockNotification(
+                    item.inventory_id,
+                    branchId
+                  );
+                } catch (notificationError) {
+                  console.error(
+                    `Failed to check low stock notification for item ${item.inventory_id}:`,
+                    notificationError
+                  );
+                  // Don't fail the payment processing if notification fails
+                }
               }
             }
           }
@@ -115,12 +126,7 @@ export async function POST(request: NextRequest) {
           `;
 
           await client.query(updateOrderQuery, [order.id]);
-
           await client.query("COMMIT");
-
-          console.log(
-            `Payment succeeded and stock updated for order ${order.id} with payment intent: ${paymentIntent.id}`
-          );
         } catch (error) {
           await client.query("ROLLBACK");
           console.error("Error processing payment success:", error);
@@ -130,10 +136,108 @@ export async function POST(request: NextRequest) {
         }
         break;
 
+      case "charge.updated":
+        const charge = event.data.object as Stripe.Charge;
+
+        // Only process if charge is succeeded and has a payment intent
+        if (charge.status === "succeeded" && charge.payment_intent) {
+          const chargeClient = await pool.connect();
+          try {
+            await chargeClient.query("BEGIN");
+
+            const orderQuery = `
+              SELECT id, order_status, payment_status
+              FROM customer_order 
+              WHERE stripe_payment_intent_id = $1
+            `;
+            const orderResult = await chargeClient.query(orderQuery, [
+              charge.payment_intent,
+            ]);
+
+            if (orderResult.rows.length === 0) {
+              console.error(
+                `Order not found for payment intent: ${charge.payment_intent}`
+              );
+              await chargeClient.query("ROLLBACK");
+              break;
+            }
+
+            const order = orderResult.rows[0];
+
+            // Only update stock if payment wasn't already processed
+            if (order.payment_status !== "paid") {
+              const orderItemsQuery = `
+                SELECT inventory_id, quantity
+                FROM order_item
+                WHERE order_id = $1
+              `;
+              const itemsResult = await chargeClient.query(orderItemsQuery, [
+                order.id,
+              ]);
+
+              // Update inventory quantities (reduce stock for paid orders)
+              for (const item of itemsResult.rows) {
+                const branchId = parseInt(process.env.BRANCH_ID || "3");
+
+                const updateInventoryQuery = `
+                  UPDATE inventory_item 
+                  SET quantity = quantity - $1
+                  WHERE inventory_id = $2 AND quantity >= $1 AND branch_id = $3
+                `;
+                const updateResult = await chargeClient.query(
+                  updateInventoryQuery,
+                  [item.quantity, item.inventory_id, branchId]
+                );
+
+                // Check if stock was sufficient
+                if (updateResult.rowCount === 0) {
+                  console.error(
+                    `Insufficient stock for item ${item.inventory_id} when processing charge for order ${order.id}`
+                  );
+                } else {
+                  // Check for low stock notification after successful inventory update
+                  try {
+                    await NotificationService.checkAndCreateLowStockNotificationAfterPurchase(
+                      item.inventory_id,
+                      item.quantity,
+                      branchId
+                    );
+                  } catch (notificationError) {
+                    console.error(
+                      `Failed to check low stock notification for item ${item.inventory_id}:`,
+                      notificationError
+                    );
+                    // Don't fail the payment processing if notification fails
+                  }
+                }
+              }
+            }
+
+            // Update order status to completed and payment status to paid
+            const updateOrderQuery = `
+              UPDATE customer_order 
+              SET 
+                order_status = 'completed',
+                payment_status = 'paid',
+                updated_at = now()
+              WHERE id = $1
+            `;
+            await chargeClient.query(updateOrderQuery, [order.id]);
+
+            await chargeClient.query("COMMIT");
+          } catch (error) {
+            await chargeClient.query("ROLLBACK");
+            console.error("Error processing charge.updated:", error);
+            throw error;
+          } finally {
+            chargeClient.release();
+          }
+        }
+        break;
+
       case "payment_intent.payment_failed":
         const failedPayment = event.data.object as Stripe.PaymentIntent;
 
-        // Update order status to cancelled
         const cancelOrderQuery = `
           UPDATE customer_order 
           SET 
@@ -143,14 +247,11 @@ export async function POST(request: NextRequest) {
         `;
 
         await pool.query(cancelOrderQuery, [failedPayment.id]);
-
-        console.log(
-          `Payment failed for order with payment intent: ${failedPayment.id}`
-        );
         break;
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        // Unhandled event type
+        break;
     }
 
     return NextResponse.json({ received: true });

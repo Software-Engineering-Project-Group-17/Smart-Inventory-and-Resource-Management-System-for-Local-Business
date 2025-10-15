@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { withAuth } from "@/hooks/useAuth";
+import { ROLES } from "@/lib/roles";
 
 // Import existing modal components
 import RemoveManagerModal from "@/components/Owners/RemoveManagerModal";
@@ -155,5 +156,5 @@ const BranchesPage = () => {
 
 // Protect this page for OWNER role (owners manage their branches)
 export default withAuth(BranchesPage, {
-  requiredRoles: ["OWNER"],
+  requiredRoles: [ROLES.OWNER],
 });

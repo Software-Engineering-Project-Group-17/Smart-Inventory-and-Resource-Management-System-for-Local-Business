@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import { requireAuth, createAuthResponse } from "@/lib/requireAuth";
+import { ROLES } from "@/lib/roles";
 
 const sql = neon(process.env.DATABASE_URL!);
 
 export async function GET(request: NextRequest) {
   try {
     // Authenticate user and check permissions
-    const authResult = await requireAuth(request, ["BRANCH_MANAGER", "STAFF"]);
+    const authResult = await requireAuth(request, [
+      ROLES.BRANCH_MANAGER,
+      ROLES.STAFF,
+    ]);
     const authResponse = createAuthResponse(authResult);
     if (authResponse) return authResponse;
 
