@@ -59,12 +59,24 @@ export const resourceApi = {
       const url = branchId
         ? `/api/resources?branch_id=${branchId}`
         : "/api/resources";
-      return await authenticatedFetchJson<
+      
+      // Check if user is authenticated
+      const token = localStorage.getItem("token");
+      console.log("🔐 Auth token exists:", !!token);
+      if (token) {
+        console.log("🔑 Token preview:", token.substring(0, 20) + "...");
+      }
+      
+      console.log("🌐 Fetching resources from:", url);
+      const response = await authenticatedFetchJson<
         ApiResponse<{
           resources: ResourceData[];
           assignments: AssignmentData[];
         }>
       >(url);
+      console.log("📡 Raw API response:", response);
+      
+      return response;
     } catch (error) {
       console.error("Failed to fetch resources:", error);
       return {
