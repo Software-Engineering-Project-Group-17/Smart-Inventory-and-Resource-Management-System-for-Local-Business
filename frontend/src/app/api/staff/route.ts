@@ -1,15 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/database/connection";
+import { requireAuth, createAuthResponse } from "@/lib/requireAuth";
+import { ROLES } from "@/lib/roles";
 
 // GET /api/staff?email=user@example.com - Get staff details by email
 export async function GET(request: NextRequest) {
-  try {
-    // Authentication check - get user ID from headers
-    const userId = request.headers.get("x-user-id");
+  // Require authentication - Only STAFF and BRANCH_MANAGER can search staff
+  const authResult = await requireAuth(request, [
+    ROLES.STAFF,
+    ROLES.BRANCH_MANAGER,
+  ]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
 
-    if (!userId) {
+  try {
+    const { user } = authResult;
+
+    // User is guaranteed to exist after authentication
+    if (!user) {
       return NextResponse.json(
-        { success: false, message: "Authentication required" },
+        { success: false, message: "User data not available" },
         { status: 401 }
       );
     }
@@ -24,7 +34,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // First, get the requesting user's role and branch
+    // First, get the requesting user's role and branch using Firebase UID
     const userResult = await sql`
       SELECT 
         u.user_id,
@@ -33,7 +43,7 @@ export async function GET(request: NextRequest) {
       FROM app_user u
       LEFT JOIN roles r ON u.role_id = r.id
       LEFT JOIN staff s ON u.user_id = s.user_id
-      WHERE u.user_id = ${userId} AND u.is_active = true
+      WHERE u.firebase_uid = ${user.uid} AND u.is_active = true
     `;
 
     if (userResult.length === 0) {
@@ -102,7 +112,7 @@ export async function GET(request: NextRequest) {
         LEFT JOIN branches b ON s.branch_id = b.id
         WHERE s.email = ${email} 
           AND s.is_active = true 
-          AND s.user_id = ${userId}
+          AND s.user_id = ${requestingUser.user_id}
       `;
     } else {
       // Other roles (SUPPLIER, CUSTOMER) cannot access staff data
@@ -136,7 +146,7 @@ export async function GET(request: NextRequest) {
 
     // Log successful access for security monitoring
     console.log(
-      `Staff data access: User ${userId} (${requestingUser.role_name}) accessed staff ${email}`
+      `Staff data access: User ${user.uid} (${requestingUser.role_name}) accessed staff ${email}`
     );
 
     return NextResponse.json({

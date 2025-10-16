@@ -6,7 +6,7 @@ import {
   ResourceFormData,
   TabType,
 } from "./types";
-import { resourceApi, assignmentApi, staffApi } from "@/lib/api/resources";
+import { resourceApi, assignmentApi, staffApi } from "@/lib/api/resources-authenticated";
 
 export const useResourceManagement = () => {
   const [activeTab, setActiveTab] = useState<TabType>("available");
@@ -108,7 +108,7 @@ export const useResourceManagement = () => {
     setIsLoadingStaff(true);
 
     try {
-      const response = await staffApi.getByEmail(email);
+      const response = await staffApi.findByEmail(email);
 
       if (response.success && response.data) {
         setAssignForm((prev) => ({
