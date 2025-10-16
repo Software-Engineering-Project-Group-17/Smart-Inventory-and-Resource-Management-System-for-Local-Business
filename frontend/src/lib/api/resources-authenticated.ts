@@ -1,5 +1,9 @@
 // API client functions for resource management with authentication
-import { authenticatedFetch, authenticatedPost, authenticatedFetchJson } from "@/lib/authenticated-fetch";
+import {
+  authenticatedFetch,
+  authenticatedPost,
+  authenticatedFetchJson,
+} from "@/lib/authenticated-fetch";
 
 interface ApiResponse<T = any> {
   success: boolean;
@@ -55,7 +59,12 @@ export const resourceApi = {
       const url = branchId
         ? `/api/resources?branch_id=${branchId}`
         : "/api/resources";
-      return await authenticatedFetchJson<ApiResponse<{ resources: ResourceData[]; assignments: AssignmentData[] }>>(url);
+      return await authenticatedFetchJson<
+        ApiResponse<{
+          resources: ResourceData[];
+          assignments: AssignmentData[];
+        }>
+      >(url);
     } catch (error) {
       console.error("Failed to fetch resources:", error);
       return {
@@ -73,7 +82,10 @@ export const resourceApi = {
     resourceType?: string;
   }): Promise<ApiResponse<ResourceData>> {
     try {
-      return await authenticatedPost<ApiResponse<ResourceData>>("/api/resources", data);
+      return await authenticatedPost<ApiResponse<ResourceData>>(
+        "/api/resources",
+        data
+      );
     } catch (error) {
       console.error("Failed to create resource:", error);
       return {
@@ -87,9 +99,12 @@ export const resourceApi = {
   // Delete a resource
   async delete(id: number): Promise<ApiResponse> {
     try {
-      return await authenticatedFetchJson<ApiResponse>(`/api/resources?id=${id}`, {
-        method: "DELETE",
-      });
+      return await authenticatedFetchJson<ApiResponse>(
+        `/api/resources?id=${id}`,
+        {
+          method: "DELETE",
+        }
+      );
     } catch (error) {
       console.error("Failed to delete resource:", error);
       return {
@@ -114,7 +129,10 @@ export const assignmentApi = {
     endTime?: string;
   }): Promise<ApiResponse<AssignmentData>> {
     try {
-      return await authenticatedPost<ApiResponse<AssignmentData>>("/api/resources/assignments", data);
+      return await authenticatedPost<ApiResponse<AssignmentData>>(
+        "/api/resources/assignments",
+        data
+      );
     } catch (error) {
       console.error("Failed to create assignment:", error);
       return {
@@ -128,9 +146,12 @@ export const assignmentApi = {
   // Unassign a resource
   async delete(id: number): Promise<ApiResponse> {
     try {
-      return await authenticatedFetchJson<ApiResponse>(`/api/resources/assignments?id=${id}`, {
-        method: "DELETE",
-      });
+      return await authenticatedFetchJson<ApiResponse>(
+        `/api/resources/assignments?id=${id}`,
+        {
+          method: "DELETE",
+        }
+      );
     } catch (error) {
       console.error("Failed to delete assignment:", error);
       return {
@@ -147,7 +168,9 @@ export const staffApi = {
   // Find staff by email
   async findByEmail(email: string): Promise<ApiResponse<StaffData>> {
     try {
-      return await authenticatedFetchJson<ApiResponse<StaffData>>(`/api/staff?email=${encodeURIComponent(email)}`);
+      return await authenticatedFetchJson<ApiResponse<StaffData>>(
+        `/api/staff?email=${encodeURIComponent(email)}`
+      );
     } catch (error) {
       console.error("Failed to find staff:", error);
       return {

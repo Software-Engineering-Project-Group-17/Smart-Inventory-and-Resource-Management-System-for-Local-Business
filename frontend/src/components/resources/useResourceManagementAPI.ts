@@ -6,7 +6,11 @@ import {
   ResourceFormData,
   TabType,
 } from "./types";
-import { resourceApi, assignmentApi, staffApi } from "@/lib/api/resources-authenticated";
+import {
+  resourceApi,
+  assignmentApi,
+  staffApi,
+} from "@/lib/api/resources-authenticated";
 
 export const useResourceManagement = () => {
   const [activeTab, setActiveTab] = useState<TabType>("available");
