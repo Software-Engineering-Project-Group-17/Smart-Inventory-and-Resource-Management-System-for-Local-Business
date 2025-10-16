@@ -65,18 +65,30 @@ export const useResourceManagement = () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       console.log("🔍 Loading resources...");
       const response = await resourceApi.getAll();
       console.log("📊 Resource API response:", response);
 
       if (response.success && response.data) {
-        console.log("✅ Resources loaded:", response.data.resources.length, "resources");
-        console.log("✅ Assignments loaded:", response.data.assignments.length, "assignments");
+        console.log(
+          "✅ Resources loaded:",
+          response.data.resources.length,
+          "resources"
+        );
+        console.log(
+          "✅ Assignments loaded:",
+          response.data.assignments.length,
+          "assignments"
+        );
         setResources(response.data.resources);
         setAssignments(response.data.assignments);
       } else {
-        console.error("❌ Failed to load resources:", response.message, response.error);
+        console.error(
+          "❌ Failed to load resources:",
+          response.message,
+          response.error
+        );
         setError(response.message || "Failed to load resources");
       }
     } catch (error) {
