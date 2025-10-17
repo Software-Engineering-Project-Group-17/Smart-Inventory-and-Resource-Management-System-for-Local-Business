@@ -110,6 +110,11 @@ export const SUPPLIER_ORDER_STATUSES = {
     color: "red",
     description: "Order was cancelled",
   },
+  shipped: {
+    label: "Shipped",
+    color: "purple",
+    description: "Order was shipped",
+  },
 } as const;
 
 export const SUPPLIER_PAYMENT_STATUSES = {
