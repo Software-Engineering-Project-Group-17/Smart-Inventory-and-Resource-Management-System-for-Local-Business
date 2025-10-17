@@ -1,9 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/database/connection";
+import { requireAuth, createAuthResponse } from "@/lib/requireAuth";
+import { ROLES } from "@/lib/roles";
 
 // POST /api/resources/assignments - Assign a resource to staff
 export async function POST(request: NextRequest) {
+  // Require authentication - Only OWNER and BRANCH_MANAGER can assign resources
+  const authResult = await requireAuth(request, [
+    ROLES.OWNER,
+    ROLES.BRANCH_MANAGER,
+  ]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
+
   try {
+    const { user } = authResult;
+
+    // User is guaranteed to exist after authentication
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: "User data not available" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const {
       resourceId,
@@ -136,6 +156,14 @@ export async function POST(request: NextRequest) {
 
 // DELETE /api/resources/assignments?id=123 - Unassign a resource
 export async function DELETE(request: NextRequest) {
+  // Require authentication - Only OWNER and BRANCH_MANAGER can unassign resources
+  const authResult = await requireAuth(request, [
+    ROLES.OWNER,
+    ROLES.BRANCH_MANAGER,
+  ]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
+
   try {
     const { searchParams } = new URL(request.url);
     const assignmentId = searchParams.get("id");

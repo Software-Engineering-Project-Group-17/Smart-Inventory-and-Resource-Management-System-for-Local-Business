@@ -7,6 +7,7 @@ interface ResourceTabsProps {
   onTabChange: (tab: TabType) => void;
   resourceCount: number;
   assignmentCount: number;
+  isLoading?: boolean;
 }
 
 export const ResourceTabs: React.FC<ResourceTabsProps> = ({
@@ -14,6 +15,7 @@ export const ResourceTabs: React.FC<ResourceTabsProps> = ({
   onTabChange,
   resourceCount,
   assignmentCount,
+  isLoading = false,
 }) => {
   return (
     <div className="border-b border-gray-200">
@@ -26,7 +28,13 @@ export const ResourceTabs: React.FC<ResourceTabsProps> = ({
               : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
         >
-          {RESOURCE_CONSTANTS.tabs.allResources} ({resourceCount})
+          {RESOURCE_CONSTANTS.tabs.allResources} (
+          {isLoading ? (
+            <span className="inline-block w-4 h-4 bg-gray-200 rounded animate-pulse"></span>
+          ) : (
+            resourceCount
+          )}
+          )
         </button>
         <button
           onClick={() => onTabChange("assigned")}
@@ -36,7 +44,13 @@ export const ResourceTabs: React.FC<ResourceTabsProps> = ({
               : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
         >
-          {RESOURCE_CONSTANTS.tabs.assignedResources} ({assignmentCount})
+          {RESOURCE_CONSTANTS.tabs.assignedResources} (
+          {isLoading ? (
+            <span className="inline-block w-4 h-4 bg-gray-200 rounded animate-pulse"></span>
+          ) : (
+            assignmentCount
+          )}
+          )
         </button>
       </div>
     </div>

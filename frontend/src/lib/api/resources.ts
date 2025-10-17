@@ -1,5 +1,9 @@
 // API client functions for resource management
 import { getUserProfile } from "@/lib/auth";
+import {
+  authenticatedFetch,
+  authenticatedPost,
+} from "@/lib/authenticated-fetch";
 
 // Helper function to get user headers for API requests
 function getUserHeaders(): HeadersInit {
@@ -53,19 +57,29 @@ interface AssignmentData {
 interface StaffData {
   id: number;
   name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   phone: string;
+  tel?: string; // Database field name
+  address?: string;
   branchId?: number;
+  branch_id?: number; // Database field name
   branchName?: string;
+  branch_name?: string; // Database field name
+  branch_location?: string;
+  staff_types?: string[];
+  hire_date?: string;
+  salary?: number;
 }
 
-// Base API function
+// Base API function using authenticated fetch
 async function apiCall<T>(
   url: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   try {
-    const response = await fetch(url, {
+    const response = await authenticatedFetch(url, {
       headers: {
         "Content-Type": "application/json",
         ...options.headers,
@@ -96,9 +110,7 @@ export const resourceApi = {
     const url = branchId
       ? `/api/resources?branch_id=${branchId}`
       : "/api/resources";
-    return apiCall(url, {
-      headers: getUserHeaders(),
-    });
+    return apiCall(url);
   },
 
   // Create a new resource
@@ -109,7 +121,6 @@ export const resourceApi = {
   }): Promise<ApiResponse<ResourceData>> {
     return apiCall("/api/resources", {
       method: "POST",
-      headers: getUserHeaders(),
       body: JSON.stringify(resourceData),
     });
   },
@@ -151,7 +162,6 @@ export const assignmentApi = {
   }): Promise<ApiResponse<AssignmentData>> {
     return apiCall("/api/resources/assignments", {
       method: "POST",
-      headers: getUserHeaders(),
       body: JSON.stringify(assignmentData),
     });
   },

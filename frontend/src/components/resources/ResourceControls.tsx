@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Loader } from "lucide-react";
 import { RESOURCE_CONSTANTS } from "./constants";
 
 interface ResourceControlsProps {
@@ -7,6 +7,7 @@ interface ResourceControlsProps {
   onSearchChange: (query: string) => void;
   onAddResource: () => void;
   placeholder?: string;
+  isLoading?: boolean;
 }
 
 export const ResourceControls: React.FC<ResourceControlsProps> = ({
@@ -14,6 +15,7 @@ export const ResourceControls: React.FC<ResourceControlsProps> = ({
   onSearchChange,
   onAddResource,
   placeholder = RESOURCE_CONSTANTS.placeholders.searchResources,
+  isLoading = false,
 }) => {
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -31,10 +33,17 @@ export const ResourceControls: React.FC<ResourceControlsProps> = ({
       </div>
       <button
         onClick={onAddResource}
-        className="px-6 py-3 text-white rounded-lg hover:opacity-90 transition-all duration-200 flex items-center gap-2 font-medium"
+        disabled={isLoading}
+        className={`px-6 py-3 text-white rounded-lg transition-all duration-200 flex items-center gap-2 font-medium ${
+          isLoading ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"
+        }`}
         style={{ backgroundColor: RESOURCE_CONSTANTS.colors.primary }}
       >
-        <Plus size={20} />
+        {isLoading ? (
+          <Loader size={20} className="animate-spin" />
+        ) : (
+          <Plus size={20} />
+        )}
         {RESOURCE_CONSTANTS.buttons.addResource}
       </button>
     </div>

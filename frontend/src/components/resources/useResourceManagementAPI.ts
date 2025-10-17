@@ -7,6 +7,7 @@ import {
   TabType,
 } from "./types";
 import { resourceApi, assignmentApi, staffApi } from "@/lib/api/resources";
+import { toastUtils } from "@/lib/toast-utils";
 
 export const useResourceManagement = () => {
   const [activeTab, setActiveTab] = useState<TabType>("available");
@@ -16,21 +17,6 @@ export const useResourceManagement = () => {
   const [isLoadingStaff, setIsLoadingStaff] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Notification state
-  const [notification, setNotification] = useState<{
-    show: boolean;
-    message: string;
-    type: "success" | "error";
-  }>({ show: false, message: "", type: "success" });
-
-  // Show notification function
-  const showNotification = (message: string, type: "success" | "error") => {
-    setNotification({ show: true, message, type });
-    setTimeout(() => {
-      setNotification({ show: false, message: "", type: "success" });
-    }, 5000); // Hide after 5 seconds
-  };
 
   const [resources, setResources] = useState<Resource[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -68,12 +54,16 @@ export const useResourceManagement = () => {
         setResources(response.data.resources);
         setAssignments(response.data.assignments);
       } else {
-        setError(response.message || "Failed to load resources");
+        const errorMessage = response.message || "Failed to load resources";
+        setError(errorMessage);
+        toastUtils.dataError("load resources", errorMessage);
         console.error("Failed to load resources:", response.error);
       }
     } catch (error) {
       console.error("Error loading resources:", error);
-      setError("Failed to load resources");
+      const errorMessage = "Failed to load resources";
+      setError(errorMessage);
+      toastUtils.networkError();
     } finally {
       setIsLoading(false);
     }
@@ -106,17 +96,39 @@ export const useResourceManagement = () => {
     if (!email || !email.includes("@")) return;
 
     setIsLoadingStaff(true);
+    console.log("Fetching staff details for email:", email);
 
     try {
       const response = await staffApi.getByEmail(email);
+      console.log("Staff API response:", response);
 
       if (response.success && response.data) {
+        const staff = response.data;
+        console.log("Staff data received:", staff);
+
+        const newFormData = {
+          staffName:
+            staff.name ||
+            `${staff.first_name || ""} ${staff.last_name || ""}`.trim(),
+          phone: staff.phone || staff.tel || "",
+        };
+
+        console.log("Setting form data:", newFormData);
+
         setAssignForm((prev) => ({
           ...prev,
-          staffName: response.data!.name,
-          phone: response.data!.phone,
+          ...newFormData,
         }));
+
+        console.log("Staff details loaded successfully:", {
+          name: staff.name,
+          email: staff.email,
+          phone: staff.phone || staff.tel,
+          branch: staff.branchName || staff.branch_name,
+          types: staff.staff_types,
+        });
       } else {
+        console.log("Staff not found for email:", email, "Response:", response);
         // Clear fields if staff not found
         setAssignForm((prev) => ({
           ...prev,
@@ -165,7 +177,7 @@ export const useResourceManagement = () => {
   // Resource operations with API
   const handleAddResource = async () => {
     if (!addResourceForm.name || !addResourceForm.details) {
-      showNotification("Please fill in all required fields", "error");
+      toastUtils.validationError("Please fill in all required fields");
       return;
     }
 
@@ -178,17 +190,20 @@ export const useResourceManagement = () => {
       });
 
       if (response.success) {
-        showNotification("Resource added successfully!", "success");
+        toastUtils.formSuccess("Created", addResourceForm.name);
         resetAddResourceForm();
         setShowAddResourceForm(false);
         // Reload resources
         await loadResources();
       } else {
-        showNotification(response.message || "Failed to add resource", "error");
+        toastUtils.formError(
+          "Create Resource",
+          response.message || "Failed to add resource"
+        );
       }
     } catch (error) {
       console.error("Error adding resource:", error);
-      showNotification("Failed to add resource", "error");
+      toastUtils.formError("Create Resource", "Failed to add resource");
     }
   };
 
@@ -199,7 +214,7 @@ export const useResourceManagement = () => {
       !assignForm.startDate ||
       !assignForm.endDate
     ) {
-      showNotification("Please fill in all required fields", "error");
+      toastUtils.validationError("Please fill in all required fields");
       return;
     }
 
@@ -215,25 +230,31 @@ export const useResourceManagement = () => {
       });
 
       if (response.success) {
-        showNotification("Resource assigned successfully!", "success");
+        toastUtils.success(
+          "Resource Assigned",
+          `Resource assigned to ${assignForm.staffName} successfully`
+        );
         resetAssignForm();
         setShowAssignForm(null);
         // Reload resources
         await loadResources();
       } else {
-        showNotification(
-          response.message || "Failed to assign resource",
-          "error"
+        toastUtils.error(
+          "Assignment Failed",
+          response.message || "Failed to assign resource"
         );
       }
     } catch (error) {
       console.error("Error assigning resource:", error);
-      showNotification("Failed to assign resource", "error");
+      toastUtils.error("Assignment Failed", "Failed to assign resource");
     }
   };
 
   const handleUnassign = async (assignmentId: number) => {
-    if (!confirm("Are you sure you want to unassign this resource?")) {
+    const assignment = assignments.find((a) => a.id === assignmentId);
+    const resourceName = assignment?.resourceName || "Resource";
+
+    if (!confirm(`Are you sure you want to unassign ${resourceName}?`)) {
       return;
     }
 
@@ -241,23 +262,37 @@ export const useResourceManagement = () => {
       const response = await assignmentApi.delete(assignmentId);
 
       if (response.success) {
-        showNotification("Resource unassigned successfully!", "success");
+        toastUtils.actionWithUndo(
+          `${resourceName} unassigned successfully`,
+          "Undo",
+          () => {
+            // If undo functionality is needed, implement it here
+            toastUtils.info("Undo", "Please reassign the resource manually");
+          }
+        );
         // Reload resources
         await loadResources();
       } else {
-        showNotification(
-          response.message || "Failed to unassign resource",
-          "error"
+        toastUtils.error(
+          "Unassignment Failed",
+          response.message || "Failed to unassign resource"
         );
       }
     } catch (error) {
       console.error("Error unassigning resource:", error);
-      showNotification("Failed to unassign resource", "error");
+      toastUtils.error("Unassignment Failed", "Failed to unassign resource");
     }
   };
 
   const handleDeleteResource = async (resourceId: number) => {
-    if (!confirm("Are you sure you want to delete this resource?")) {
+    const resource = resources.find((r) => r.id === resourceId);
+    const resourceName = resource?.name || "Resource";
+
+    if (
+      !confirm(
+        `Are you sure you want to delete "${resourceName}"? This action cannot be undone.`
+      )
+    ) {
       return;
     }
 
@@ -265,18 +300,21 @@ export const useResourceManagement = () => {
       const response = await resourceApi.delete(resourceId);
 
       if (response.success) {
-        showNotification("Resource deleted successfully!", "success");
+        toastUtils.success(
+          "Resource Deleted",
+          `"${resourceName}" has been deleted successfully`
+        );
         // Reload resources
         await loadResources();
       } else {
-        showNotification(
-          response.message || "Failed to delete resource",
-          "error"
+        toastUtils.error(
+          "Delete Failed",
+          response.message || "Failed to delete resource"
         );
       }
     } catch (error) {
       console.error("Error deleting resource:", error);
-      showNotification("Failed to delete resource", "error");
+      toastUtils.error("Delete Failed", "Failed to delete resource");
     }
   };
 
@@ -312,7 +350,6 @@ export const useResourceManagement = () => {
     assignments,
     assignForm,
     addResourceForm,
-    notification,
 
     // Computed
     availableResources,
@@ -334,6 +371,5 @@ export const useResourceManagement = () => {
     openAddResourceForm,
     closeAddResourceForm,
     loadResources,
-    showNotification,
   };
 };

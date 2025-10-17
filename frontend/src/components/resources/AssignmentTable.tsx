@@ -1,17 +1,93 @@
 import React from "react";
-import { User, Mail, Phone, Calendar, Clock, X, Truck } from "lucide-react";
+import {
+  User,
+  Mail,
+  Phone,
+  Calendar,
+  Clock,
+  X,
+  Truck,
+  Loader,
+} from "lucide-react";
 import { Assignment } from "./types";
 import { RESOURCE_CONSTANTS } from "./constants";
 
 interface AssignmentTableProps {
   assignments: Assignment[];
+  isLoading?: boolean;
   onUnassign: (assignmentId: number) => void;
 }
 
 export const AssignmentTable: React.FC<AssignmentTableProps> = ({
   assignments,
+  isLoading = false,
   onUnassign,
 }) => {
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                Resource
+              </th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                Purpose
+              </th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                Assigned To
+              </th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                Schedule
+              </th>
+              <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {/* Loading skeleton rows */}
+            {[...Array(3)].map((_, index) => (
+              <tr key={index} className="animate-pulse">
+                <td className="px-6 py-4">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="space-y-2">
+                    <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex justify-center">
+                    <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {/* Loading indicator */}
+        <div className="flex items-center justify-center py-8">
+          <Loader className="animate-spin h-6 w-6 text-blue-600 mr-2" />
+          <span className="text-gray-600">Loading assignments...</span>
+        </div>
+      </div>
+    );
+  }
+
   if (assignments.length === 0) {
     return (
       <div className="text-center py-12">

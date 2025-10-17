@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { withAuth } from "@/hooks/useAuth";
 import { ROLES } from "@/lib/roles";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 interface StaffMember {
   id: number;
@@ -204,16 +205,60 @@ const StaffManagementPage = () => {
   };
 
   const handleToggleActive = (id: number) => {
-    setStaff((prev) =>
-      prev.map((member) =>
-        member.id === id ? { ...member, isActive: !member.isActive } : member
-      )
+    // This function is kept for UI consistency but doesn't perform any action
+    // Deactivation is handled by handleRemove function using the proper API
+    // Reactivation would require a separate API endpoint and additional business logic
+    console.log("Toggle active status for staff ID:", id);
+
+    toastUtils.info(
+      "Status Change",
+      "Use the deactivate button to deactivate staff members. Contact system administrator for reactivation."
     );
   };
 
-  const handleRemove = (id: number) => {
-    if (confirm("Are you sure you want to remove this staff member?")) {
-      setStaff((prev) => prev.filter((member) => member.id !== id));
+  const handleRemove = async (id: number) => {
+    const staffMember = staff.find((member) => member.id === id);
+    if (!staffMember) return;
+
+    const confirmMessage = `Are you sure you want to deactivate ${staffMember.firstName} ${staffMember.lastName}? They will no longer be able to log in.`;
+
+    if (confirm(confirmMessage)) {
+      try {
+        // Call deactivation API using authenticatedFetch
+        const response = await authenticatedFetch(
+          `/api/staff/deactivate/${id}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          // Update staff member status in frontend state instead of removing
+          setStaff((prev) =>
+            prev.map((member) =>
+              member.id === id ? { ...member, isActive: false } : member
+            )
+          );
+
+          toastUtils.formSuccess(
+            "Staff Deactivated",
+            `${staffMember.firstName} ${staffMember.lastName} has been deactivated`
+          );
+        } else {
+          toastUtils.formError(
+            "Deactivate Staff",
+            result.message || "Failed to deactivate staff member"
+          );
+        }
+      } catch (error) {
+        console.error("Error deactivating staff:", error);
+        toastUtils.networkError();
+      }
     }
   };
 
@@ -856,7 +901,11 @@ const StaffManagementPage = () => {
                 {filteredStaff.map((member) => (
                   <tr
                     key={member.id}
-                    className="hover:bg-gray-50 transition-colors duration-150"
+                    className={`transition-colors duration-150 ${
+                      member.isActive
+                        ? "hover:bg-gray-50"
+                        : "bg-gray-50 opacity-60"
+                    }`}
                   >
                     <td className="px-6 py-4">
                       {editingId === member.id ? (
@@ -889,7 +938,18 @@ const StaffManagementPage = () => {
                           />
                         </div>
                       ) : (
-                        <div className="font-medium text-gray-900">{`${member.firstName} ${member.lastName}`}</div>
+                        <div
+                          className={`font-medium ${
+                            member.isActive ? "text-gray-900" : "text-gray-500"
+                          }`}
+                        >
+                          {`${member.firstName} ${member.lastName}`}
+                          {!member.isActive && (
+                            <span className="ml-2 px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full">
+                              Deactivated
+                            </span>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -1073,12 +1133,15 @@ const StaffManagementPage = () => {
                           </>
                         ) : (
                           <>
-                            <button
-                              onClick={() => handleEdit(member)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            >
-                              <Edit size={16} />
-                            </button>
+                            {member.isActive && (
+                              <button
+                                onClick={() => handleEdit(member)}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Edit Staff Member"
+                              >
+                                <Edit size={16} />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleToggleActive(member.id)}
                               className={`p-2 rounded-lg transition-colors ${
@@ -1087,17 +1150,22 @@ const StaffManagementPage = () => {
                                   : "text-gray-400 hover:bg-gray-50"
                               }`}
                               title={
-                                member.isActive ? "Deactivate" : "Activate"
+                                member.isActive
+                                  ? "Mark as Active"
+                                  : "Mark as Inactive"
                               }
                             >
                               <UserCheck size={16} />
                             </button>
-                            <button
-                              onClick={() => handleRemove(member.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            {member.isActive && (
+                              <button
+                                onClick={() => handleRemove(member.id)}
+                                className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                                title="Deactivate Staff Member"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
