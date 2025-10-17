@@ -37,18 +37,23 @@ async function createRestockCompletionNotification(
     // Create notification for branch users
     const notificationResult = await sql`
       INSERT INTO notification (
-        user_id,
-        type,
+        branch_id,
+        notification_type,
         title,
         message,
+        content,
+        inventory_id,
         metadata,
+        is_read,
         created_at
       )
-      SELECT 
-        u.user_id,
+      VALUES (
+        ${inventoryItem.branch_id},
         'restock_completion',
         'Inventory Restocked',
         ${message},
+        ${message},
+        ${inventoryItem.inventory_id},
         ${JSON.stringify({
           inventory_id: inventoryId,
           inventory_name: inventoryItem.inventory_name,
@@ -58,12 +63,9 @@ async function createRestockCompletionNotification(
           branch_id: inventoryItem.branch_id,
           branch_name: inventoryItem.branch_name,
         })},
+        false,
         NOW()
-      FROM app_user u
-      INNER JOIN staff s ON u.user_id = s.user_id
-      WHERE s.branch_id = ${inventoryItem.branch_id}
-        AND u.is_active = true
-        AND s.is_active = true
+      )
       RETURNING *
     `;
 

@@ -157,7 +157,7 @@ async function createRestockCompletionNotification(
     `;
 
     console.log(
-      `✅ Created restock notification for ${inventoryItem.inventory_name}: +${addedQuantity} units (${previousQuantity} → ${newQuantity})`
+      `Created restock notification for ${inventoryItem.inventory_name}: +${addedQuantity} units (${previousQuantity} → ${newQuantity})`
     );
     return result[0];
   } catch (error) {

@@ -21,6 +21,7 @@ import { SupplierOrder } from "@/types/supplier-order";
 import { SupplierOrderCard } from "@/components/restock-requests/SupplierOrderCard";
 import { PaymentModal } from "@/components/restock-requests/PaymentModal";
 import { toastUtils } from "@/lib/toast-utils";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 const RestockRequestDetailsPage = () => {
   const params = useParams();
@@ -176,7 +177,7 @@ const RestockRequestDetailsPage = () => {
         headers["x-user-email"] = userProfile.email;
       }
 
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `/api/supplier-orders/${order.id}/mark-delivered`,
         {
           method: "PATCH",
