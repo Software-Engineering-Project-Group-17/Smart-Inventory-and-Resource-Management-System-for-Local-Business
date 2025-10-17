@@ -10,10 +10,11 @@ import { ROLES } from "@/lib/roles";
 
 // GET /api/resources - Get resources for user's branch
 export async function GET(request: NextRequest) {
-  // Require authentication - Only OWNER and BRANCH_MANAGER can view resources
+  // Require authentication - OWNER BRANCH_MANAGER  STAFF  can view resources
   const authResult = await requireAuth(request, [
     ROLES.OWNER,
     ROLES.BRANCH_MANAGER,
+    ROLES.STAFF,
   ]);
   const authResponse = createAuthResponse(authResult);
   if (authResponse) return authResponse;
@@ -81,10 +82,11 @@ export async function GET(request: NextRequest) {
 
 // POST /api/resources - Create a new resource
 export async function POST(request: NextRequest) {
-  // Require authentication - Only OWNER and BRANCH_MANAGER can create resources
+  // Require authentication - OWNER BRANCH_MANAGER  STAFF can create resources
   const authResult = await requireAuth(request, [
     ROLES.OWNER,
     ROLES.BRANCH_MANAGER,
+    ROLES.STAFF,
   ]);
   const authResponse = createAuthResponse(authResult);
   if (authResponse) return authResponse;
@@ -172,6 +174,7 @@ export async function PUT(request: NextRequest) {
   const authResult = await requireAuth(request, [
     ROLES.OWNER,
     ROLES.BRANCH_MANAGER,
+    ROLES.STAFF,
   ]);
   const authResponse = createAuthResponse(authResult);
   if (authResponse) return authResponse;
