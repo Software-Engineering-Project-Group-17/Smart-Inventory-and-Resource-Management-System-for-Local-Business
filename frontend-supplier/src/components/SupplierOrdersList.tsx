@@ -162,7 +162,7 @@ export default function SupplierOrdersList({
         <CardContent>
           <div className="text-center py-8">
             <p className="text-gray-500">
-              You haven't created any orders for this request yet.
+              You have not created any orders for this request yet.
             </p>
           </div>
         </CardContent>
