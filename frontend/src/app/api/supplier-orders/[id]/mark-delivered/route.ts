@@ -81,7 +81,7 @@ async function createRestockCompletionNotification(
 // PATCH /api/supplier-orders/[id]/mark-delivered - Mark supplier order as delivered
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Require authentication - Only STAFF and BRANCH_MANAGER can mark orders as delivered
   const authResult = await requireAuth(request, [
@@ -93,7 +93,10 @@ export async function PATCH(
 
   try {
     const { user } = authResult;
-    const orderId = params.id;
+
+    const { id } = await params;
+
+    const orderId = id;
 
     // User is guaranteed to exist after authentication
     if (!user) {
