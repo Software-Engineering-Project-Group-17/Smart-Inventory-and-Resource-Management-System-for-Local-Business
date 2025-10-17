@@ -52,10 +52,6 @@ export const useBranchUsers = (
 
       if (response.success) {
         setBranchUsers(response.data);
-        toastUtils.dataLoaded(
-          `Branch Users`,
-          response.data.counts.totalManagers + response.data.counts.totalStaff
-        );
       } else {
         throw new Error("Failed to fetch branch users");
       }

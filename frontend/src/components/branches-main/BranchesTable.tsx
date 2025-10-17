@@ -108,7 +108,7 @@ export const BranchesTable: React.FC<BranchesTableProps> = ({
                   <div className="flex items-center justify-center gap-3">
                     <button
                       onClick={() => onViewUsers(branch.id, branch.name)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#3674B5] border border-[#3674B5] rounded-lg hover:bg-[#3674B5] hover:border-[#3674B5] transition-all duration-200 font-medium text-sm"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#3674B5] border border-[#3674B5] rounded-lg hover:bg-blue-200 hover:border-[#3674B5] transition-all duration-200 font-medium text-sm"
                     >
                       <Eye size={16} />
                       View Users
