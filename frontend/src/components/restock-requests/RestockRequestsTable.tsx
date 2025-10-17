@@ -125,7 +125,7 @@ const RestockRequestsTable: React.FC<RestockRequestsTableProps> = ({
                 Items
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
+                Delivery
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Required By
@@ -191,32 +191,18 @@ const RestockRequestsTable: React.FC<RestockRequestsTableProps> = ({
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  {request.status === "completed" ? (
+                  {request.completed_at ? (
                     <div className="flex items-center gap-2">
                       <div className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium flex items-center gap-1">
                         <CheckCircle className="h-3 w-3" />
-                        Completed
-                      </div>
-                    </div>
-                  ) : request.status === "active" ? (
-                    <div className="flex items-center gap-2">
-                      <div className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium flex items-center gap-1">
-                        <Truck className="h-3 w-3" />
-                        In Progress
-                      </div>
-                    </div>
-                  ) : request.status === "cancelled" ? (
-                    <div className="flex items-center gap-2">
-                      <div className="px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-medium flex items-center gap-1">
-                        <XCircle className="h-3 w-3" />
-                        Cancelled
+                        Delivered
                       </div>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <div className="px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-medium flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Pending
+                      <div className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-medium flex items-center gap-1">
+                        <Truck className="h-3 w-3" />
+                        Awaiting Delivery
                       </div>
                     </div>
                   )}

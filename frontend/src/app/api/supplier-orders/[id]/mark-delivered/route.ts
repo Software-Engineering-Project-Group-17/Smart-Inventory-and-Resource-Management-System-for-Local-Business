@@ -191,6 +191,13 @@ export async function PATCH(
         WHERE id = ${orderId}
       `;
 
+      // Also mark the restock request as completed
+      await sql`
+        UPDATE restock_request 
+        SET completed_at = NOW(), status = 'completed'
+        WHERE id = ${supplierOrder.restock_request_id}
+      `;
+
       // Get order items for inventory update
       const orderItems = await sql`
         SELECT 
