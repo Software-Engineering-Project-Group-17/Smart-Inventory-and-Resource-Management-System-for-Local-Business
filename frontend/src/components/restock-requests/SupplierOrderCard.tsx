@@ -80,9 +80,9 @@ export const SupplierOrderCard: React.FC<SupplierOrderCardProps> = ({
     order.order_status !== "completed";
   const canMarkAsDelivered =
     order.payment_status === "paid" &&
-    !order.completed_at &&
+    !order.delivered_at &&
     order.order_status !== "cancelled";
-  const isDelivered = !!order.completed_at;
+  const isDelivered = !!order.delivered_at;
 
   const totalItems = order.items.length;
   const totalQuantity = order.items.reduce(
@@ -225,9 +225,9 @@ export const SupplierOrderCard: React.FC<SupplierOrderCardProps> = ({
               </div>
             )}
 
-            {isDelivered && order.completed_at && (
+            {isDelivered && order.delivered_at && (
               <div className="text-xs text-green-600">
-                Delivered on {new Date(order.completed_at).toLocaleDateString()}
+                Delivered on {new Date(order.delivered_at).toLocaleDateString()}
               </div>
             )}
           </div>

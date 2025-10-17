@@ -143,7 +143,7 @@ export async function PATCH(
         so.restock_request_id,
         so.order_status,
         so.payment_status,
-        so.completed_at,
+        so.delivered_at,
         rr.branch_id,
         rr.title as restock_title
       FROM supplier_order so
@@ -173,7 +173,7 @@ export async function PATCH(
     }
 
     // Check if already delivered
-    if (supplierOrder.completed_at) {
+    if (supplierOrder.delivered_at) {
       return NextResponse.json(
         { success: false, message: "Order is already marked as delivered" },
         { status: 400 }
@@ -184,10 +184,10 @@ export async function PATCH(
     await sql`BEGIN`;
 
     try {
-      // Mark order as delivered by setting completed_at
+      // Mark order as delivered by setting delivered_at
       await sql`
         UPDATE supplier_order 
-        SET completed_at = NOW()
+        SET delivered_at = NOW()
         WHERE id = ${orderId}
       `;
 

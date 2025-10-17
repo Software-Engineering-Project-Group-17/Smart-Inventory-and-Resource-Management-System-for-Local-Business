@@ -13,7 +13,7 @@ export interface SupplierOrder {
   updated_at: string;
   paid_at?: string;
   cancelled_at?: string;
-  completed_at?: string; // Delivery completion timestamp
+  delivered_at?: string; // Delivery completion timestamp
   stripe_payment_intent_id?: string;
   payment_method: string;
 
