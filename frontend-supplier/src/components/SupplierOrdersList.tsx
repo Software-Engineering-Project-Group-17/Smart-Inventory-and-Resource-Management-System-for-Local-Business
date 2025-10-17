@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Truck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Truck, Package } from "lucide-react";
+import { toast } from "sonner";
 
 interface SupplierOrder {
   id: number;
@@ -24,6 +27,7 @@ interface SupplierOrdersListProps {
   orders: SupplierOrder[];
   isAuthenticated: boolean;
   currentSupplierId?: number;
+  onOrderUpdate?: () => void; // Callback to refresh the orders list
 }
 
 const ORDER_STATUS_COLORS = {
@@ -46,7 +50,10 @@ export default function SupplierOrdersList({
   orders,
   isAuthenticated,
   currentSupplierId,
+  onOrderUpdate,
 }: SupplierOrdersListProps) {
+  const [isMarkingShipped, setIsMarkingShipped] = useState<number | null>(null);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -70,6 +77,51 @@ export default function SupplierOrdersList({
       month: "short",
       day: "numeric",
     });
+  };
+
+  const handleMarkAsShipped = async (orderId: number) => {
+    if (!confirm("Are you sure you want to mark this order as shipped?")) {
+      return;
+    }
+
+    setIsMarkingShipped(orderId);
+
+    try {
+      const response = await fetch(
+        `/api/supplier-orders/${orderId}/mark-shipped`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Order marked as shipped successfully");
+        if (onOrderUpdate) {
+          onOrderUpdate(); // Refresh the orders list
+        }
+      } else {
+        toast.error(data.message || "Failed to mark order as shipped");
+      }
+    } catch (error) {
+      console.error("Error marking order as shipped:", error);
+      toast.error("Failed to mark order as shipped");
+    } finally {
+      setIsMarkingShipped(null);
+    }
+  };
+
+  const canMarkAsShipped = (order: SupplierOrder) => {
+    return (
+      order.payment_status === "paid" &&
+      order.order_status !== "shipped" &&
+      order.order_status !== "delivered" &&
+      order.order_status !== "cancelled"
+    );
   };
 
   // If not authenticated, don't show any orders
@@ -200,6 +252,23 @@ export default function SupplierOrdersList({
                     Supplier Notes:
                   </div>
                   <div className="text-gray-600">{order.supplier_notes}</div>
+                </div>
+              )}
+
+              {canMarkAsShipped(order) && (
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => handleMarkAsShipped(order.id)}
+                    disabled={isMarkingShipped === order.id}
+                    variant="outline"
+                    size="sm"
+                    className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    {isMarkingShipped === order.id
+                      ? "Marking..."
+                      : "Mark as Shipped"}
+                  </Button>
                 </div>
               )}
 
