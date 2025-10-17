@@ -97,6 +97,28 @@ export const branchUsersAPI = {
     return response.json();
   },
 
+  // Reactivate a branch user (manager or staff)
+  reactivateUser: async (userId: number): Promise<DeactivateUserResponse> => {
+    const response = await authenticatedFetch(
+      `/api/branches/users/reactivate/${userId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ message: "Failed to reactivate user" }));
+      throw new Error(error.message || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  },
+
   // Get aggregated counts for all branches owned by the current user
   getBranchCounts: async (): Promise<{
     [branchId: string]: {

@@ -11,6 +11,7 @@ import {
   DollarSign,
   MapPin,
   Trash2,
+  RotateCcw,
 } from "lucide-react";
 import { useBranchUsers } from "@/hooks/useBranchUsers";
 import { BranchUser } from "@/lib/api/branchUsers";
@@ -34,7 +35,9 @@ const BranchUsersModal: React.FC<BranchUsersModalProps> = ({
     error,
     fetchBranchUsers,
     deactivateUser,
+    reactivateUser,
     isDeactivating,
+    isReactivating,
   } = useBranchUsers();
 
   // Load data when modal opens
@@ -51,6 +54,16 @@ const BranchUsersModal: React.FC<BranchUsersModalProps> = ({
 
     if (confirm(confirmMessage)) {
       await deactivateUser(user.userId, userName, user.role);
+    }
+  };
+
+  const handleReactivateUser = async (user: BranchUser) => {
+    const userName =
+      user.name || `${user.firstName} ${user.lastName}` || user.email;
+    const confirmMessage = `Are you sure you want to reactivate ${user.role} "${userName}"? They will be able to log in again.`;
+
+    if (confirm(confirmMessage)) {
+      await reactivateUser(user.userId, userName, user.role);
     }
   };
 
@@ -274,18 +287,35 @@ const BranchUsersModal: React.FC<BranchUsersModalProps> = ({
                                 {formatDate(manager.createdAt)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-center">
-                                {manager.isActive && (
-                                  <button
-                                    onClick={() =>
-                                      handleDeactivateUser(manager)
-                                    }
-                                    disabled={isDeactivating}
-                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                    title="Deactivate Manager"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                )}
+                                <div className="flex justify-center gap-2">
+                                  {manager.isActive ? (
+                                    <button
+                                      onClick={() =>
+                                        handleDeactivateUser(manager)
+                                      }
+                                      disabled={
+                                        isDeactivating || isReactivating
+                                      }
+                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                      title="Deactivate Manager"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() =>
+                                        handleReactivateUser(manager)
+                                      }
+                                      disabled={
+                                        isDeactivating || isReactivating
+                                      }
+                                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                                      title="Reactivate Manager"
+                                    >
+                                      <RotateCcw className="h-4 w-4" />
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -402,16 +432,35 @@ const BranchUsersModal: React.FC<BranchUsersModalProps> = ({
                                   : "Not set"}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-center">
-                                {staff.isUserActive && staff.isStaffActive && (
-                                  <button
-                                    onClick={() => handleDeactivateUser(staff)}
-                                    disabled={isDeactivating}
-                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                    title="Deactivate Staff Member"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                )}
+                                <div className="flex justify-center gap-2">
+                                  {staff.isUserActive && staff.isStaffActive ? (
+                                    <button
+                                      onClick={() =>
+                                        handleDeactivateUser(staff)
+                                      }
+                                      disabled={
+                                        isDeactivating || isReactivating
+                                      }
+                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                      title="Deactivate Staff Member"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() =>
+                                        handleReactivateUser(staff)
+                                      }
+                                      disabled={
+                                        isDeactivating || isReactivating
+                                      }
+                                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                                      title="Reactivate Staff Member"
+                                    >
+                                      <RotateCcw className="h-4 w-4" />
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))}
