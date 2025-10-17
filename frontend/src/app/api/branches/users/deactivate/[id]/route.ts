@@ -105,7 +105,7 @@ export async function PATCH(
     await sql`
       UPDATE app_user 
       SET is_active = false,
-          account_status = 'deactivated',
+          account_status = 'DEACTIVATED',
           updated_at = now()
       WHERE user_id = ${userId}
     `;
