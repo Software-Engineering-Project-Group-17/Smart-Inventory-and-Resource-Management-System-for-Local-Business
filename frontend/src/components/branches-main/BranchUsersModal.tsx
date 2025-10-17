@@ -429,8 +429,8 @@ const BranchUsersModal: React.FC<BranchUsersModalProps> = ({
                     <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-500 text-lg">No users found</p>
                     <p className="text-gray-400">
-                      This branch doesn't have any managers or staff members
-                      yet.
+                      This branch doesn&apos;t have any managers or staff
+                      members yet.
                     </p>
                   </div>
                 )}

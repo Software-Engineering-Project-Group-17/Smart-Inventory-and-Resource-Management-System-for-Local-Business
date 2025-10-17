@@ -38,9 +38,6 @@ export const BranchesTable: React.FC<BranchesTableProps> = ({
                 <th className="px-6 py-4 text-left text-sm font-semibold text-white">
                   {BRANCHES_CONSTANTS.labels.branchName}
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                  {BRANCHES_CONSTANTS.labels.employeeCount}
-                </th>
                 <th className="px-6 py-4 text-center text-sm font-semibold text-white">
                   {BRANCHES_CONSTANTS.labels.actions}
                 </th>
@@ -48,7 +45,7 @@ export const BranchesTable: React.FC<BranchesTableProps> = ({
             </thead>
             <tbody>
               <tr>
-                <td colSpan={3} className="px-6 py-12 text-center">
+                <td colSpan={2} className="px-6 py-12 text-center">
                   <div className="flex items-center justify-center gap-3">
                     <RefreshCw
                       size={20}
@@ -75,9 +72,6 @@ export const BranchesTable: React.FC<BranchesTableProps> = ({
             <tr>
               <th className="px-6 py-4 text-left text-sm font-semibold text-white">
                 {BRANCHES_CONSTANTS.labels.branchName}
-              </th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                {BRANCHES_CONSTANTS.labels.employeeCount}
               </th>
               <th className="px-6 py-4 text-center text-sm font-semibold text-white">
                 {BRANCHES_CONSTANTS.labels.actions}
@@ -111,58 +105,21 @@ export const BranchesTable: React.FC<BranchesTableProps> = ({
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <User size={16} className="text-gray-500" />
-                      <span className="text-sm text-gray-600">
-                        {BRANCHES_CONSTANTS.labels.managers}{" "}
-                        <span className="font-semibold text-gray-900">
-                          {branch.managerCount}
-                        </span>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users size={16} className="text-gray-500" />
-                      <span className="text-sm text-gray-600">
-                        {BRANCHES_CONSTANTS.labels.staff}{" "}
-                        <span className="font-semibold text-gray-900">
-                          {branch.staffCount}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    <ActionButton
-                      icon={Eye}
-                      label="View Users"
+                  <div className="flex items-center justify-center gap-3">
+                    <button
                       onClick={() => onViewUsers(branch.id, branch.name)}
-                      variant="default"
-                    />
-                    <ActionButton
-                      icon={UserCheck}
-                      label={BRANCHES_CONSTANTS.labels.createManager}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#3674B5] border border-[#3674B5] rounded-lg hover:bg-[#3674B5] hover:border-[#3674B5] transition-all duration-200 font-medium text-sm"
+                    >
+                      <Eye size={16} />
+                      View Users
+                    </button>
+                    <button
                       onClick={() => onCreateManager(branch.id, branch.name)}
-                      variant="primary"
-                    />
-                    {/* <ActionButton
-                      icon={UserMinus}
-                      label={BRANCHES_CONSTANTS.labels.removeManager}
-                      onClick={() => onRemoveManager(branch)}
-                      disabled={branch.managerCount === 0}
-                    /> */}
-                    {/* <ActionButton
-                      icon={LogIn}
-                      label={BRANCHES_CONSTANTS.labels.login}
-                      onClick={() => onLogin(branch.id)}
-                    /> */}
-                    {/* <ActionButton
-                      icon={Trash2}
-                      label={BRANCHES_CONSTANTS.labels.delete}
-                      onClick={() => onDelete(branch)}
-                      variant="danger"
-                    /> */}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#3674B5] text-white border border-[#3674B5] rounded-lg hover:bg-[#2d5a94] transition-all duration-200 font-medium text-sm"
+                    >
+                      <UserCheck size={16} />
+                      {BRANCHES_CONSTANTS.labels.createManager}
+                    </button>
                   </div>
                 </td>
               </tr>
