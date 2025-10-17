@@ -5,100 +5,34 @@ import {
   transformAssignment,
   ResourceWithAssignment,
 } from "@/lib/database/connection";
+import { requireAuth, createAuthResponse } from "@/lib/requireAuth";
+import { ROLES } from "@/lib/roles";
 
 // GET /api/resources - Get resources for user's branch
 export async function GET(request: NextRequest) {
+  // Require authentication - Only OWNER and BRANCH_MANAGER can view resources
+  const authResult = await requireAuth(request, [
+    ROLES.OWNER,
+    ROLES.BRANCH_MANAGER,
+  ]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
+
   try {
-    // Get user information from headers
-    const userId = request.headers.get("x-user-id");
-    const userEmail = request.headers.get("x-user-email");
+    const { user } = authResult;
 
-    if (!userId && !userEmail) {
+    // User is guaranteed to exist after authentication
+    if (!user) {
       return NextResponse.json(
-        { success: false, message: "User authentication required" },
+        { success: false, message: "User data not available" },
         { status: 401 }
-      );
-    }
-
-    // Get user's branch information from database
-    let userInfo = null;
-
-    try {
-      if (userId) {
-        // First try as Firebase UID
-        let result = await sql`
-          SELECT 
-            u.user_id,
-            u.email,
-            u.firebase_uid,
-            s.branch_id,
-            s.id as staff_id
-          FROM app_user u
-          INNER JOIN staff s ON u.user_id = s.user_id
-          WHERE u.firebase_uid = ${userId}
-          LIMIT 1
-        `;
-
-        // If no result, try as user_id (for cases where frontend sends user_id instead of firebase_uid)
-        if (result.length === 0) {
-          result = await sql`
-            SELECT 
-              u.user_id,
-              u.email,
-              u.firebase_uid,
-              s.branch_id,
-              s.id as staff_id
-            FROM app_user u
-            INNER JOIN staff s ON u.user_id = s.user_id
-            WHERE u.user_id = ${parseInt(userId)}
-            LIMIT 1
-          `;
-        }
-
-        userInfo = result[0];
-      } else if (userEmail) {
-        const result = await sql`
-          SELECT 
-            u.user_id,
-            u.email,
-            u.firebase_uid,
-            s.branch_id,
-            s.id as staff_id
-          FROM app_user u
-          INNER JOIN staff s ON u.user_id = s.user_id
-          WHERE u.email = ${userEmail}
-          LIMIT 1
-        `;
-
-        userInfo = result[0];
-      }
-
-      if (!userInfo || !userInfo.branch_id) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "User not found in database or not assigned to a branch. Please contact your administrator.",
-          },
-          { status: 404 }
-        );
-      }
-    } catch (error) {
-      console.error("Failed to fetch user information:", error);
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Failed to authenticate user",
-          error: error instanceof Error ? error.message : "Unknown error",
-        },
-        { status: 500 }
       );
     }
 
     // Fetch resources for the user's specific branch only
     const resources = (await sql`
       SELECT * FROM resource_with_assignment_view 
-      WHERE branch_id = ${userInfo.branch_id}
+      WHERE branch_id = ${user.branchId}
       ORDER BY created_at DESC
     `) as ResourceWithAssignment[];
 
@@ -147,7 +81,25 @@ export async function GET(request: NextRequest) {
 
 // POST /api/resources - Create a new resource
 export async function POST(request: NextRequest) {
+  // Require authentication - Only OWNER and BRANCH_MANAGER can create resources
+  const authResult = await requireAuth(request, [
+    ROLES.OWNER,
+    ROLES.BRANCH_MANAGER,
+  ]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
+
   try {
+    const { user } = authResult;
+
+    // User is guaranteed to exist after authentication
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: "User data not available" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { name, details, resourceType = "GENERAL" } = body;
 
@@ -159,110 +111,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user information from headers
-    const userId = request.headers.get("x-user-id");
-    const userEmail = request.headers.get("x-user-email");
-    const userRole = request.headers.get("x-user-role"); // Add role to headers
-
-    if (!userId && !userEmail) {
-      return NextResponse.json(
-        { success: false, message: "User authentication required" },
-        { status: 401 }
-      );
-    }
-
-    // Check if user has permission to create resources (STAFF or BRANCH_MANAGER)
-    const allowedRoles = ["STAFF", "BRANCH_MANAGER", "ADMIN"];
-    if (userRole && !allowedRoles.includes(userRole)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Insufficient permissions to create resources",
-        },
-        { status: 403 }
-      );
-    }
-
-    // Get user's branch information from database - user must exist since they're logged in
-    let userInfo = null;
-
-    try {
-      if (userId) {
-        // First try as Firebase UID
-        let result = await sql`
-          SELECT 
-            u.user_id,
-            u.email,
-            u.firebase_uid,
-            s.branch_id,
-            s.id as staff_id
-          FROM app_user u
-          INNER JOIN staff s ON u.user_id = s.user_id
-          WHERE u.firebase_uid = ${userId}
-          LIMIT 1
-        `;
-
-        // If no result, try as user_id (for cases where frontend sends user_id instead of firebase_uid)
-        if (result.length === 0) {
-          result = await sql`
-            SELECT 
-              u.user_id,
-              u.email,
-              u.firebase_uid,
-              s.branch_id,
-              s.id as staff_id
-            FROM app_user u
-            INNER JOIN staff s ON u.user_id = s.user_id
-            WHERE u.user_id = ${parseInt(userId)}
-            LIMIT 1
-          `;
-        }
-
-        userInfo = result[0];
-      } else if (userEmail) {
-        // Query by email using the actual schema structure
-        const result = await sql`
-          SELECT 
-            u.user_id,
-            u.email,
-            u.firebase_uid,
-            s.branch_id,
-            s.id as staff_id
-          FROM app_user u
-          INNER JOIN staff s ON u.user_id = s.user_id
-          WHERE u.email = ${userEmail}
-          LIMIT 1
-        `;
-        userInfo = result[0];
-      }
-
-      if (!userInfo || !userInfo.branch_id) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "User not found in database or not assigned to a branch. Please contact your administrator.",
-          },
-          { status: 404 }
-        );
-      }
-    } catch (error) {
-      console.error("Error fetching user info:", error);
-      return NextResponse.json(
-        { success: false, message: "Failed to authenticate user" },
-        { status: 500 }
-      );
-    }
-
     // Generate resource number (you can customize this logic)
     const resourceNumber = `RES-${Date.now()}`;
 
     // Insert new resource with user's branch and creator info
     const result = await sql`
       INSERT INTO resource (name, resource_number, description, resource_type, branch_id, availability_status, created_by)
-      VALUES (${name}, ${resourceNumber}, ${details}, ${resourceType}, ${userInfo.branch_id}, 'available', ${userInfo.user_id})
+      VALUES (${name}, ${resourceNumber}, ${details}, ${resourceType}, ${user.branchId}, 'available', ${user.userId})
       RETURNING *
     `;
+
+    if (result.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "Failed to create resource" },
+        { status: 500 }
+      );
+    }
 
     const newResource = result[0] as any;
 
@@ -304,6 +168,14 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/resources - Update a resource
 export async function PUT(request: NextRequest) {
+  // Require authentication - Only OWNER and BRANCH_MANAGER can update resources
+  const authResult = await requireAuth(request, [
+    ROLES.OWNER,
+    ROLES.BRANCH_MANAGER,
+  ]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
+
   try {
     const body = await request.json();
     const { id, name, details, resourceType } = body;
@@ -352,6 +224,14 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/resources?id=123 - Delete a resource
 export async function DELETE(request: NextRequest) {
+  // Require authentication - Only OWNER and BRANCH_MANAGER can delete resources
+  const authResult = await requireAuth(request, [
+    ROLES.OWNER,
+    ROLES.BRANCH_MANAGER,
+  ]);
+  const authResponse = createAuthResponse(authResult);
+  if (authResponse) return authResponse;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");

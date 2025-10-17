@@ -106,17 +106,39 @@ export const useResourceManagement = () => {
     if (!email || !email.includes("@")) return;
 
     setIsLoadingStaff(true);
+    console.log("Fetching staff details for email:", email);
 
     try {
       const response = await staffApi.getByEmail(email);
+      console.log("Staff API response:", response);
 
       if (response.success && response.data) {
+        const staff = response.data;
+        console.log("Staff data received:", staff);
+
+        const newFormData = {
+          staffName:
+            staff.name ||
+            `${staff.first_name || ""} ${staff.last_name || ""}`.trim(),
+          phone: staff.phone || staff.tel || "",
+        };
+
+        console.log("Setting form data:", newFormData);
+
         setAssignForm((prev) => ({
           ...prev,
-          staffName: response.data!.name,
-          phone: response.data!.phone,
+          ...newFormData,
         }));
+
+        console.log("Staff details loaded successfully:", {
+          name: staff.name,
+          email: staff.email,
+          phone: staff.phone || staff.tel,
+          branch: staff.branchName || staff.branch_name,
+          types: staff.staff_types,
+        });
       } else {
+        console.log("Staff not found for email:", email, "Response:", response);
         // Clear fields if staff not found
         setAssignForm((prev) => ({
           ...prev,
