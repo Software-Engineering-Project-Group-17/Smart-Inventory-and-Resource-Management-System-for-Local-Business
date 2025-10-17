@@ -23,14 +23,18 @@ interface SupplierOrderCardProps {
   order: SupplierOrder;
   onSelectForPayment: (order: SupplierOrder) => void;
   onCancelOrder?: (order: SupplierOrder) => void;
+  onMarkAsDelivered?: (order: SupplierOrder) => void;
   isCancelling?: boolean;
+  isMarkingAsDelivered?: boolean;
 }
 
 export const SupplierOrderCard: React.FC<SupplierOrderCardProps> = ({
   order,
   onSelectForPayment,
   onCancelOrder,
+  onMarkAsDelivered,
   isCancelling = false,
+  isMarkingAsDelivered = false,
 }) => {
   const getPaymentStatusIcon = (status: string) => {
     switch (status) {
@@ -74,6 +78,12 @@ export const SupplierOrderCard: React.FC<SupplierOrderCardProps> = ({
     order.payment_status === "unpaid" &&
     order.order_status !== "cancelled" &&
     order.order_status !== "completed";
+  const canMarkAsDelivered =
+    order.payment_status === "paid" &&
+    !order.completed_at &&
+    order.order_status !== "cancelled";
+  const isDelivered = !!order.completed_at;
+
   const totalItems = order.items.length;
   const totalQuantity = order.items.reduce(
     (sum, item) => sum + item.offered_quantity,
@@ -110,6 +120,34 @@ export const SupplierOrderCard: React.FC<SupplierOrderCardProps> = ({
                 {SUPPLIER_ORDER_STATUSES[
                   order.order_status as keyof typeof SUPPLIER_ORDER_STATUSES
                 ]?.label || order.order_status}
+              </span>
+
+              {/* Delivery Status Badge */}
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  isDelivered
+                    ? "bg-green-100 text-green-800"
+                    : order.payment_status === "paid"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {isDelivered ? (
+                  <>
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Delivered
+                  </>
+                ) : order.payment_status === "paid" ? (
+                  <>
+                    <Truck className="h-3 w-3 mr-1" />
+                    Awaiting Delivery
+                  </>
+                ) : (
+                  <>
+                    <Clock className="h-3 w-3 mr-1" />
+                    Not Shipped
+                  </>
+                )}
               </span>
             </div>
 
@@ -158,6 +196,17 @@ export const SupplierOrderCard: React.FC<SupplierOrderCardProps> = ({
                 </button>
               )}
 
+              {canMarkAsDelivered && onMarkAsDelivered && (
+                <button
+                  onClick={() => onMarkAsDelivered(order)}
+                  disabled={isMarkingAsDelivered}
+                  className="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  <Truck className="h-4 w-4 mr-2" />
+                  {isMarkingAsDelivered ? "Marking..." : "Mark as Delivered"}
+                </button>
+              )}
+
               {canCancel && onCancelOrder && (
                 <button
                   onClick={() => onCancelOrder(order)}
@@ -171,8 +220,14 @@ export const SupplierOrderCard: React.FC<SupplierOrderCardProps> = ({
             </div>
 
             {order.payment_status === "paid" && order.paid_at && (
-              <div className="text-xs text-green-600">
+              <div className="text-xs text-green-600 mb-1">
                 Paid on {new Date(order.paid_at).toLocaleDateString()}
+              </div>
+            )}
+
+            {isDelivered && order.completed_at && (
+              <div className="text-xs text-green-600">
+                Delivered on {new Date(order.completed_at).toLocaleDateString()}
               </div>
             )}
           </div>
