@@ -21,6 +21,7 @@ import { SupplierOrder } from "@/types/supplier-order";
 import { SupplierOrderCard } from "@/components/restock-requests/SupplierOrderCard";
 import { PaymentModal } from "@/components/restock-requests/PaymentModal";
 import { toastUtils } from "@/lib/toast-utils";
+import { authenticatedFetch } from "@/lib/authenticated-fetch";
 
 const RestockRequestDetailsPage = () => {
   const params = useParams();
@@ -36,6 +37,9 @@ const RestockRequestDetailsPage = () => {
   );
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState<number | null>(null);
+  const [isMarkingAsDelivered, setIsMarkingAsDelivered] = useState<
+    number | null
+  >(null);
 
   const loadRequestDetails = async () => {
     try {
@@ -148,6 +152,66 @@ const RestockRequestDetailsPage = () => {
       );
     } finally {
       setIsCancelling(null);
+    }
+  };
+
+  const handleMarkAsDelivered = async (order: SupplierOrder) => {
+    if (
+      !confirm(
+        `Are you sure you want to mark the order from ${order.supplier_name} as delivered? This will update inventory quantities.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setIsMarkingAsDelivered(order.id);
+      const userProfile = getUserProfile();
+
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+
+      if (userProfile) {
+        headers["x-user-id"] = userProfile.id;
+        headers["x-user-email"] = userProfile.email;
+      }
+
+      const response = await authenticatedFetch(
+        `/api/supplier-orders/${order.id}/mark-delivered`,
+        {
+          method: "PATCH",
+          headers,
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        toastUtils.success(
+          "Order Delivered",
+          `Order marked as delivered. ${
+            data.data?.itemsUpdated || 0
+          } inventory items updated.`
+        );
+        // Refresh the data to show updated status
+        loadRequestDetails();
+      } else {
+        const errorData = await response.json();
+        toastUtils.error(
+          "Delivery Failed",
+          `Failed to mark order as delivered: ${
+            errorData.message || "Unknown error"
+          }`
+        );
+      }
+    } catch (err) {
+      console.error("Error marking order as delivered:", err);
+      toastUtils.error(
+        "Delivery Failed",
+        "Failed to mark order as delivered. Please try again."
+      );
+    } finally {
+      setIsMarkingAsDelivered(null);
     }
   };
 
@@ -336,7 +400,9 @@ const RestockRequestDetailsPage = () => {
                     order={order}
                     onSelectForPayment={handleSelectOrder}
                     onCancelOrder={handleCancelOrder}
+                    onMarkAsDelivered={handleMarkAsDelivered}
                     isCancelling={isCancelling === order.id}
+                    isMarkingAsDelivered={isMarkingAsDelivered === order.id}
                   />
                 ))}
               </div>

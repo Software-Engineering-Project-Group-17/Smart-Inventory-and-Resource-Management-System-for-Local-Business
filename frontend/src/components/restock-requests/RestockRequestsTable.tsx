@@ -10,6 +10,7 @@ import {
   XCircle,
   Eye,
   Ban,
+  Truck,
 } from "lucide-react";
 import {
   RestockRequest,
@@ -124,6 +125,9 @@ const RestockRequestsTable: React.FC<RestockRequestsTableProps> = ({
                 Items
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Delivery
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Required By
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -185,6 +189,23 @@ const RestockRequestsTable: React.FC<RestockRequestsTableProps> = ({
                   <div className="text-xs text-gray-500">
                     Qty: {request.total_quantity_requested || 0}
                   </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  {request.completed_at ? (
+                    <div className="flex items-center gap-2">
+                      <div className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" />
+                        Delivered
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-medium flex items-center gap-1">
+                        <Truck className="h-3 w-3" />
+                        Awaiting Delivery
+                      </div>
+                    </div>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {request.required_by_date ? (

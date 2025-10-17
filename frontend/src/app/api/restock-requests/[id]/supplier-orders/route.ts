@@ -35,6 +35,7 @@ export async function GET(
         so.updated_at,
         so.paid_at,
         so.cancelled_at,
+        so.delivered_at,
         so.stripe_payment_intent_id,
         so.payment_method,
         

@@ -157,7 +157,7 @@ async function createRestockCompletionNotification(
     `;
 
     console.log(
-      `✅ Created restock notification for ${inventoryItem.inventory_name}: +${addedQuantity} units (${previousQuantity} → ${newQuantity})`
+      `Created restock notification for ${inventoryItem.inventory_name}: +${addedQuantity} units (${previousQuantity} → ${newQuantity})`
     );
     return result[0];
   } catch (error) {
@@ -240,6 +240,14 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
 
     console.log(`Found ${orderItems.length} items to update in inventory`);
 
+    // Note: Inventory update moved to delivery confirmation endpoint
+    // Payment success now only updates order status, not inventory
+    console.log(
+      "Payment successful, but inventory will be updated when order is marked as delivered"
+    );
+
+    /* MOVED TO DELIVERY ENDPOINT - this logic will be in /api/supplier-orders/[id]/mark-delivered
+    
     // Update inventory quantities and create restock notifications
     for (const item of orderItems) {
       if (item.inventory_id) {
@@ -276,6 +284,8 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
         }
       }
     }
+    
+    */
 
     // Check if all orders for this restock request are paid
     const unpaidOrders = await sql`
