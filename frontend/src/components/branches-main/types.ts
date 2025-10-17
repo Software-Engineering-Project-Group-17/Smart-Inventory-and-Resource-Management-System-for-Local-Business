@@ -31,6 +31,7 @@ export interface BranchesTableProps {
   onRemoveManager: (branch: Branch) => void;
   onLogin: (branchId: string) => void;
   onDelete: (branch: Branch) => void;
+  onViewUsers: (branchId: string, branchName: string) => void;
 }
 
 export interface BranchesErrorProps {

@@ -14,8 +14,9 @@ import { BranchesHeader } from "@/components/branches-main/BranchesHeader";
 import { BranchesError } from "@/components/branches-main/BranchesError";
 import { BranchesFilters } from "@/components/branches-main/BranchesFilters";
 import { BranchesTable } from "@/components/branches-main/BranchesTable";
+import BranchUsersModal from "@/components/branches-main/BranchUsersModal";
 import { useBranchesManagement } from "@/components/branches-main/useBranchesManagement";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { showRoleAccessNotification } from "@/lib/auth";
 
 const BranchesPage = () => {
@@ -55,6 +56,13 @@ const BranchesPage = () => {
     handleDeleteBranch,
   } = useBranchesManagement();
 
+  // Branch users modal state
+  const [showBranchUsersModal, setShowBranchUsersModal] = useState(false);
+  const [selectedBranchForUsers, setSelectedBranchForUsers] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
   // // Show role access notification on page load
   // useEffect(() => {
   //   showRoleAccessNotification("Branch Management");
@@ -68,6 +76,11 @@ const BranchesPage = () => {
   const handleDeleteClick = (branch: any) => {
     setSelectedBranch(branch);
     setShowDeleteModal(true);
+  };
+
+  const handleViewUsers = (branchId: string, branchName: string) => {
+    setSelectedBranchForUsers({ id: branchId, name: branchName });
+    setShowBranchUsersModal(true);
   };
 
   return (
@@ -101,6 +114,7 @@ const BranchesPage = () => {
             onRemoveManager={handleRemoveManagerClick}
             onLogin={handleLogin}
             onDelete={handleDeleteClick}
+            onViewUsers={handleViewUsers}
           />
         </div>
 
@@ -147,6 +161,18 @@ const BranchesPage = () => {
             branch={selectedBranch}
             handleDeleteBranch={handleDeleteBranch}
             isProcessing={isProcessing}
+          />
+        )}
+
+        {showBranchUsersModal && selectedBranchForUsers && (
+          <BranchUsersModal
+            isOpen={showBranchUsersModal}
+            onClose={() => {
+              setShowBranchUsersModal(false);
+              setSelectedBranchForUsers(null);
+            }}
+            branchId={parseInt(selectedBranchForUsers.id)}
+            branchName={selectedBranchForUsers.name}
           />
         )}
       </div>

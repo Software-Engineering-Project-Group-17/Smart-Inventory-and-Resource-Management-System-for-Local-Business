@@ -10,6 +10,7 @@ import {
   UserMinus,
   LogIn,
   Trash2,
+  Eye,
 } from "lucide-react";
 import ActionButton from "@/components/Owners/ActionButton";
 import { BranchesTableProps } from "./types";
@@ -23,6 +24,7 @@ export const BranchesTable: React.FC<BranchesTableProps> = ({
   onRemoveManager,
   onLogin,
   onDelete,
+  onViewUsers,
 }) => {
   if (isLoading) {
     return (
@@ -132,6 +134,12 @@ export const BranchesTable: React.FC<BranchesTableProps> = ({
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-wrap gap-2 justify-center">
+                    <ActionButton
+                      icon={Eye}
+                      label="View Users"
+                      onClick={() => onViewUsers(branch.id, branch.name)}
+                      variant="default"
+                    />
                     <ActionButton
                       icon={UserCheck}
                       label={BRANCHES_CONSTANTS.labels.createManager}
