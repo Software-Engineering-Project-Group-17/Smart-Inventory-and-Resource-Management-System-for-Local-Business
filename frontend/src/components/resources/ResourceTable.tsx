@@ -1,11 +1,12 @@
 import React from "react";
-import { UserPlus, Trash2, Search, Truck } from "lucide-react";
+import { UserPlus, Trash2, Search, Truck, Loader } from "lucide-react";
 import { Resource } from "./types";
 import { RESOURCE_CONSTANTS } from "./constants";
 import { AssignmentForm } from "./AssignmentForm";
 
 interface ResourceTableProps {
   resources: Resource[];
+  isLoading?: boolean;
   showAssignForm: number | null;
   assignFormData: any;
   isLoadingStaff: boolean;
@@ -19,6 +20,7 @@ interface ResourceTableProps {
 
 export const ResourceTable: React.FC<ResourceTableProps> = ({
   resources,
+  isLoading = false,
   showAssignForm,
   assignFormData,
   isLoadingStaff,
@@ -29,6 +31,59 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
   onAssignSubmit,
   onAssignCancel,
 }) => {
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                {RESOURCE_CONSTANTS.labels.resourceName}
+              </th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                Details
+              </th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                {RESOURCE_CONSTANTS.labels.status}
+              </th>
+              <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
+                {RESOURCE_CONSTANTS.labels.actions}
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {/* Loading skeleton rows */}
+            {[...Array(5)].map((_, index) => (
+              <tr key={index} className="animate-pulse">
+                <td className="px-6 py-4">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="h-6 bg-gray-200 rounded-full w-20"></div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
+                    <div className="h-8 w-8 bg-gray-200 rounded-lg"></div>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {/* Loading indicator */}
+        <div className="flex items-center justify-center py-8">
+          <Loader className="animate-spin h-6 w-6 text-blue-600 mr-2" />
+          <span className="text-gray-600">Loading resources...</span>
+        </div>
+      </div>
+    );
+  }
+
   if (resources.length === 0) {
     return (
       <div className="text-center py-12">

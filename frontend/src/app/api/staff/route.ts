@@ -12,7 +12,14 @@ export async function GET(request: NextRequest) {
   ]);
 
   if (!authResult.isAuthenticated) {
-    return createAuthResponse(authResult, 401);
+    return NextResponse.json(
+      {
+        success: false,
+        error: authResult.error || "Authentication failed",
+        code: "AUTH_FAILED",
+      },
+      { status: 401 }
+    );
   }
 
   const user = authResult.user!;
