@@ -20,10 +20,16 @@ export interface UseBranchUsersResult {
     userName: string,
     role: string
   ) => Promise<void>;
+  reactivateUser: (
+    userId: number,
+    userName: string,
+    role: string
+  ) => Promise<void>;
   refreshData: () => Promise<void>;
 
   // UI State
   isDeactivating: boolean;
+  isReactivating: boolean;
 }
 
 export const useBranchUsers = (
@@ -35,6 +41,7 @@ export const useBranchUsers = (
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDeactivating, setIsDeactivating] = useState(false);
+  const [isReactivating, setIsReactivating] = useState(false);
   const [currentBranchId, setCurrentBranchId] = useState<number | null>(
     initialBranchId || null
   );
@@ -102,6 +109,42 @@ export const useBranchUsers = (
     }
   };
 
+  // Reactivate a user
+  const reactivateUser = async (
+    userId: number,
+    userName: string,
+    role: string
+  ) => {
+    try {
+      setIsReactivating(true);
+
+      console.log(`🔄 Reactivating ${role}: ${userName} (ID: ${userId})`);
+
+      const response = await branchUsersAPI.reactivateUser(userId);
+
+      if (response.success) {
+        // Refresh the data to show updated status
+        if (currentBranchId) {
+          await fetchBranchUsers(currentBranchId);
+        }
+
+        toastUtils.formSuccess(
+          "User Reactivated",
+          `${role} ${userName} has been reactivated successfully`
+        );
+      } else {
+        throw new Error(response.message || "Failed to reactivate user");
+      }
+    } catch (error) {
+      console.error("Error reactivating user:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to reactivate user";
+      toastUtils.formError("Reactivate User", errorMessage);
+    } finally {
+      setIsReactivating(false);
+    }
+  };
+
   // Refresh current data
   const refreshData = async () => {
     if (currentBranchId) {
@@ -122,7 +165,9 @@ export const useBranchUsers = (
     error,
     fetchBranchUsers,
     deactivateUser,
+    reactivateUser,
     refreshData,
     isDeactivating,
+    isReactivating,
   };
 };
