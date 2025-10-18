@@ -137,10 +137,11 @@ export default function AddCategoryPage() {
 
     setIsSubmitting(true);
 
-      try {
-        const submitFormData = new FormData();
-        submitFormData.append("categoryName", formData.categoryName.trim());
-        submitFormData.append("image", selectedImage);      const response = await authenticatedFetch("/api/categories", {
+    try {
+      const submitFormData = new FormData();
+      submitFormData.append("categoryName", formData.categoryName.trim());
+      submitFormData.append("image", selectedImage);
+      const response = await authenticatedFetch("/api/categories", {
         method: "POST",
         body: submitFormData,
       });
@@ -382,7 +383,11 @@ export default function AddCategoryPage() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isSubmitting || !formData.categoryName.trim() || !selectedImage}
+                disabled={
+                  isSubmitting ||
+                  !formData.categoryName.trim() ||
+                  !selectedImage
+                }
                 className="w-full flex items-center justify-center gap-2 bg-[#3674B5] hover:bg-blue-900 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-md transition-colors"
               >
                 {isSubmitting ? (
