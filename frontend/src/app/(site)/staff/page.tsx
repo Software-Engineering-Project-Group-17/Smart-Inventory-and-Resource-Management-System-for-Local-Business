@@ -23,6 +23,7 @@ import {
 import { withAuth } from "@/hooks/useAuth";
 import { ROLES } from "@/lib/roles";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { staffApi } from "@/lib/api/resources";
 
 interface StaffMember {
   id: number;
@@ -76,79 +77,56 @@ const StaffManagementPage = () => {
       setLoading(true);
       setError(null);
 
-      // Get current user Firebase UID from localStorage
-      const uid = localStorage.getItem("uid");
-      console.log("Firebase UID from localStorage:", uid);
+      console.log("🔍 [STAFF FETCH] Fetching staff members using staffApi...");
 
-      if (!uid) {
-        toastUtils.permissionError("view staff - please log in as a manager");
-        setLoading(false);
-        return;
-      }
+      // Use the same API pattern as Resource Management
+      const response = await staffApi.getAll();
+      
+      console.log("� [STAFF FETCH] API Response:", response);
 
-      const managerFirebaseUid = uid;
-      console.log("Manager Firebase UID:", managerFirebaseUid);
+      if (response.success && response.data) {
+        console.log("✅ [STAFF FETCH] Raw staff data:", response.data);
 
-      if (!managerFirebaseUid) {
-        toastUtils.error(
-          "Authentication Error",
-          "Manager authentication not found"
-        );
-        setLoading(false);
-        return;
-      }
+        // Transform the staff data to match our interface
+        // Using the same transformation pattern as useResourceManagement
+        const staffMembers = response.data.map((staff: any) => ({
+          id: staff.id,
+          firstName: staff.firstName || staff.first_name || "",
+          lastName: staff.lastName || staff.last_name || "",
+          email: staff.email || "",
+          phone: staff.phone || staff.tel || "",
+          address: staff.address || "",
+          types: Array.isArray(staff.staff_types) 
+            ? staff.staff_types.map((t: string) => t.toLowerCase()) 
+            : [],
+          salary: Math.round(parseFloat(staff.salary) || 0), // Convert to integer
+          remainingLeave: 21, // Default value
+          isActive: true, // Default to active
+        }));
 
-      // Use the dedicated staff endpoint for this manager
-      const API_BASE_URL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8084";
-      const apiUrl = `${API_BASE_URL}/api/roles/staff/manager/${managerFirebaseUid}`;
-      console.log("API URL:", apiUrl);
+        console.log("✅ [STAFF FETCH] Mapped staff members:", staffMembers);
+        console.log("✅ [STAFF FETCH] Total count:", staffMembers.length);
 
-      const response = await fetch(apiUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      console.log("Response status:", response.status);
-
-      if (response.ok) {
-        const result = await response.text();
-        console.log("Raw API response:", result);
-
-        const parsedResult = JSON.parse(result);
-        console.log("Parsed API response:", parsedResult);
-
-        // Map the staff data from the API response
-        const staffMembers =
-          parsedResult.staff?.map((staff: any) => ({
-            id: staff.id,
-            firstName: staff.firstName,
-            lastName: staff.lastName,
-            email: staff.email,
-            phone: staff.phoneNumber || "",
-            address: staff.address || "",
-            types: staff.staffTypes || ["sales"], // Use the actual staff types from database
-            salary: staff.salary || 0,
-            remainingLeave: 21, // Default leave days
-            isActive: staff.isActive !== false, // Default to true if not specified
-          })) || [];
-
-        console.log("Mapped staff members:", staffMembers);
         setStaff(staffMembers);
-        toastUtils.dataLoaded("Staff members", staffMembers.length);
+        
+        if (staffMembers.length > 0) {
+          toastUtils.dataLoaded("Staff members", staffMembers.length);
+        } else {
+          toastUtils.info("No Staff Found", "No staff members found for this branch");
+        }
       } else {
-        const errorText = await response.text();
-        console.error("API Error:", response.status, errorText);
-        toastUtils.dataError("fetch staff data", errorText);
+        const errorMsg = response.message || "Failed to load staff members";
+        console.error("❌ [STAFF FETCH] API Error:", errorMsg);
+        toastUtils.dataError("load staff members", errorMsg);
+        setError(errorMsg);
       }
     } catch (error) {
-      console.error("Error fetching staff:", error);
+      console.error("❌ [STAFF FETCH] Unexpected error:", error);
       toastUtils.networkError();
       setError("Failed to load staff data");
     } finally {
       setLoading(false);
+      console.log("🏁 [STAFF FETCH] Fetch complete");
     }
   };
 
