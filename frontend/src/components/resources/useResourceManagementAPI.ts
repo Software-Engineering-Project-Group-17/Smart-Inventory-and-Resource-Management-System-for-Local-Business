@@ -9,6 +9,14 @@ import {
 import { resourceApi, assignmentApi, staffApi } from "@/lib/api/resources";
 import { toastUtils } from "@/lib/toast-utils";
 
+interface StaffMember {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+}
+
 export const useResourceManagement = () => {
   const [activeTab, setActiveTab] = useState<TabType>("available");
   const [showAssignForm, setShowAssignForm] = useState<number | null>(null);
@@ -20,8 +28,11 @@ export const useResourceManagement = () => {
 
   const [resources, setResources] = useState<Resource[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [showStaffDropdown, setShowStaffDropdown] = useState(false);
 
   const [assignForm, setAssignForm] = useState<AssignmentFormData>({
+    staffId: undefined,
     email: "",
     staffName: "",
     phone: "",
@@ -37,9 +48,10 @@ export const useResourceManagement = () => {
     details: "",
   });
 
-  // Load resources and assignments on component mount
+  // Load resources, assignments, and staff on component mount
   useEffect(() => {
     loadResources();
+    loadStaffMembers();
   }, []);
 
   // Load resources from API
@@ -66,6 +78,32 @@ export const useResourceManagement = () => {
       toastUtils.networkError();
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Load staff members for the current branch
+  const loadStaffMembers = async () => {
+    try {
+      console.log("Loading staff members for assignment dropdown...");
+      const response = await staffApi.getAll();
+
+      if (response.success && response.data) {
+        // Transform the staff data to match our interface
+        const staffList = response.data.map((staff: any) => ({
+          id: staff.id,
+          email: staff.email,
+          firstName: staff.firstName || staff.first_name || "",
+          lastName: staff.lastName || staff.last_name || "",
+          phone: staff.phone || staff.tel || staff.phoneNumber || "",
+        }));
+
+        setStaffMembers(staffList);
+        console.log("Staff members loaded:", staffList);
+      } else {
+        console.error("Failed to load staff members:", response.message);
+      }
+    } catch (error) {
+      console.error("Error loading staff members:", error);
     }
   };
 
@@ -149,13 +187,24 @@ export const useResourceManagement = () => {
   };
 
   // Form handlers
-  const handleEmailChange = (email: string) => {
-    setAssignForm((prev) => ({ ...prev, email }));
-    fetchStaffDetails(email);
+  const handleStaffSelect = (staff: StaffMember) => {
+    setAssignForm((prev) => ({
+      ...prev,
+      staffId: staff.id,
+      email: staff.email,
+      staffName: `${staff.firstName} ${staff.lastName}`.trim(),
+      phone: staff.phone,
+    }));
+    setShowStaffDropdown(false);
+  };
+
+  const handleToggleStaffDropdown = () => {
+    setShowStaffDropdown(!showStaffDropdown);
   };
 
   const resetAssignForm = () => {
     setAssignForm({
+      staffId: undefined,
       email: "",
       staffName: "",
       phone: "",
@@ -165,6 +214,7 @@ export const useResourceManagement = () => {
       startTime: "",
       endTime: "",
     });
+    setShowStaffDropdown(false);
   };
 
   const resetAddResourceForm = () => {
@@ -348,6 +398,8 @@ export const useResourceManagement = () => {
     error,
     resources,
     assignments,
+    staffMembers,
+    showStaffDropdown,
     assignForm,
     addResourceForm,
 
@@ -361,7 +413,8 @@ export const useResourceManagement = () => {
     setSearchQuery,
     setAssignForm,
     setAddResourceForm,
-    handleEmailChange,
+    handleStaffSelect,
+    handleToggleStaffDropdown,
     handleAddResource,
     handleAssign,
     handleUnassign,

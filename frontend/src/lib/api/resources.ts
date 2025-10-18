@@ -180,6 +180,11 @@ export const staffApi = {
   async getByEmail(email: string): Promise<ApiResponse<StaffData>> {
     return apiCall(`/api/staff?email=${encodeURIComponent(email)}`);
   },
+
+  // Get all staff members for the current branch
+  async getAll(): Promise<ApiResponse<StaffData[]>> {
+    return apiCall("/api/staff");
+  },
 };
 
 // Test database connection
