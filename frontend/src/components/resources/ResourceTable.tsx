@@ -4,16 +4,27 @@ import { Resource } from "./types";
 import { RESOURCE_CONSTANTS } from "./constants";
 import { AssignmentForm } from "./AssignmentForm";
 
+interface StaffMember {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+}
+
 interface ResourceTableProps {
   resources: Resource[];
   isLoading?: boolean;
   showAssignForm: number | null;
   assignFormData: any;
   isLoadingStaff: boolean;
+  staffMembers: StaffMember[];
+  showStaffDropdown: boolean;
   onAssignClick: (resourceId: number) => void;
   onDeleteClick: (resourceId: number) => void;
   onAssignFormChange: (data: any) => void;
-  onEmailChange: (email: string) => void;
+  onStaffSelect: (staff: StaffMember) => void;
+  onToggleStaffDropdown: () => void;
   onAssignSubmit: (resourceId: number) => void;
   onAssignCancel: () => void;
 }
@@ -24,10 +35,13 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
   showAssignForm,
   assignFormData,
   isLoadingStaff,
+  staffMembers,
+  showStaffDropdown,
   onAssignClick,
   onDeleteClick,
   onAssignFormChange,
-  onEmailChange,
+  onStaffSelect,
+  onToggleStaffDropdown,
   onAssignSubmit,
   onAssignCancel,
 }) => {
@@ -168,8 +182,11 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
                   resourceName={resource.name}
                   formData={assignFormData}
                   isLoadingStaff={isLoadingStaff}
+                  staffMembers={staffMembers}
+                  showStaffDropdown={showStaffDropdown}
                   onChange={onAssignFormChange}
-                  onEmailChange={onEmailChange}
+                  onStaffSelect={onStaffSelect}
+                  onToggleStaffDropdown={onToggleStaffDropdown}
                   onSubmit={() => onAssignSubmit(resource.id)}
                   onCancel={onAssignCancel}
                 />

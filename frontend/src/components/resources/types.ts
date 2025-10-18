@@ -26,6 +26,7 @@ export interface StaffMember {
 }
 
 export interface AssignmentFormData {
+  staffId?: number;
   email: string;
   staffName: string;
   phone: string;

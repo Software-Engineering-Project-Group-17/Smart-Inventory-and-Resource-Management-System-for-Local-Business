@@ -24,6 +24,8 @@ const ResourceTrackingPage = () => {
     isLoading,
     resources,
     assignments,
+    staffMembers,
+    showStaffDropdown,
     assignForm,
     addResourceForm,
 
@@ -36,7 +38,8 @@ const ResourceTrackingPage = () => {
     setSearchQuery,
     setAssignForm,
     setAddResourceForm,
-    handleEmailChange,
+    handleStaffSelect,
+    handleToggleStaffDropdown,
     handleAddResource,
     handleAssign,
     handleUnassign,
@@ -100,10 +103,13 @@ const ResourceTrackingPage = () => {
                 showAssignForm={showAssignForm}
                 assignFormData={assignForm}
                 isLoadingStaff={isLoadingStaff}
+                staffMembers={staffMembers}
+                showStaffDropdown={showStaffDropdown}
                 onAssignClick={openAssignForm}
                 onDeleteClick={handleDeleteResource}
                 onAssignFormChange={setAssignForm}
-                onEmailChange={handleEmailChange}
+                onStaffSelect={handleStaffSelect}
+                onToggleStaffDropdown={handleToggleStaffDropdown}
                 onAssignSubmit={handleAssign}
                 onAssignCancel={closeAssignForm}
               />

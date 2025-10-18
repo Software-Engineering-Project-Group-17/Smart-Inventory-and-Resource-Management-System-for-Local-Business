@@ -1,15 +1,26 @@
 import React from "react";
-import { UserPlus, Loader, Check } from "lucide-react";
+import { UserPlus, Loader, Check, ChevronDown } from "lucide-react";
 import { AssignmentFormData } from "./types";
 import { RESOURCE_CONSTANTS } from "./constants";
+
+interface StaffMember {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+}
 
 interface AssignmentFormProps {
   isOpen: boolean;
   resourceName: string;
   formData: AssignmentFormData;
   isLoadingStaff: boolean;
+  staffMembers: StaffMember[];
+  showStaffDropdown: boolean;
   onChange: (data: AssignmentFormData) => void;
-  onEmailChange: (email: string) => void;
+  onStaffSelect: (staff: StaffMember) => void;
+  onToggleStaffDropdown: () => void;
   onSubmit: () => void;
   onCancel: () => void;
 }
@@ -19,8 +30,11 @@ export const AssignmentForm: React.FC<AssignmentFormProps> = ({
   resourceName,
   formData,
   isLoadingStaff,
+  staffMembers,
+  showStaffDropdown,
   onChange,
-  onEmailChange,
+  onStaffSelect,
+  onToggleStaffDropdown,
   onSubmit,
   onCancel,
 }) => {
@@ -59,19 +73,63 @@ export const AssignmentForm: React.FC<AssignmentFormProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {RESOURCE_CONSTANTS.labels.staffEmail}
+                Select Staff Member
               </label>
               <div className="relative">
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => onEmailChange(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent pr-10"
-                  placeholder={RESOURCE_CONSTANTS.placeholders.staffEmail}
-                />
-                {isLoadingStaff && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <Loader size={16} className="animate-spin text-[#3674B5]" />
+                <button
+                  onClick={onToggleStaffDropdown}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#3674B5] focus:border-transparent text-left flex items-center justify-between"
+                  disabled={isLoadingStaff}
+                >
+                  <span
+                    className={
+                      formData.staffName ? "text-gray-900" : "text-gray-400"
+                    }
+                  >
+                    {formData.staffName
+                      ? `${formData.staffName} (${formData.email})`
+                      : "Select a staff member"}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {isLoadingStaff && (
+                      <Loader
+                        size={16}
+                        className="animate-spin text-[#3674B5]"
+                      />
+                    )}
+                    <ChevronDown size={16} className="text-gray-400" />
+                  </div>
+                </button>
+
+                {showStaffDropdown && !isLoadingStaff && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {staffMembers.length > 0 ? (
+                      <div className="p-2">
+                        {staffMembers.map((staff) => (
+                          <button
+                            key={staff.id}
+                            onClick={() => onStaffSelect(staff)}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded-lg transition-colors"
+                          >
+                            <div className="font-medium text-gray-900">
+                              {staff.firstName} {staff.lastName}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {staff.email}
+                            </div>
+                            {staff.phone && (
+                              <div className="text-sm text-gray-400">
+                                {staff.phone}
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 text-center text-gray-500">
+                        No staff members found for this branch
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
