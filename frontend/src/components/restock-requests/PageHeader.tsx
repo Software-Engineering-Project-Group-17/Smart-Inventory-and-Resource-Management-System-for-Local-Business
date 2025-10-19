@@ -1,12 +1,15 @@
 "use client";
 import React from "react";
-import { Plus } from "lucide-react";
+import { Plus, Store } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface PageHeaderProps {
   onCreateRequest: () => void;
 }
 
 const PageHeader: React.FC<PageHeaderProps> = ({ onCreateRequest }) => {
+  const router = useRouter();
+
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between">
@@ -23,13 +26,22 @@ const PageHeader: React.FC<PageHeaderProps> = ({ onCreateRequest }) => {
             </p>
           </div>
         </div>
-        <button
-          onClick={onCreateRequest}
-          className="inline-flex items-center px-4 py-2 bg-[#3674B5] text-white rounded-md hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Request
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push("/inventory/suppliers")}
+            className="inline-flex items-center px-4 py-2 bg-green-700 text-white rounded-md hover:bg-green-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-700 transition-colors"
+          >
+            <Store className="h-4 w-4 mr-2" />
+            View Suppliers
+          </button>
+          <button
+            onClick={onCreateRequest}
+            className="inline-flex items-center px-4 py-2 bg-[#3674B5] text-white rounded-md hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Request
+          </button>
+        </div>
       </div>
     </div>
   );
