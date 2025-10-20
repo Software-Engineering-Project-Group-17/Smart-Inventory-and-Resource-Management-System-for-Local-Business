@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import admin from "./firebase-admin";
+import { ROLES } from "./roles";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -81,7 +82,6 @@ async function getUserFromDatabase(firebaseUid: string) {
       `;
 
       if (ownerResult.length > 0) {
-        // Owners can access all branches, but let's get their first branch for convenience
         const branchResult = await sql`
           SELECT id FROM branches WHERE owner_id = ${user.user_id} LIMIT 1
         `;
@@ -89,7 +89,7 @@ async function getUserFromDatabase(firebaseUid: string) {
         return {
           userId: user.user_id,
           email: user.email,
-          role: "OWNER",
+          role: ROLES.OWNER,
           branchId: branchResult.length > 0 ? branchResult[0].id : null,
           ownerId: ownerResult[0].id,
         };
@@ -117,12 +117,15 @@ async function getUserFromDatabase(firebaseUid: string) {
 
         // Also check if the user's role in the roles table indicates they're a branch manager
         const hasManagerRole =
-          user.user_role?.toUpperCase() === "BRANCH_MANAGER";
+          user.user_role?.toUpperCase() === ROLES.BRANCH_MANAGER;
 
         return {
           userId: user.user_id,
           email: user.email,
-          role: isBranchManager || hasManagerRole ? "BRANCH_MANAGER" : "STAFF",
+          role:
+            isBranchManager || hasManagerRole
+              ? ROLES.BRANCH_MANAGER
+              : ROLES.STAFF,
           branchId: staff.branch_id,
           staffId: staff.id,
         };
@@ -132,7 +135,7 @@ async function getUserFromDatabase(firebaseUid: string) {
       return {
         userId: user.user_id,
         email: user.email,
-        role: user.user_role?.toUpperCase() || "STAFF",
+        role: user.user_role?.toUpperCase() || ROLES.STAFF,
         branchId: null,
       };
     }

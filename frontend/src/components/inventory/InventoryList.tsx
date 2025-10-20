@@ -4,6 +4,7 @@ import { InventoryItem } from "@/lib/api/inventory";
 import { getUserProfile, hasAnyRole } from "@/lib/auth";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
 import { toastUtils } from "@/lib/toast-utils";
+import { ROLES } from "@/lib/roles";
 
 interface InventoryTableProps {
   inventory: InventoryItem[];
@@ -32,7 +33,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
   const [saving, setSaving] = useState(false);
 
   // Check if user can edit (OWNER or BRANCH_MANAGER)
-  const canEdit = hasAnyRole(["OWNER", "BRANCH_MANAGER"]);
+  const canEdit = hasAnyRole([ROLES.OWNER, ROLES.BRANCH_MANAGER]);
 
   const startEditing = (item: InventoryItem) => {
     setEditing({

@@ -221,8 +221,6 @@ export default function AddCategoryPage() {
                   categoryToDelete.category_name
                 );
 
-                // If the category had an image, we'll need to handle this differently
-                // For now, we'll recreate without the image as we can't restore S3 files
                 const restoreResponse = await authenticatedFetch(
                   "/api/categories",
                   {
