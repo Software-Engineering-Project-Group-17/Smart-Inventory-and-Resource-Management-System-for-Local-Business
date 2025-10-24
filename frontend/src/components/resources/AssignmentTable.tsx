@@ -171,7 +171,23 @@ export const AssignmentTable: React.FC<AssignmentTableProps> = ({
                   <div className="flex items-center gap-1 mb-1">
                     <Calendar size={14} />
                     <span>
-                      {assignment.startDate} - {assignment.endDate}
+                      {new Date(assignment.startDate).toLocaleDateString(
+                        "en-US",
+                        {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        }
+                      )}{" "}
+                      -{" "}
+                      {new Date(assignment.endDate).toLocaleDateString(
+                        "en-US",
+                        {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        }
+                      )}
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
