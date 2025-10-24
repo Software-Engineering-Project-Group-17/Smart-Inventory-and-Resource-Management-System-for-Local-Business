@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect } from "react";
-import { showRoleAccessNotification } from "@/lib/auth";
+import { showRoleAccessNotification, hasAnyRole } from "@/lib/auth";
 import { ResourceHeader } from "@/components/resources/ResourceHeader";
 import { ResourceSummaryCards } from "@/components/resources/ResourceSummaryCards";
 import { ResourceTabs } from "@/components/resources/ResourceTabs";
@@ -55,6 +55,8 @@ const ResourceTrackingPage = () => {
     // showRoleAccessNotification("Resource Management");
   }, []);
 
+  const canAssign = hasAnyRole([ROLES.BRANCH_MANAGER]);
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -81,6 +83,15 @@ const ResourceTrackingPage = () => {
           {/* All Resources Tab */}
           {activeTab === "available" && (
             <div className="p-6">
+              {!canAssign && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    You are viewing resources in read-only mode. Only branch
+                    managers can assign resources to staff.
+                  </p>
+                </div>
+              )}
+
               <ResourceControls
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
@@ -100,25 +111,37 @@ const ResourceTrackingPage = () => {
               <ResourceTable
                 resources={filteredResources}
                 isLoading={isLoading}
-                showAssignForm={showAssignForm}
+                showAssignForm={canAssign ? showAssignForm : null}
                 assignFormData={assignForm}
                 isLoadingStaff={isLoadingStaff}
                 staffMembers={staffMembers}
                 showStaffDropdown={showStaffDropdown}
-                onAssignClick={openAssignForm}
+                onAssignClick={canAssign ? openAssignForm : () => {}}
                 onDeleteClick={handleDeleteResource}
                 onAssignFormChange={setAssignForm}
                 onStaffSelect={handleStaffSelect}
                 onToggleStaffDropdown={handleToggleStaffDropdown}
                 onAssignSubmit={handleAssign}
                 onAssignCancel={closeAssignForm}
+                canAssign={canAssign}
               />
+
+              {/* Show assign buttons only for branch managers */}
             </div>
           )}
 
           {/* Assigned Resources Tab */}
           {activeTab === "assigned" && (
             <div className="p-6">
+              {!canAssign && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    You are viewing resource assignments in read-only mode. Only
+                    branch managers can modify assignments.
+                  </p>
+                </div>
+              )}
+
               <ResourceControls
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
@@ -138,7 +161,8 @@ const ResourceTrackingPage = () => {
               <AssignmentTable
                 assignments={filteredAssignments}
                 isLoading={isLoading}
-                onUnassign={handleUnassign}
+                onUnassign={canAssign ? handleUnassign : () => {}}
+                canUnassign={canAssign}
               />
             </div>
           )}

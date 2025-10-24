@@ -16,12 +16,14 @@ interface AssignmentTableProps {
   assignments: Assignment[];
   isLoading?: boolean;
   onUnassign: (assignmentId: number) => void;
+  canUnassign?: boolean;
 }
 
 export const AssignmentTable: React.FC<AssignmentTableProps> = ({
   assignments,
   isLoading = false,
   onUnassign,
+  canUnassign = true,
 }) => {
   // Loading state
   if (isLoading) {
@@ -42,9 +44,11 @@ export const AssignmentTable: React.FC<AssignmentTableProps> = ({
               <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
                 Schedule
               </th>
-              <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
-                Actions
-              </th>
+              {canUnassign && (
+                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -119,9 +123,11 @@ export const AssignmentTable: React.FC<AssignmentTableProps> = ({
             <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
               {RESOURCE_CONSTANTS.labels.timeRange}
             </th>
-            <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
-              {RESOURCE_CONSTANTS.labels.actions}
-            </th>
+            {canUnassign && (
+              <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
+                {RESOURCE_CONSTANTS.labels.actions}
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -176,17 +182,19 @@ export const AssignmentTable: React.FC<AssignmentTableProps> = ({
                   </div>
                 </div>
               </td>
-              <td className="px-6 py-4">
-                <div className="flex items-center justify-center">
-                  <button
-                    onClick={() => onUnassign(assignment.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title={RESOURCE_CONSTANTS.messages.unassignResource}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              </td>
+              {canUnassign && (
+                <td className="px-6 py-4">
+                  <div className="flex items-center justify-center">
+                    <button
+                      onClick={() => onUnassign(assignment.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title={RESOURCE_CONSTANTS.messages.unassignResource}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

@@ -108,7 +108,6 @@ export async function POST(request: NextRequest) {
   const authResult = await requireAuth(request, [
     ROLES.OWNER,
     ROLES.BRANCH_MANAGER,
-    ROLES.STAFF,
   ]);
   const authResponse = createAuthResponse(authResult);
   if (authResponse) return authResponse;

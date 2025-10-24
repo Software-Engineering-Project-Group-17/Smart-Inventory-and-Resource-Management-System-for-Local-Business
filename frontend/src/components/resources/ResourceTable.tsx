@@ -27,6 +27,7 @@ interface ResourceTableProps {
   onToggleStaffDropdown: () => void;
   onAssignSubmit: (resourceId: number) => void;
   onAssignCancel: () => void;
+  canAssign?: boolean;
 }
 
 export const ResourceTable: React.FC<ResourceTableProps> = ({
@@ -44,6 +45,7 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
   onToggleStaffDropdown,
   onAssignSubmit,
   onAssignCancel,
+  canAssign = true,
 }) => {
   // Loading state
   if (isLoading) {
@@ -61,9 +63,11 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
               <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
                 {RESOURCE_CONSTANTS.labels.status}
               </th>
-              <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
-                {RESOURCE_CONSTANTS.labels.actions}
-              </th>
+              {canAssign && (
+                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
+                  {RESOURCE_CONSTANTS.labels.actions}
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -124,9 +128,11 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
             <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
               {RESOURCE_CONSTANTS.labels.status}
             </th>
-            <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
-              {RESOURCE_CONSTANTS.labels.actions}
-            </th>
+            {canAssign && (
+              <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
+                {RESOURCE_CONSTANTS.labels.actions}
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -154,29 +160,31 @@ export const ResourceTable: React.FC<ResourceTableProps> = ({
                       : RESOURCE_CONSTANTS.statuses.assigned}
                   </span>
                 </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      onClick={() => onAssignClick(resource.id)}
-                      className="p-2 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
-                      title={RESOURCE_CONSTANTS.messages.assignResource}
-                    >
-                      <UserPlus size={16} />
-                    </button>
+                {canAssign && (
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => onAssignClick(resource.id)}
+                        className="p-2 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                        title={RESOURCE_CONSTANTS.messages.assignResource}
+                      >
+                        <UserPlus size={16} />
+                      </button>
 
-                    <button
-                      onClick={() => onDeleteClick(resource.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title={RESOURCE_CONSTANTS.messages.deleteResource}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </td>
+                      <button
+                        onClick={() => onDeleteClick(resource.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title={RESOURCE_CONSTANTS.messages.deleteResource}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                )}
               </tr>
 
               {/* Assignment Form Row */}
-              {showAssignForm === resource.id && (
+              {canAssign && showAssignForm === resource.id && (
                 <AssignmentForm
                   isOpen={true}
                   resourceName={resource.name}

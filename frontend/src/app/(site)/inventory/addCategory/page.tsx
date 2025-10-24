@@ -14,6 +14,8 @@ import {
 import { showRoleAccessNotification } from "@/lib/auth";
 import { toastUtils } from "@/lib/toast-utils";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { withAuth } from "@/hooks/useAuth";
+import { ROLES } from "@/lib/roles";
 
 interface Category {
   id: number;
@@ -23,7 +25,7 @@ interface Category {
   updated_at?: string;
 }
 
-export default function AddCategoryPage() {
+const AddCategoryPage = () => {
   const router = useRouter();
   const [formData, setFormData] = useState({
     categoryName: "",
@@ -470,4 +472,8 @@ export default function AddCategoryPage() {
       </div>
     </div>
   );
-}
+};
+
+export default withAuth(AddCategoryPage, {
+  requiredRoles: [ROLES.BRANCH_MANAGER],
+});

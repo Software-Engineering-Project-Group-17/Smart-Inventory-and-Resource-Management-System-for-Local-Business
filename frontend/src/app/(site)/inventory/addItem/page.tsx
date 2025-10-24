@@ -16,6 +16,8 @@ import { toastUtils } from "@/lib/toast-utils";
 import { showRoleAccessNotification } from "@/lib/auth";
 import { getUserProfile } from "@/lib/auth";
 import { authenticatedFetch } from "@/lib/authenticated-fetch";
+import { ROLES } from "@/lib/roles";
+import { withAuth } from "@/hooks/useAuth";
 
 interface Category {
   id: string;
@@ -23,7 +25,7 @@ interface Category {
   category_img_url?: string;
 }
 
-export default function AddItemPage() {
+const AddItemPage = () => {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -445,7 +447,7 @@ export default function AddItemPage() {
             {/* Image Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Item Image (Optional)
+                Item Image
               </label>
 
               {!imagePreview ? (
@@ -531,4 +533,8 @@ export default function AddItemPage() {
       </div>
     </div>
   );
-}
+};
+
+export default withAuth(AddItemPage, {
+  requiredRoles: [ROLES.BRANCH_MANAGER],
+});

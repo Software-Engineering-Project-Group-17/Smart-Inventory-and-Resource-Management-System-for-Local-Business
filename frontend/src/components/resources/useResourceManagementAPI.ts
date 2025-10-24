@@ -8,6 +8,8 @@ import {
 } from "./types";
 import { resourceApi, assignmentApi, staffApi } from "@/lib/api/resources";
 import { toastUtils } from "@/lib/toast-utils";
+import { hasAnyRole } from "@/lib/auth";
+import { ROLES } from "@/lib/roles";
 
 interface StaffMember {
   id: number;
@@ -51,7 +53,11 @@ export const useResourceManagement = () => {
   // Load resources, assignments, and staff on component mount
   useEffect(() => {
     loadResources();
-    loadStaffMembers();
+
+    // Only load staff members if user has permission to assign resources
+    if (hasAnyRole([ROLES.BRANCH_MANAGER])) {
+      loadStaffMembers();
+    }
   }, []);
 
   // Load resources from API
